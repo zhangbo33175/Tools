@@ -1,0 +1,45 @@
+# ---- 构建产物 ----
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+[Rr]eleases/
+*.user
+*.suo
+*.userosscache
+*.dbmdl
+*.pdb
+*.exe
+*.dll
+*.cache
+
+# ---- Visual Studio / Rider 等 IDE ----
+.vs/
+.idea/
+*.sln.docstates
+
+# ---- 临时与备份目录 ----
+.tmp/
+*.backup
+*.bak
+*~
+
+# ---- 大型源素材（按需取消注释后纳入版本库） ----
+PSD/
+# 299MB 以上的 PSB/PSD 原始分层素材不入库；确需保留时可单独使用 Git LFS
+*.psb
+*.psd
+
+# ---- 发布 / 探测产物 ----
+PublishProbe/
+publish_probe*/
+legacy-bake/
+BandCheck/
+PixelProbe/
+probe/
+
+# ---- 操作系统垃圾文件 ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

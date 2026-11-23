@@ -1,0 +1,304 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MapEditorTool.App"
+             RequestedThemeVariant="Light">
+             <!-- TexturePacker 风格：浅灰面板 + 白色输入区 + 蓝色强调，统一走 Light 主题 -->
+
+    <Application.Resources>
+        <!-- 经典竖向滚动条：14px 宽，上下箭头常显，中间蓝灰滑块 -->
+        <ControlTheme x:Key="ClassicVScrollBar" TargetType="ScrollBar">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="MinWidth" Value="14" />
+            <Setter Property="Background" Value="#EDEDED" />
+            <Setter Property="AllowAutoHide" Value="False" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" BorderBrush="#C6C6C6" BorderThickness="1,0,0,0">
+                        <Grid RowDefinitions="15,*,15">
+                            <RepeatButton Grid.Row="0" x:Name="PART_LineUpButton" Padding="0" CornerRadius="0"
+                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,0,0,1">
+                                <Path Data="M0,4 L4,0 L8,4 Z" Fill="#5A5A5A" Width="8" Height="4"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </RepeatButton>
+                            <!-- 必须把 Minimum/Maximum/Value/ViewportSize 绑到模板父级，否则 Track 拿到默认值，
+                                 滑块位置与长度都会算错（表现为滑块贴在轨道底部或长度不随内容变化） -->
+                            <Track Grid.Row="1" x:Name="PART_Track" Orientation="Vertical" Margin="2,2"
+                                   IsDirectionReversed="True"
+                                   Minimum="{TemplateBinding Minimum}"
+                                   Maximum="{TemplateBinding Maximum}"
+                                   Value="{TemplateBinding Value}"
+                                   ViewportSize="{TemplateBinding ViewportSize}">
+                                <Track.Thumb>
+                                    <Thumb MinHeight="20" Background="#A9C6D8" BorderBrush="#7FA8C0" BorderThickness="1" CornerRadius="2">
+                                        <Thumb.Template>
+                                            <ControlTemplate>
+                                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                            <RepeatButton Grid.Row="2" x:Name="PART_LineDownButton" Padding="0" CornerRadius="0"
+                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,1,0,0">
+                                <Path Data="M0,0 L8,0 L4,4 Z" Fill="#5A5A5A" Width="8" Height="4"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </RepeatButton>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
+        <!-- 经典横向滚动条：14px 高，左右箭头常显 -->
+        <ControlTheme x:Key="ClassicHScrollBar" TargetType="ScrollBar">
+            <Setter Property="Height" Value="14" />
+            <Setter Property="MinHeight" Value="14" />
+            <Setter Property="Background" Value="#EDEDED" />
+            <Setter Property="AllowAutoHide" Value="False" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" BorderBrush="#C6C6C6" BorderThickness="0,1,0,0">
+                        <Grid ColumnDefinitions="15,*,15">
+                            <RepeatButton Grid.Column="0" x:Name="PART_LineUpButton" Padding="0" CornerRadius="0"
+                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,0,1,0">
+                                <Path Data="M4,0 L0,4 L4,8 Z" Fill="#5A5A5A" Width="4" Height="8"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </RepeatButton>
+                            <Track Grid.Column="1" x:Name="PART_Track" Orientation="Horizontal" Margin="2,2"
+                                   IsDirectionReversed="False"
+                                   Minimum="{TemplateBinding Minimum}"
+                                   Maximum="{TemplateBinding Maximum}"
+                                   Value="{TemplateBinding Value}"
+                                   ViewportSize="{TemplateBinding ViewportSize}">
+                                <Track.Thumb>
+                                    <Thumb MinWidth="20" Background="#A9C6D8" BorderBrush="#7FA8C0" BorderThickness="1" CornerRadius="2">
+                                        <Thumb.Template>
+                                            <ControlTemplate>
+                                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                            <RepeatButton Grid.Column="2" x:Name="PART_LineDownButton" Padding="0" CornerRadius="0"
+                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,0,0,0">
+                                <Path Data="M0,0 L4,4 L0,8 Z" Fill="#5A5A5A" Width="4" Height="8"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </RepeatButton>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- 按钮：浅灰底 + 1px 灰边 + 深色文字，悬停变浅蓝，按下加深 -->
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#E3E3E3" />
+            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Foreground" Value="#262626" />
+            <Setter Property="Padding" Value="8,3" />
+        </Style>
+        <!-- 所有按钮文字统一水平 / 垂直居中，避免宽按钮内文字贴左 -->
+        <Style Selector="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#D5E9F6" />
+            <Setter Property="BorderBrush" Value="#70B4DA" />
+        </Style>
+        <Style Selector="Button:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#BBDBEF" />
+        </Style>
+        <Style Selector="Button:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="#EFEFEF" />
+            <Setter Property="BorderBrush" Value="#D2D2D2" />
+            <Setter Property="Foreground" Value="#9A9A9A" />
+        </Style>
+
+        <!-- 左侧资源类型：分段式 Tab，未选中透明、选中蓝底白字，避免五个按钮各带一圈灰边 -->
+        <Style Selector="Button.sideTab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#52616B" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.sideTab:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E8F2F8" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#0F6B96" />
+        </Style>
+        <Style Selector="Button.sideTab.active">
+            <Setter Property="Background" Value="#1387BE" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.sideTab.active:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#0F6B96" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+
+        <!-- 输入框：白底 + 灰边 -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Foreground" Value="#1B1B1B" />
+        </Style>
+        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="#1387BE" />
+        </Style>
+        <!-- Fluent 文本框的文字 presenter 默认贴模板上沿，数字 / 中文墨迹会比 24px 框中心高约 2px；统一下移 2px 回到视觉中线。 -->
+        <Style Selector="TextBox.field /template/ TextPresenter">
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+
+        <!-- 下拉框：浅灰底 + 灰边，与截图的下拉控件一致 -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#EDEDED" />
+            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Foreground" Value="#262626" />
+        </Style>
+        <!-- Fluent 模板里的选中内容默认贴顶，把模板内 ContentPresenter 压回垂直居中；
+             可编辑下拉框内部的 TextBox 也要单独居中，否则「动画名称」这类值会浮在框顶。 -->
+        <Style Selector="ComboBox /template/ ContentPresenter">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ComboBox TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="6,0" />
+        </Style>
+        <Style Selector="ComboBoxItem">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="MinHeight" Value="24" />
+        </Style>
+
+        <!-- 复选框：被勾选时用强调蓝；文字与勾选框同高居中，避免文字贴行顶 -->
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="#262626" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- 三栏分隔条：平时透明只露 1px 灰线，悬停整条 6px 变淡蓝提示可拖。
+             GridSplitter 默认没有可视模板，这里补一个纯背景 Border，Background 才能随 :pointerover 换色。 -->
+        <Style Selector="GridSplitter">
+            <Setter Property="Background" Value="#00000000" />
+            <Setter Property="Cursor" Value="SizeWestEast" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" CornerRadius="2" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="GridSplitter:pointerover">
+            <Setter Property="Background" Value="#331387BE" />
+        </Style>
+
+        <!-- 卡片：底部三栏统一的白底 + 1px 灰边 + 圆角 -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="#FCFCFC" />
+            <Setter Property="BorderBrush" Value="#CDCDCD" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+        </Style>
+
+        <!-- 外层分区框：比卡片重一级的描边，用来把「左侧栏 / 工具条 / 画布」这些大区块框出来 -->
+        <Style Selector="Border.frame">
+            <Setter Property="Background" Value="#FAFAFA" />
+            <Setter Property="BorderBrush" Value="#BFBFBF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+        </Style>
+
+        <!-- 卡片内白色分组框 -->
+        <Style Selector="Border.inset">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#E4E4E4" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
+
+        <!-- 表单标签：右对齐、统一灰色、垂直居中（不再额外上提，和文本框内容共用同一条视觉中线）。 -->
+        <Style Selector="TextBlock.lbl">
+            <Setter Property="Foreground" Value="#565656" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+
+        <!-- 区块标题 -->
+        <Style Selector="TextBlock.section">
+            <Setter Property="Foreground" Value="#0B6E9B" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- 小号提示文字 -->
+        <Style Selector="TextBlock.tip">
+            <Setter Property="Foreground" Value="#7A7A7A" />
+            <Setter Property="FontSize" Value="10" />
+        </Style>
+
+        <!-- 表单输入框：统一高度 -->
+        <Style Selector="TextBox.field">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- 表单下拉框：统一高度 -->
+        <Style Selector="ComboBox.field">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- 小按钮：卡片内统一 24px 高 -->
+        <Style Selector="Button.mini">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="6,1" />
+        </Style>
+
+        <!-- 滑动列表：常显的经典滚动条（14px 宽 + 上下箭头） -->
+        <Style Selector="ScrollViewer">
+            <Setter Property="AllowAutoHide" Value="False"/>
+        </Style>
+        <Style Selector="ScrollBar:vertical">
+            <Setter Property="AllowAutoHide" Value="False"/>
+            <Setter Property="Theme" Value="{StaticResource ClassicVScrollBar}"/>
+        </Style>
+        <Style Selector="ScrollBar:horizontal">
+            <Setter Property="AllowAutoHide" Value="False"/>
+            <Setter Property="Theme" Value="{StaticResource ClassicHScrollBar}"/>
+        </Style>
+    </Application.Styles>
+</Application>
