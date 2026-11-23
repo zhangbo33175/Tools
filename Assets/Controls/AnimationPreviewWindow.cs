@@ -40,6 +40,38 @@ public sealed partial class AnimationPreviewWindow : Window
 {
     #region 常量与画刷
 
+    private const int PreviewWidth = 1280;
+    private const int PreviewHeight = 840;
+    private const int PreviewMinWidth = 1000;
+    private const int PreviewMinHeight = 660;
+
+    /// <summary>顶栏高度。</summary>
+    private const int HeaderHeight = 58;
+
+    /// <summary>底部状态栏高度。</summary>
+    private const int FooterHeight = 36;
+
+    /// <summary>主体左右外边距。</summary>
+    private const int BodyHorizontalMargin = 14;
+
+    /// <summary>主体上下外边距。</summary>
+    private const int BodyVerticalMargin = 10;
+
+    /// <summary>左侧对象列表宽度。</summary>
+    private const int ObjectPaneWidth = 300;
+
+    /// <summary>右侧信息面板宽度。</summary>
+    private const int InfoPaneWidth = 320;
+
+    /// <summary>主体三列之间的间隔。</summary>
+    private const int PaneGap = 10;
+
+    /// <summary>顶栏输入控件统一高度。</summary>
+    private const int ToolbarControlHeight = 30;
+
+    private const int FilterWidth = 112;
+    private const int SearchWidth = 226;
+
     private static readonly IBrush BuildingBrush = new SolidColorBrush(Color.FromRgb(0xD9, 0x8B, 0x2B));
     private static readonly IBrush CharacterBrush = new SolidColorBrush(Color.FromRgb(0x8A, 0x6F, 0xD1));
     private static readonly IBrush PropBrush = new SolidColorBrush(Color.FromRgb(0x3F, 0x8E, 0xD4));
@@ -124,10 +156,10 @@ public sealed partial class AnimationPreviewWindow : Window
         _onSceneChanged = onSceneChanged;
 
         Title = "场景动画预览";
-        Width = 1280;
-        Height = 840;
-        MinWidth = 1000;
-        MinHeight = 660;
+        Width = PreviewWidth;
+        Height = PreviewHeight;
+        MinWidth = PreviewMinWidth;
+        MinHeight = PreviewMinHeight;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = UiTheme.PreviewPanel;
 
@@ -166,7 +198,7 @@ public sealed partial class AnimationPreviewWindow : Window
     {
         var root = new Grid
         {
-            RowDefinitions = new RowDefinitions("58,*,36"),
+            RowDefinitions = new RowDefinitions($"{HeaderHeight},*,{FooterHeight}"),
             Background = UiTheme.PreviewPanel,
         };
 
@@ -228,14 +260,14 @@ public sealed partial class AnimationPreviewWindow : Window
 
         _filterBox.ItemsSource = new[] { "全部", "仅动画", "仅 Spine", "有路径" };
         _filterBox.SelectedIndex = 0;
-        _filterBox.Width = 112;
-        _filterBox.Height = 30;
+        _filterBox.Width = FilterWidth;
+        _filterBox.Height = ToolbarControlHeight;
         _filterBox.FontSize = 12;
         _filterBox.VerticalAlignment = VerticalAlignment.Center;
         _filterBox.SelectionChanged += (_, _) => RebuildVisibleList();
 
-        _searchBox.Width = 226;
-        _searchBox.Height = 30;
+        _searchBox.Width = SearchWidth;
+        _searchBox.Height = ToolbarControlHeight;
         _searchBox.FontSize = 12;
         _searchBox.Padding = new Thickness(9, 0);
         _searchBox.PlaceholderText = "搜索名称 / ID / 动画 / 资产";
@@ -311,8 +343,8 @@ public sealed partial class AnimationPreviewWindow : Window
     {
         var body = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("300,10,*,10,320"),
-            Margin = new Thickness(14, 10, 14, 10),
+            ColumnDefinitions = new ColumnDefinitions($"{ObjectPaneWidth},{PaneGap},*,{PaneGap},{InfoPaneWidth}"),
+            Margin = new Thickness(BodyHorizontalMargin, BodyVerticalMargin, BodyHorizontalMargin, BodyVerticalMargin),
         };
 
         var objectPane = BuildObjectPane();

@@ -35,7 +35,10 @@ public sealed partial class AnimationPreviewWindow : Window
 {
     #region 播放与导入
 
-    /// <summary>播放 / 暂停。</summary>
+    /// <summary>
+    /// 切换播放状态。恢复播放时重置计时基准，避免暂停期间累积的时间造成跳帧；
+    /// 暂停时仅停表，画布保持当前帧。
+    /// </summary>
     private void TogglePlayback()
     {
         _playing = !_playing;
@@ -51,7 +54,10 @@ public sealed partial class AnimationPreviewWindow : Window
         }
     }
 
-    /// <summary>定时器：推进动画、路径和右侧信息。</summary>
+    /// <summary>
+    /// 定时器推进动画。单帧时长上限 0.1 秒，防止窗口卡顿或后台恢复后一次性跳过大量动画时间；
+    /// 时间文本每帧刷新，右侧信息按 10 Hz 刷新，降低文本布局开销。
+    /// </summary>
     private void Tick()
     {
         if (!_playing)
@@ -75,7 +81,10 @@ public sealed partial class AnimationPreviewWindow : Window
         }
     }
 
-    /// <summary>从预览窗导入 Spine 并绑定到当前物体。</summary>
+    /// <summary>
+    /// 从预览窗导入 Spine 并绑定到当前物体。导入成功后注册目录并持久化；
+    /// 只有存在选中物体时才回写实例字段并请求主窗口刷新，取消选择文件不改变任何状态。
+    /// </summary>
     private async Task ImportSpineAsync()
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -172,6 +181,7 @@ public sealed partial class AnimationPreviewWindow : Window
             : null;
     }
 
+    /// <summary>将地图类型转换为列表和详情区使用的中文名称。</summary>
     private static string TypeName(MapObjectType type) => type switch
     {
         MapObjectType.Building => "建筑",
@@ -180,6 +190,7 @@ public sealed partial class AnimationPreviewWindow : Window
         _ => "物体",
     };
 
+    /// <summary>取得类型对应的强调色；未知类型回退到物件色。</summary>
     private static IBrush TypeBrush(MapObjectType type) => type switch
     {
         MapObjectType.Building => BuildingBrush,
@@ -187,6 +198,7 @@ public sealed partial class AnimationPreviewWindow : Window
         _ => PropBrush,
     };
 
+    /// <summary>取得图层中文显示名，统一由地图图层键解析。</summary>
     private static string LayerName(string layer) => MapLayerKeys.DisplayName(layer);
 
     #endregion
