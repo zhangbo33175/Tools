@@ -319,22 +319,21 @@ public sealed class PublishMapWindow : Window
         _statusText.Text = string.Empty;
     }
 
+    /// <summary>选择发布目标工程目录；取消选择时保留输入框原值。</summary>
     private async Task BrowseAsync(TextBox output)
     {
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "选择目标工程接入目录",
-            AllowMultiple = false,
-            SuggestedStartLocation = Directory.Exists(output.Text)
-                ? await StorageProvider.TryGetFolderFromPathAsync(output.Text!)
-                : null,
-        });
+        var path = await FileDialogService.PickFolderAsync(
+            this,
+            "选择目标工程接入目录",
+            output.Text);
 
-        if (folders.Count > 0)
+        if (string.IsNullOrEmpty(path))
         {
-            output.Text = folders[0].Path.LocalPath;
-            UpdatePreview();
+            return;
         }
+
+        output.Text = path;
+        UpdatePreview();
     }
 
     private async Task PublishAsync()

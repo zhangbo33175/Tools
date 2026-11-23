@@ -91,8 +91,105 @@ public static class UiTheme
     /// <summary>收集物向导的绿色强调。</summary>
     public static readonly IBrush WizardAccent = Rgb(0x2F, 0xC5, 0x8B);
 
+    /// <summary>收集物向导的深绿描边。</summary>
+    public static readonly IBrush WizardAccentDark = Rgb(0x23, 0xA3, 0x71);
+
+    /// <summary>收集物向导标题绿。</summary>
+    public static readonly IBrush WizardTitle = Rgb(0x1B, 0x8F, 0x66);
+
+    /// <summary>收集物向导说明卡底色。</summary>
+    public static readonly IBrush WizardInfoSurface = Rgb(0xF7, 0xFB, 0xFD);
+
+    /// <summary>收集物向导说明卡描边。</summary>
+    public static readonly IBrush WizardInfoBorder = Rgb(0xD8, 0xEA, 0xF3);
+
+    /// <summary>收集物向导说明文字。</summary>
+    public static readonly IBrush WizardInfoText = Rgb(0x46, 0x66, 0x78);
+
+    /// <summary>收集物向导地图预览底色。</summary>
+    public static readonly IBrush WizardMapSurface = Rgb(0xF7, 0xFA, 0xFD);
+
+    /// <summary>收集物向导地图预览深色背景。</summary>
+    public static readonly IBrush WizardMapBackdrop = Rgb(0x1C, 0x25, 0x33);
+
     /// <summary>收集物向导的绿色浅底。</summary>
     public static readonly IBrush WizardAccentSoft = Rgb(0xE8, 0xFA, 0xF3);
+
+    /// <summary>收集物向导的移除/危险操作色。</summary>
+    public static readonly IBrush WizardDanger = Rgb(0xFF, 0x6B, 0x6B);
+
+    /// <summary>收集物向导空槽描边。</summary>
+    public static readonly IBrush WizardEmptySlotBorder = Rgb(0xD4, 0xDD, 0xE7);
+
+    /// <summary>收集物向导空槽提示色。</summary>
+    public static readonly IBrush WizardEmptySlotHint = Rgb(0xB4, 0xC1, 0xCE);
+
+    /// <summary>收集物向导缩略图底色。</summary>
+    public static readonly IBrush WizardThumbSurface = Rgb(0xF5, 0xF8, 0xFB);
+
+    /// <summary>收集物向导无图占位底色。</summary>
+    public static readonly IBrush WizardThumbFallback = Rgb(0xEE, 0xF3, 0xF8);
+
+    #endregion
+
+    #region 物件类型标签
+
+    /// <summary>物件类型标签色：建筑。</summary>
+    public static class ObjectTag
+    {
+        /// <summary>建筑标签（琥珀）。</summary>
+        public static readonly IBrush Building = Rgb(0xD9, 0x8B, 0x2B);
+
+        /// <summary>角色标签（紫）。</summary>
+        public static readonly IBrush Character = Rgb(0x8A, 0x6F, 0xD1);
+
+        /// <summary>物件标签（蓝）。</summary>
+        public static readonly IBrush Prop = Rgb(0x3F, 0x8E, 0xD4);
+    }
+
+    #endregion
+
+    #region 资源配置表
+
+    /// <summary>已配置资源表的表头、行底色与描边。</summary>
+    public static class ResourceTable
+    {
+        /// <summary>单元格描边。</summary>
+        public static readonly IBrush CellBorder = Rgb(0xD6, 0xD6, 0xD6);
+
+        /// <summary>表头与表格外框线。</summary>
+        public static readonly IBrush Line = Rgb(0x80, 0x80, 0x80);
+
+        /// <summary>标题行底色。</summary>
+        public static readonly IBrush TitleRow = Rgb(0xC5, 0xD9, 0xF1);
+
+        /// <summary>注释行底色。</summary>
+        public static readonly IBrush CommentRow = Rgb(0x92, 0xD0, 0x50);
+
+        /// <summary>名称列文字。</summary>
+        public static readonly IBrush NameText = Rgb(0x26, 0x26, 0x26);
+
+        /// <summary>类型列文字。</summary>
+        public static readonly IBrush TypeText = Rgb(0x80, 0x80, 0x80);
+
+        /// <summary>行内编辑按钮底色。</summary>
+        public static readonly IBrush EditSurface = Rgb(0xE8, 0xF3, 0xFA);
+
+        /// <summary>行内编辑按钮描边。</summary>
+        public static readonly IBrush EditBorder = Rgb(0x13, 0x87, 0xBE);
+
+        /// <summary>行内编辑按钮文字。</summary>
+        public static readonly IBrush EditText = Rgb(0x0B, 0x6E, 0x9B);
+
+        /// <summary>行内删除按钮底色。</summary>
+        public static readonly IBrush DeleteSurface = Rgb(0xFD, 0xEC, 0xEA);
+
+        /// <summary>行内删除按钮描边。</summary>
+        public static readonly IBrush DeleteBorder = Rgb(0xC0, 0x50, 0x4D);
+
+        /// <summary>行内删除按钮文字。</summary>
+        public static readonly IBrush DeleteText = Rgb(0xB0, 0x36, 0x2F);
+    }
 
     #endregion
 

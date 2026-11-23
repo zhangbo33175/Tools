@@ -200,28 +200,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>弹出文件选择器导入 PSD / PSB（按钮 <c>BtnImportPsd</c> 入口）。</summary>
-
     private async Task ImportPsdAsync()
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "选择 PSD / PSB 文件",
-            AllowMultiple = false,
-            FileTypeFilter = new[]
+        var path = await FileDialogService.PickFileAsync(
+            this,
+            "选择 PSD / PSB 文件",
+            new FilePickerFileType("Photoshop 文档")
             {
-                new FilePickerFileType("Photoshop 文档")
-                {
-                    Patterns = new[] { "*.psd", "*.psb" },
-                },
-            },
-        });
+                Patterns = new[] { "*.psd", "*.psb" },
+            });
 
-        if (files.Count == 0)
-        {
-            return;
-        }
-
-        var path = files[0].TryGetLocalPath();
         if (string.IsNullOrEmpty(path))
         {
             SetMessage("无法读取所选文件路径");

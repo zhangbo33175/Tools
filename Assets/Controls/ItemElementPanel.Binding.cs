@@ -313,7 +313,7 @@ public sealed partial class ItemElementPanel : UserControl
         _loaders.Add(template =>
         {
             _loading = true;
-            box.Text = read(template).ToString("0.###", CultureInfo.InvariantCulture);
+            box.Text = TableTextFormat.Number(read(template));
             _loading = false;
         });
 

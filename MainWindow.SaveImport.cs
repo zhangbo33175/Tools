@@ -429,20 +429,10 @@ public partial class MainWindow : Window
         Canvas.Refresh();
     }
 
+    /// <summary>选择地图数据输出目录；取消选择时保留原目录。</summary>
     private async Task PickSaveDirectoryAsync()
     {
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "选择地图数据输出目录",
-            AllowMultiple = false,
-        });
-
-        if (folders.Count == 0)
-        {
-            return;
-        }
-
-        var local = folders[0].TryGetLocalPath();
+        var local = await FileDialogService.PickFolderAsync(this, "选择地图数据输出目录");
         if (string.IsNullOrEmpty(local))
         {
             return;
@@ -452,12 +442,6 @@ public partial class MainWindow : Window
         RefreshStatus();
         SetMessage($"输出目录：{local}");
     }
-
-    /// <summary>弹出文件选择器导入 PSD / PSB（按钮 <c>BtnImportPsd</code> 入口）。</summary>
-    /// <summary>
-    /// 清掉与某一关 PSD 绑定的会话状态（文档、源路径、内存预览、图层→物件映射）。
-    /// 换关卡 / 从 JSON 重载后必须调用，否则「导出切片」会拿上一关的 PSD 去写新关卡目录。
-    /// </summary>
 
     /// <summary>
     /// 「导出切片」：把当前导入的 PSD 逐层烘焙到

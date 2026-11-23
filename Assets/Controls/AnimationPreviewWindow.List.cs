@@ -35,7 +35,10 @@ public sealed partial class AnimationPreviewWindow : Window
 {
     #region 列表与信息
 
-    /// <summary>构建全部列表项；筛选时只重建可见项。</summary>
+    /// <summary>
+    /// 初始化列表数据源。这里只清空旧绑定，真正的行由
+    /// <see cref="RebuildVisibleList"/> 按筛选条件构建。
+    /// </summary>
     private void BuildObjectList()
     {
         _objectList.ItemsSource = null;
@@ -51,9 +54,9 @@ public sealed partial class AnimationPreviewWindow : Window
         var visible = _allObjects
             .Where(item => filter switch
             {
-                1 => item.AnimEnabled && (ResolveSpine(item) is not null || ResolveSprite(item) is not null),
-                2 => ResolveSpine(item) is not null,
-                3 => item.PathPoints.Count >= 2,
+                FilterAnimated => item.AnimEnabled && (ResolveSpine(item) is not null || ResolveSprite(item) is not null),
+                FilterSpineOnly => ResolveSpine(item) is not null,
+                FilterWithPath => item.PathPoints.Count >= 2,
                 _ => true,
             })
             .Where(item => keyword.Length == 0

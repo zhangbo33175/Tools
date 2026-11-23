@@ -20,7 +20,7 @@ using System.Text.RegularExpressions;
 using MapEditorTool.Models;
 
 namespace MapEditorTool.Services;
-
+/// <summary>Cocos Lua 主表与发布入口：主表分段输出、共享辅助与文件落盘。</summary>
 public static partial class MapPublishService
 {
     #region Cocos 常量
@@ -48,6 +48,31 @@ public static partial class MapPublishService
     private const string ObjectsSuffix = "_Objects";
     private const string PathsSuffix = "_Paths";
     private const string TrafficSuffix = "_Traffic";
+
+    /// <summary>主表段落分隔注释，保持 Lua 文件分节视觉一致。</summary>
+    private const string LuaSectionBanner = "    -- ==========================================================================";
+
+    /// <summary>主表 Defaults 中的默认排序值。</summary>
+    private const int DefaultCocosSortOrder = 40;
+
+    /// <summary>主表 Defaults 中的默认 Y 排序偏移。</summary>
+    private const double DefaultCocosYSortOffset = 0;
+
+    /// <summary>主表 Defaults 中的默认播放速度。</summary>
+    private const double DefaultCocosSpeed = 1;
+
+    /// <summary>主表 Defaults 中的默认朝向。</summary>
+    private const string DefaultCocosFacingDirection = "down";
+
+    /// <summary>输出主表分节注释：分隔线 + 标题 + 分隔线。</summary>
+    /// <param name="sb">Lua 文本缓冲。</param>
+    /// <param name="title">分节标题。</param>
+    private static void AppendLuaSectionBanner(StringBuilder sb, string title)
+    {
+        sb.AppendLine(LuaSectionBanner);
+        sb.AppendLine($"    -- {title}");
+        sb.AppendLine(LuaSectionBanner);
+    }
 
     /// <summary>关卡表基名。</summary>
     private static string LevelBaseName(string chapter, string level) =>
@@ -194,9 +219,31 @@ public static partial class MapPublishService
         var tableName = StripTablePrefix(baseName);
         sb.AppendLine("---@type Tables.LevelData_Item");
         sb.AppendLine($"Tables.{tableName} = {{");
-        sb.AppendLine("    -- ==========================================================================");
-        sb.AppendLine("    -- 1. 关卡元数据");
-        sb.AppendLine("    -- ==========================================================================");
+        AppendCocosMetaSection(sb, chapter, level, config, mapName);
+        sb.AppendLine();
+        AppendCocosDefaultsSection(sb);
+        sb.AppendLine();
+        AppendCocosCountsSection(sb, config);
+        sb.AppendLine();
+        AppendCocosSubTablesSection(sb, baseName);
+        sb.AppendLine("}");
+        return sb.ToString();
+    }
+
+    /// <summary>输出主表 Meta 段：章节、关卡、地图尺寸与网格口径。</summary>
+    /// <param name="sb">Lua 文本缓冲。</param>
+    /// <param name="chapter">章节 ID。</param>
+    /// <param name="level">关卡 ID。</param>
+    /// <param name="config">当前地图配置。</param>
+    /// <param name="mapName">Cocos 地图预制体名。</param>
+    private static void AppendCocosMetaSection(
+        StringBuilder sb,
+        string chapter,
+        string level,
+        MapConfigData config,
+        string mapName)
+    {
+        AppendLuaSectionBanner(sb, "1. 关卡元数据");
         sb.AppendLine("    Meta = {");
         sb.AppendLine($"        ChapterId     = \"{Escape(chapter)}\",");
         sb.AppendLine($"        ChapterName   = \"{Escape(config.ChapterName)}\",");
@@ -215,31 +262,36 @@ public static partial class MapPublishService
         sb.AppendLine($"        DrawShape     = \"{Escape(config.DrawShape)}\",");
         sb.AppendLine($"        RegionType    = \"{Escape(config.RegionType)}\",");
         sb.AppendLine("    },");
-        sb.AppendLine();
+    }
 
-        sb.AppendLine("    -- ==========================================================================");
-        sb.AppendLine("    -- 2. 全局默认配置（所有实体共享，实体自身字段优先）");
-        sb.AppendLine("    -- ==========================================================================");
+    /// <summary>输出主表 Defaults 段：所有实体共享的默认排序、阴影、朝向与循环参数。</summary>
+    /// <param name="sb">Lua 文本缓冲。</param>
+    private static void AppendCocosDefaultsSection(StringBuilder sb)
+    {
+        AppendLuaSectionBanner(sb, "2. 全局默认配置（所有实体共享，实体自身字段优先）");
         sb.AppendLine("    Defaults = {");
-        sb.AppendLine("        SortOrder        = 40,");
+        sb.AppendLine($"        SortOrder        = {DefaultCocosSortOrder},");
         sb.AppendLine("        ShadowEnabled    = true,");
         sb.AppendLine("        YSortEnabled     = true,");
-        sb.AppendLine("        YSortOffset      = 0,");
+        sb.AppendLine($"        YSortOffset      = {Num(DefaultCocosYSortOffset)},");
         sb.AppendLine("        Loop             = true,");
-        sb.AppendLine("        Speed            = 1,");
-        sb.AppendLine("        FacingDirection  = \"down\",");
-        sb.AppendLine("        HideWhenOffMap   = true,");
-        sb.AppendLine("        LoopRestartDelay = 3,");
+        sb.AppendLine($"        Speed            = {Num(DefaultCocosSpeed)},");
+        sb.AppendLine($"        FacingDirection  = \"{DefaultCocosFacingDirection}\",");
+        sb.AppendLine($"        HideWhenOffMap   = {Bool(MapToolDefaults.DefaultHideWhenOffMap)},");
+        sb.AppendLine($"        LoopRestartDelay = {Num(MapToolDefaults.DefaultLoopRestartDelay)},");
         sb.AppendLine("    },");
-        sb.AppendLine();
+    }
 
+    /// <summary>输出主表 Counts 段：各实体类型数量，供运行时快速判断子表是否为空。</summary>
+    /// <param name="sb">Lua 文本缓冲。</param>
+    /// <param name="config">当前地图配置。</param>
+    private static void AppendCocosCountsSection(StringBuilder sb, MapConfigData config)
+    {
         var characterCount = config.Objects.Count(item => item.Type == MapObjectType.Character);
         var buildingCount = config.Objects.Count(item => item.Type == MapObjectType.Building);
         var objectCount = config.Objects.Count(item => item.Type == MapObjectType.Prop);
 
-        sb.AppendLine("    -- ==========================================================================");
-        sb.AppendLine("    -- 3. 实体数量统计");
-        sb.AppendLine("    -- ==========================================================================");
+        AppendLuaSectionBanner(sb, "3. 实体数量统计");
         sb.AppendLine("    Counts = {");
         sb.AppendLine($"        Characters = {characterCount},");
         sb.AppendLine($"        Buildings  = {buildingCount},");
@@ -247,11 +299,14 @@ public static partial class MapPublishService
         sb.AppendLine($"        Lights     = {config.TrafficLights.Count},");
         sb.AppendLine($"        Crosswalks = {config.Crosswalks.Count},");
         sb.AppendLine("    },");
-        sb.AppendLine();
+    }
 
-        sb.AppendLine("    -- ==========================================================================");
-        sb.AppendLine("    -- 4. 子表索引（运行时按需 require 加载）");
-        sb.AppendLine("    -- ==========================================================================");
+    /// <summary>输出主表 SubTables 段：运行时按需 require 的子表文件名。</summary>
+    /// <param name="sb">Lua 文本缓冲。</param>
+    /// <param name="baseName">关卡表基名。</param>
+    private static void AppendCocosSubTablesSection(StringBuilder sb, string baseName)
+    {
+        AppendLuaSectionBanner(sb, "4. 子表索引（运行时按需 require 加载）");
         sb.AppendLine("    SubTables = {");
         sb.AppendLine($"        Characters = \"{SubTableStem(baseName, CharactersSuffix)}\",");
         sb.AppendLine($"        Buildings  = \"{SubTableStem(baseName, BuildingsSuffix)}\",");
@@ -259,453 +314,6 @@ public static partial class MapPublishService
         sb.AppendLine($"        Paths      = \"{SubTableStem(baseName, PathsSuffix)}\",");
         sb.AppendLine($"        Traffic    = \"{SubTableStem(baseName, TrafficSuffix)}\",");
         sb.AppendLine("    },");
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    #endregion
-
-    #region Cocos 子表
-
-    /// <summary>
-    /// 构建角色子表：公共字段复用 <see cref="AppendCocosObjectFields"/>，
-    /// 再补角色独有的巡逻、交互、路径与交通绑定字段。
-    /// </summary>
-    /// <param name="baseName">关卡表基名。</param>
-    /// <param name="characters">角色实例列表。</param>
-    /// <returns>角色表 Lua 文本。</returns>
-    private static string BuildCocosCharactersFile(string baseName, IReadOnlyList<PlacedObject> characters)
-    {
-        var sb = new StringBuilder();
-        var tableName = SubTableName(baseName, CharactersSuffix);
-        AppendLuaHeader(sb, tableName, "角色列表（自动生成）", "关卡角色实体列表（只存差异字段）");
-        sb.AppendLine($"Tables.{tableName} = {{");
-
-        if (characters.Count == 0)
-        {
-            sb.AppendLine("    -- 空列表");
-        }
-        else
-        {
-            for (var index = 0; index < characters.Count; index++)
-            {
-                sb.AppendLine($"    [{index + 1}] = {{");
-                AppendCocosObjectFields(
-                    sb,
-                    characters[index],
-                    includeCollectId: false,
-                    includeCollectibleFields: false,
-                    includeCharacterFields: true);
-                sb.AppendLine("    },");
-            }
-        }
-
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    /// <summary>构建建筑子表；字段口径与物件表共用，但不输出收集物字段。</summary>
-    /// <param name="baseName">关卡表基名。</param>
-    /// <param name="buildings">建筑实例列表。</param>
-    /// <returns>建筑表 Lua 文本。</returns>
-    private static string BuildCocosBuildingsFile(string baseName, IReadOnlyList<PlacedObject> buildings)
-    {
-        var sb = new StringBuilder();
-        var tableName = SubTableName(baseName, BuildingsSuffix);
-        AppendLuaHeader(sb, tableName, "建筑列表（自动生成）", "关卡建筑实体列表");
-        sb.AppendLine($"Tables.{tableName} = {{");
-
-        if (buildings.Count == 0)
-        {
-            sb.AppendLine("    -- 空列表");
-        }
-        else
-        {
-            for (var index = 0; index < buildings.Count; index++)
-            {
-                var item = buildings[index];
-                sb.AppendLine($"    [{index + 1}] = {{");
-                AppendCocosObjectFields(sb, item, includeCollectId: false);
-                sb.AppendLine("    },");
-            }
-        }
-
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    /// <summary>构建待收集物件子表；比建筑表多输出收集物标记与 collectId。</summary>
-    /// <param name="baseName">关卡表基名。</param>
-    /// <param name="objects">物件实例列表。</param>
-    /// <returns>物件表 Lua 文本。</returns>
-    private static string BuildCocosObjectsFile(string baseName, IReadOnlyList<PlacedObject> objects)
-    {
-        var sb = new StringBuilder();
-        var tableName = SubTableName(baseName, ObjectsSuffix);
-        AppendLuaHeader(sb, tableName, "待收集物件列表（自动生成）", "关卡待收集物件列表",
-            "字段与 Buildings 对齐：GridX/GridY 兼容旧换算，PosX/PosY/PixelWidth/PixelHeight/Stretch/LayerType 按 PSD 还原");
-        sb.AppendLine($"Tables.{tableName} = {{");
-
-        if (objects.Count == 0)
-        {
-            sb.AppendLine("    -- 空列表");
-        }
-        else
-        {
-            for (var index = 0; index < objects.Count; index++)
-            {
-                var item = objects[index];
-                sb.AppendLine($"    [{index + 1}] = {{");
-                AppendCocosObjectFields(sb, item, includeCollectId: true);
-                sb.AppendLine("    },");
-            }
-        }
-
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// 输出建筑 / 物件共用的公共字段：位置、尺寸、图层、动画、Spine、排序与翻转。
-    /// </summary>
-    /// <param name="sb">Lua 文本缓冲。</param>
-    /// <param name="item">实例数据。</param>
-    /// <param name="includeCollectId">是否输出 collectId（物件表为 true）。</param>
-    /// <param name="includeCollectibleFields">是否输出收集物标记字段（建筑表 / 角色表为 false）。</param>
-    /// <param name="includeCharacterFields">是否追加角色独有字段。</param>
-    private static void AppendCocosObjectFields(
-        StringBuilder sb,
-        PlacedObject item,
-        bool includeCollectId,
-        bool includeCollectibleFields = true,
-        bool includeCharacterFields = false)
-    {
-        sb.AppendLine($"        Uid        = \"{Escape(item.Id)}\",");
-        sb.AppendLine($"        TemplateId = \"{Escape(item.TemplateId)}\",");
-        sb.AppendLine($"        Name       = \"{Escape(item.Name)}\",");
-        sb.AppendLine($"        GridX      = {item.CellX},");
-        sb.AppendLine($"        GridY      = {item.CellY},");
-        sb.AppendLine($"        PosX       = {Num(item.X)},");
-        sb.AppendLine($"        PosY       = {Num(item.Y)},");
-        sb.AppendLine($"        Width      = {item.ExportWidth},");
-        sb.AppendLine($"        Height     = {item.ExportHeight},");
-        sb.AppendLine($"        PixelWidth  = {Num(item.PixelWidth)},");
-        sb.AppendLine($"        PixelHeight = {Num(item.PixelHeight)},");
-        sb.AppendLine($"        Stretch     = {Bool(item.Stretch)},");
-        sb.AppendLine($"        LayerType   = \"{Escape(item.LayerType)}\",");
-        sb.AppendLine($"        DisplayLayer = \"{Escape(item.DisplayLayer)}\",");
-        if (includeCollectibleFields)
-        {
-            sb.AppendLine($"        IsCollectible = {Bool(item.IsCollectible)},");
-            sb.AppendLine($"        CollectibleOverObjects = {Bool(item.CollectibleOverObjects)},");
-        }
-
-        sb.AppendLine($"        Image      = \"{Escape(item.ImagePath)}\",");
-        sb.AppendLine($"        Anim        = \"{Escape(item.AnimName)}\",");
-        sb.AppendLine($"        AnimEnabled = {Bool(item.AnimEnabled)},");
-        sb.AppendLine($"        AnimationKind = \"{Escape(item.AnimationKind)}\",");
-        sb.AppendLine($"        SpineAsset  = \"{Escape(item.SpineAsset)}\",");
-        sb.AppendLine($"        SpineAnimation = \"{Escape(item.SpineAnimation)}\",");
-        sb.AppendLine($"        Loop        = {Bool(item.Loop)},");
-        sb.AppendLine($"        Speed       = {Num(item.Speed)},");
-        if (includeCollectId)
-        {
-            sb.AppendLine($"        CollectId  = \"collect_{Escape(item.Id)}\",");
-        }
-
-        sb.AppendLine($"        SortOrder    = {item.SortOrder},");
-        sb.AppendLine($"        YSortEnabled = {Bool(item.YSortEnabled)},");
-        sb.AppendLine($"        YSortOffset  = {Num(item.YSortOffset)},");
-        sb.AppendLine($"        Rotation      = {Num(item.Rotation)},");
-        sb.AppendLine($"        Scale         = {Num(item.Scale)},");
-        sb.AppendLine($"        ScaleX        = {Num(item.Scale)},");
-        sb.AppendLine($"        ScaleY        = {Num(item.Scale)},");
-        sb.AppendLine($"        FlipX         = {Bool(item.FlipX)},");
-        if (item.BandOverride >= 0)
-        {
-            sb.AppendLine($"        Band          = {item.BandOverride},");
-        }
-
-        if (includeCharacterFields)
-        {
-            AppendCocosCharacterFields(sb, item);
-        }
-    }
-
-    /// <summary>角色表独有的行为字段；公共位置/外观字段由 <see cref="AppendCocosObjectFields"/> 统一输出。</summary>
-    /// <param name="sb">Lua 文本缓冲。</param>
-    /// <param name="item">角色物件。</param>
-    private static void AppendCocosCharacterFields(StringBuilder sb, PlacedObject item)
-    {
-        sb.AppendLine($"        PatrolLoop  = \"{Escape(item.WalkMode)}\",");
-        sb.AppendLine($"        FacingDirection = \"{Escape(item.FacingDirection)}\",");
-        sb.AppendLine($"        Interactable = {Bool(item.Interactable)},");
-        sb.AppendLine($"        InteractType = \"{Escape(item.InteractType)}\",");
-        sb.AppendLine($"        DialogBubble = \"{Escape(item.DialogBubble)}\",");
-        sb.AppendLine($"        PathId      = \"path_{Escape(item.Id)}\",");
-        sb.AppendLine($"        IsVehicle     = {Bool(item.IsVehicle)},");
-        sb.AppendLine($"        TrafficRole  = \"{Escape(item.TrafficRole)}\",");
-        sb.AppendLine($"        StopLineX    = {Num(item.StopLineX)},");
-        sb.AppendLine($"        StopLineY    = {Num(item.StopLineY)},");
-        sb.AppendLine($"        BoundLightId = \"{Escape(item.BoundLightIds.FirstOrDefault() ?? string.Empty)}\",");
-        sb.AppendLine($"        BoundLightIds = {LuaStringArray(item.BoundLightIds)},");
-        sb.AppendLine($"        YellowTreatAsRed = {Bool(item.YellowTreatAsRed)},");
-    }
-
-    /// <summary>
-    /// 构建路径子表：每个带路径实例输出一条 <c>PathId → 路径点数组</c>，
-    /// 路径点使用格坐标，运行时无需再按像素换算。
-    /// </summary>
-    /// <param name="baseName">关卡表基名。</param>
-    /// <param name="characters">当前参与路径导出的实例（角色 / 载具等）。</param>
-    /// <param name="gridSize">格尺寸（像素）。</param>
-    /// <returns>路径表 Lua 文本。</returns>
-    private static string BuildCocosPathsFile(string baseName, IReadOnlyList<PlacedObject> characters, int gridSize)
-    {
-        var sb = new StringBuilder();
-        var tableName = SubTableName(baseName, PathsSuffix);
-        AppendLuaHeader(sb, tableName, "路径数据（自动生成）", "所有带路径物件的路径点，按 PathId 索引",
-            "路径点格式：{ gridX, gridY } 纯数组");
-        sb.AppendLine($"Tables.{tableName} = {{");
-
-        foreach (var item in characters)
-        {
-            if (item.PathPoints.Count == 0)
-            {
-                continue;
-            }
-
-            sb.AppendLine($"    [\"path_{Escape(item.Id)}\"] = {{");
-            foreach (var point in item.PathPoints)
-            {
-                // 与 Unity Lua 导出器一致：按编辑器格尺寸向下取整，而不是直接使用 PathPoint 自带的 GridX。
-                var gridX = (int)Math.Floor(point.X / Math.Max(1, gridSize));
-                var gridY = (int)Math.Floor(point.Y / Math.Max(1, gridSize));
-                sb.AppendLine($"        {{{gridX}, {gridY}}},");
-            }
-
-            sb.AppendLine("    },");
-        }
-
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// 构建交通子表：红绿灯、横道、人行道 / 道路格子与车辆绑定关系统一从地图配置导出。
-    /// </summary>
-    /// <param name="baseName">关卡表基名。</param>
-    /// <param name="config">当前地图配置。</param>
-    /// <returns>交通表 Lua 文本。</returns>
-    private static string BuildCocosTrafficFile(string baseName, MapConfigData config)
-    {
-        var sb = new StringBuilder();
-        var tableName = SubTableName(baseName, TrafficSuffix);
-        AppendLuaHeader(sb, tableName, "交通规则数据（自动生成）", "红绿灯 / 斑马线 / 区域 / 人行道格 / 道路格");
-        sb.AppendLine($"Tables.{tableName} = {{");
-
-        sb.AppendLine("    Lights = {");
-        for (var index = 0; index < config.TrafficLights.Count; index++)
-        {
-            var light = config.TrafficLights[index];
-            sb.AppendLine($"        [{index + 1}] = {{");
-            sb.AppendLine($"            Uid                = \"{Escape(light.Id)}\",");
-            sb.AppendLine($"            TemplateId         = \"{Escape(light.TemplateId)}\",");
-            sb.AppendLine($"            Name               = \"{Escape(light.Name)}\",");
-            sb.AppendLine($"            GridX              = {light.GridX},");
-            sb.AppendLine($"            GridY              = {light.GridY},");
-            sb.AppendLine($"            PosX               = {Num(light.PosX)},");
-            sb.AppendLine($"            PosY               = {Num(light.PosY)},");
-            sb.AppendLine($"            Direction          = \"{Escape(light.Direction)}\",");
-            sb.AppendLine($"            Side               = \"{Escape(light.Side)}\",");
-            sb.AppendLine($"            IntersectionId     = \"{Escape(light.IntersectionId)}\",");
-            sb.AppendLine($"            RedDuration        = {Num(light.RedDuration)},");
-            sb.AppendLine($"            GreenDuration      = {Num(light.GreenDuration)},");
-            sb.AppendLine($"            YellowDuration     = {Num(light.YellowDuration)},");
-            sb.AppendLine($"            OffsetPhase        = {Num(light.OffsetPhase)},");
-            sb.AppendLine($"            BoundCrosswalkId   = \"{Escape(light.BoundCrosswalkId)}\",");
-            sb.AppendLine($"            InitialPhase       = \"{Escape(light.InitialPhase)}\",");
-            sb.AppendLine($"            Image              = \"{Escape(light.Image)}\",");
-            sb.AppendLine($"            Anim               = \"{Escape(light.Anim)}\",");
-            sb.AppendLine("        },");
-        }
-
-        sb.AppendLine("    },");
-
-        sb.AppendLine("    Crosswalks = {");
-        for (var index = 0; index < config.Crosswalks.Count; index++)
-        {
-            var crosswalk = config.Crosswalks[index];
-            sb.AppendLine($"        [{index + 1}] = {{");
-            sb.AppendLine($"            Uid           = \"{Escape(crosswalk.Id)}\",");
-            sb.AppendLine($"            Name          = \"{Escape(crosswalk.Name)}\",");
-            sb.AppendLine($"            PointA        = {{ X = {Num(crosswalk.PointA.X)}, Y = {Num(crosswalk.PointA.Y)} }},");
-            sb.AppendLine($"            PointB        = {{ X = {Num(crosswalk.PointB.X)}, Y = {Num(crosswalk.PointB.Y)} }},");
-            sb.AppendLine($"            Width         = {Num(crosswalk.Width)},");
-            sb.AppendLine($"            Direction     = \"{Escape(crosswalk.Direction)}\",");
-            sb.AppendLine($"            BoundLightId  = \"{Escape(crosswalk.BoundLightId)}\",");
-            sb.AppendLine("        },");
-        }
-
-        sb.AppendLine("    },");
-
-        sb.AppendLine("    Regions = {");
-        for (var index = 0; index < config.Regions.Count; index++)
-        {
-            var region = config.Regions[index];
-            sb.AppendLine($"        [{index + 1}] = {{");
-            sb.AppendLine($"            Uid     = \"{Escape(region.Id)}\",");
-            sb.AppendLine($"            Type    = \"{Escape(region.Type)}\",");
-            sb.AppendLine($"            X       = {Num(region.X)},");
-            sb.AppendLine($"            Y       = {Num(region.Y)},");
-            sb.AppendLine($"            Width   = {Num(region.Width)},");
-            sb.AppendLine($"            Height  = {Num(region.Height)},");
-            sb.AppendLine("        },");
-        }
-
-        sb.AppendLine("    },");
-
-        sb.AppendLine("    SidewalkCells = {");
-        foreach (var cell in config.SidewalkCells)
-        {
-            sb.AppendLine($"        {{{cell.X}, {cell.Y}}},");
-        }
-
-        sb.AppendLine("    },");
-
-        sb.AppendLine("    RoadCells = {");
-        foreach (var cell in config.RoadCells)
-        {
-            sb.AppendLine($"        {{{cell.X}, {cell.Y}}},");
-        }
-
-        sb.AppendLine("    },");
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    #endregion
-
-    #region Cocos 章节索引
-
-    /// <summary>
-    /// 构建章节索引：文件不存在时创建，存在时在原文件中合并当前关卡。
-    /// </summary>
-    /// <param name="path">索引文件绝对路径。</param>
-    /// <param name="chapter">章节 ID。</param>
-    /// <param name="chapterName">章节显示名。</param>
-    /// <param name="level">当前关卡 ID。</param>
-    /// <returns>完整索引文件内容。</returns>
-    private static string BuildCocosIndex(string path, string chapter, string chapterName, string level)
-    {
-        if (!File.Exists(path))
-        {
-            return CreateCocosIndex(chapter, chapterName, level);
-        }
-
-        return MergeCocosIndex(File.ReadAllText(path), chapter, chapterName, level);
-    }
-
-    /// <summary>创建全新的章节索引内容。</summary>
-    /// <param name="chapter">章节 ID。</param>
-    /// <param name="chapterName">章节显示名。</param>
-    /// <param name="level">首个关卡 ID。</param>
-    /// <returns>索引文件内容。</returns>
-    private static string CreateCocosIndex(string chapter, string chapterName, string level)
-    {
-        var sb = new StringBuilder();
-        AppendLuaHeader(sb, LevelIndexFileStem, "章节地图索引（自动生成）", "章节地图数据索引");
-        sb.AppendLine($"---@class Tables.{LevelIndexTableName} @章节地图数据索引");
-        sb.AppendLine($"Tables.{LevelIndexTableName} = {{");
-        sb.AppendLine($"    {BuildIndexLine(chapter, chapterName, new List<string> { level })}");
-        sb.AppendLine("}");
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// 在已有索引中合并章节：保留原 ChapterName 与 Levels，追加当前关卡后去重，
-    /// 关卡 ID 能转数字时按数字排序，否则按字符串排序。
-    /// </summary>
-    /// <param name="original">已有索引全文。</param>
-    /// <param name="chapter">章节 ID。</param>
-    /// <param name="chapterName">章节显示名（仅新建条目时使用）。</param>
-    /// <param name="level">当前关卡 ID。</param>
-    /// <returns>合并后的索引全文。</returns>
-    private static string MergeCocosIndex(string original, string chapter, string chapterName, string level)
-    {
-        var newline = original.Contains("\r\n") ? "\r\n" : "\n";
-        var lines = original.Replace("\r\n", "\n").Split('\n');
-        var targetPrefix = $"[\"{chapter}\"]";
-        var targetIndex = -1;
-        string? existingName = null;
-        var levels = new List<string>();
-
-        for (var index = 0; index < lines.Length; index++)
-        {
-            if (!lines[index].Contains(targetPrefix, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            targetIndex = index;
-            var nameMatch = Regex.Match(lines[index], "ChapterName\\s*=\\s*\"((?:\\\\.|[^\"])*)\"");
-            if (nameMatch.Success)
-            {
-                existingName = nameMatch.Groups[1].Value;
-            }
-
-            var levelsMatch = Regex.Match(lines[index], "Levels\\s*=\\s*\\{([^}]*)\\}");
-            if (levelsMatch.Success)
-            {
-                foreach (Match levelMatch in Regex.Matches(levelsMatch.Groups[1].Value, "\"((?:\\\\.|[^\"])*)\""))
-                {
-                    levels.Add(levelMatch.Groups[1].Value);
-                }
-            }
-
-            break;
-        }
-
-        levels.Add(level);
-        var merged = levels
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(value => int.TryParse(value, out var number) ? number : int.MaxValue)
-            .ThenBy(value => value, StringComparer.Ordinal)
-            .ToList();
-        var line = BuildIndexLine(chapter, existingName ?? chapterName, merged);
-
-        if (targetIndex >= 0)
-        {
-            lines[targetIndex] = "    " + line;
-        }
-        else
-        {
-            var closeIndex = Array.LastIndexOf(lines, "}");
-            if (closeIndex < 0)
-            {
-                lines = lines.Append($"Tables.{LevelIndexTableName} = {{").Append("}").ToArray();
-                closeIndex = lines.Length - 1;
-            }
-
-            var mergedLines = lines.Take(closeIndex).Concat(new[] { "    " + line }).Concat(lines.Skip(closeIndex)).ToArray();
-            lines = mergedLines;
-        }
-
-        return string.Join(newline, lines);
-    }
-
-    /// <summary>构建单章节索引行，供新建与合并共用。</summary>
-    /// <param name="chapter">章节 ID。</param>
-    /// <param name="chapterName">章节显示名。</param>
-    /// <param name="levels">已排序去重的关卡列表。</param>
-    /// <returns>一行 Lua 表项。</returns>
-    private static string BuildIndexLine(string chapter, string chapterName, IReadOnlyList<string> levels)
-    {
-        var quotedLevels = string.Join(", ", levels.Select(value => "\"" + Escape(value) + "\""));
-        return $"[\"{Escape(chapter)}\"] = {{ ChapterId = \"{Escape(chapter)}\", " +
-               $"ChapterName = \"{Escape(chapterName)}\", LevelCount = {levels.Count}, " +
-               $"Levels = {{ {quotedLevels} }} }},";
     }
 
     #endregion

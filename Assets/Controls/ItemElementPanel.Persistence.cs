@@ -197,18 +197,13 @@ public sealed partial class ItemElementPanel : UserControl
             return;
         }
 
-        var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "导入元件配置表",
-            AllowMultiple = false,
-            FileTypeFilter = new[]
-            {
-                new FilePickerFileType("CSV 配置表") { Patterns = new[] { "*.csv" } },
-                FilePickerFileTypes.All,
-            },
-        });
+        var path = await FileDialogService.PickFileAsync(
+            top,
+            "导入元件配置表",
+            new FilePickerFileType("CSV 配置表") { Patterns = new[] { "*.csv" } },
+            FilePickerFileTypes.All);
 
-        if (files.Count == 0 || files[0].TryGetLocalPath() is not { } path)
+        if (path is null)
         {
             return;
         }
@@ -242,18 +237,14 @@ public sealed partial class ItemElementPanel : UserControl
             return;
         }
 
-        var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "导出元件配置表",
-            SuggestedFileName = _store.DefaultCsvFileName,
-            DefaultExtension = "csv",
-            FileTypeChoices = new[]
-            {
-                new FilePickerFileType("CSV 配置表") { Patterns = new[] { "*.csv" } },
-            },
-        });
+        var path = await FileDialogService.SaveFileAsync(
+            top,
+            "导出元件配置表",
+            _store.DefaultCsvFileName,
+            "csv",
+            new FilePickerFileType("CSV 配置表") { Patterns = new[] { "*.csv" } });
 
-        if (file?.TryGetLocalPath() is not { } path)
+        if (path is null)
         {
             return;
         }

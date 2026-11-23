@@ -210,7 +210,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         _fieldName.Text = string.IsNullOrWhiteSpace(row.TemplateName) ? row.Icon : row.TemplateName;
         _fieldAnim.Text = string.IsNullOrWhiteSpace(row.AnimName) ? MapToolDefaults.DefaultAnimName : row.AnimName;
         _fieldLoop.Text = row.Loop ? "1" : "0";
-        _fieldSpeed.Text = row.Speed.ToString("0.###", CultureInfo.InvariantCulture);
+        _fieldSpeed.Text = TableTextFormat.Number(row.Speed);
         _fieldOrder.Text = row.SortOrder.ToString(CultureInfo.InvariantCulture);
         _fieldShadow.Text = row.ShadowEnabled ? "1" : "0";
         _fieldCollectible.Text = row.IsCollectible ? "1" : "0";
@@ -391,7 +391,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         _fieldName.Text = template.TemplateName;
         _fieldAnim.Text = template.AnimName;
         _fieldLoop.Text = template.Loop ? "1" : "0";
-        _fieldSpeed.Text = template.Speed.ToString("0.###", CultureInfo.InvariantCulture);
+        _fieldSpeed.Text = TableTextFormat.Number(template.Speed);
         _fieldOrder.Text = template.SortOrder.ToString(CultureInfo.InvariantCulture);
         _fieldShadow.Text = template.ShadowEnabled ? "1" : "0";
         _fieldCollectible.Text = template.IsCollectible ? "1" : "0";

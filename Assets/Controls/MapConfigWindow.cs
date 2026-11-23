@@ -20,6 +20,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using MapEditorTool.Models;
+using MapEditorTool.Services;
 
 namespace MapEditorTool.Controls;
 
@@ -287,48 +288,23 @@ public sealed class MapConfigWindow : Window
         public bool IsFile { get; }
     }
 
+    /// <summary>按字段类型选择文件或目录，并把结果按 Unity 口径写回。</summary>
     private async Task PickPathAsync(PathField field)
     {
-        var start = await ResolveStartFolderAsync(field.Box.Text, field.IsFile);
+        var start = ResolveStartPath(field.Box.Text, field.IsFile);
 
-        if (field.IsFile)
-        {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "选择配置文件",
-                AllowMultiple = false,
-                SuggestedStartLocation = start,
-                FileTypeFilter = new[]
+        var local = field.IsFile
+            ? await FileDialogService.PickFileFromAsync(
+                this,
+                "选择配置文件",
+                start,
+                new FilePickerFileType("配置表")
                 {
-                    new FilePickerFileType("配置表")
-                    {
-                        Patterns = new[] { "*.xlsm", "*.xlsx", "*.csv", "*.json" },
-                    },
-                },
-            });
+                    Patterns = new[] { "*.xlsm", "*.xlsx", "*.csv", "*.json" },
+                })
+            : await FileDialogService.PickFolderAsync(this, "选择目录", start);
 
-            if (files.Count == 0)
-            {
-                return;
-            }
-
-            ApplyPicked(field.Box, files[0].TryGetLocalPath());
-            return;
-        }
-
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "选择目录",
-            AllowMultiple = false,
-            SuggestedStartLocation = start,
-        });
-
-        if (folders.Count == 0)
-        {
-            return;
-        }
-
-        ApplyPicked(field.Box, folders[0].TryGetLocalPath());
+        ApplyPicked(field.Box, local);
     }
 
     /// <summary>把选中的绝对路径按 Unity 口径转成相对路径写回文本框。</summary>
@@ -343,7 +319,7 @@ public sealed class MapConfigWindow : Window
     }
 
     /// <summary>解析选择器的初始目录：优先当前配置所在目录，其次 Assets 目录。</summary>
-    private async Task<IStorageFolder?> ResolveStartFolderAsync(string? current, bool isFile)
+    private string? ResolveStartPath(string? current, bool isFile)
     {
         var assets = _projectRoot is null ? null : Path.Combine(_projectRoot, "Assets");
         var absolute = EditorSettings.ResolveProjectPath(current, _projectRoot);
@@ -351,12 +327,7 @@ public sealed class MapConfigWindow : Window
             ? assets
             : isFile ? Path.GetDirectoryName(absolute) : absolute;
 
-        if (target is null || !Directory.Exists(target))
-        {
-            return null;
-        }
-
-        return await StorageProvider.TryGetFolderFromPathAsync(target);
+        return target is not null && Directory.Exists(target) ? target : null;
     }
 
     #endregion

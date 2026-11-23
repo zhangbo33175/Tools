@@ -154,9 +154,9 @@ SortOrder / DialogBubble / ShadowEnabled / IsCollectible / RespawnTime`，比旧
 | `SenceMapTool.uxml` / `.uss` | `MainWindow.axaml`（203px 左栏 + 主区 + 底部属性横排，按 uxml 复查复刻） |
 | 底部三栏 | 420px 场景设置 / 自适应「对象编辑」/ 900px「属性」+ 280px 交通设置，三张等高卡片（高 336） |
 | `SceneEditModule` | `Controls/MapCanvas.*.cs` + `MainWindow.*.cs` 的场景编辑部分 |
-| `ItemElementEditModule` | `Controls/ItemElementPanel.cs` + `Services/TemplateStore.cs`（模板 CRUD 与配置表读写） |
+| `ItemElementEditModule` | `Controls/ItemElementPanel.cs` + `Services/TemplateStore*.cs`（模板 CRUD 与配置表读写） |
 | `ObjectTemplateManager` / `TemplateFieldView` | `Services/TemplateCatalog.cs`（19 个内置模板）+ `Models/TemplateDisplay.cs`（枚举显示名映射） |
-| `TemplateConfigReader` / `TemplateConfigWriter` | `Services/TemplateStore.cs`（29 列兼容 + 4 扩展列） |
+| `TemplateConfigReader` / `TemplateConfigWriter` | `Services/TemplateStore.Csv.cs`（29 列兼容 + 4 扩展列） |
 | `TemplateIdGenerator` | `Services/TemplateStore.cs` 的 `NextTemplateId()`（人物 1000+/建筑 2000+/物件 3000+） |
 | `MapToolModels.cs` | `Models/EditorModels.cs` |
 | `MapToolConstants.cs` | `Models/EditorModels.cs` 的 `MapToolDefaults` |
@@ -936,19 +936,49 @@ MapEditorTool/
 ├─ MainWindow.SaveImport.cs    保存、重载、发布、保存目录、迷雾载入与切片导出
 ├─ MainWindow.PsdImport.cs     PSD 源探测、重导入、切片落盘、失败回滚与导入日志
 ├─ Models/
-│  ├─ EditorModels.cs          常量、枚举、模板、摆放对象、地图配置
+│  ├─ EditorModels.cs          基础常量、默认值、枚举、图层键与显示名映射
+│  ├─ EditorTemplateModels.cs  物体模板模型：公共属性、交互与层级字段
+│  ├─ NineSliceModels.cs       九宫格模型：边距、中心模式与显示名/代码互转
+│  ├─ AnimationModels.cs       动画模型：动画来源常量与序列帧片段
+│  ├─ PlacedObject.cs          地图实例模型：位姿、碰撞、阴影、路径与模板引用
+│  ├─ EditorMapModels.cs       地图数据模型：章节、关卡、区域、交通、迷雾与地图配置
 │  ├─ EditorSettings.cs        地图配置弹窗的编辑级设置 + 路径口径（Assets/… 与 ../…）解析
 │  ├─ TrafficModels.cs         交通（红绿灯/斑马线）与迷雾（区域/格子）模型
 │  └─ TemplateDisplay.cs       枚举显示名 ⇄ 编码，交互码双口径归一
 ├─ Services/
 │  ├─ PsdReader.cs             零依赖 PSD/PSB 解析：图层结构 + 通道元信息 + RAW/RLE 像素解码
-│  ├─ PsdSliceBaker.cs         按图层像素自裁切片 + 整幅底图合成（slices.json 缓存）
+│  ├─ PsdSliceBaker.cs         公开烘焙流程：导入预览、导出切片、整幅底图合成
+│  ├─ PsdSliceModels.cs        PSD 切片模型：切片记录、切片集合与清单缓存 DTO
+│  ├─ PsdSliceBaker.Dedupe.cs  切片去重：尺寸索引、0° 指纹与 90° 旋转匹配
+│  ├─ PsdSliceBaker.Composite.cs 底图合成与像素处理：source-over、透明边裁剪、旋转与安全命名
+│  ├─ PsdSliceBaker.Manifest.cs  切片清单：PSD 源文件戳与 slices.json 读写
+│  ├─ FileDialogService.cs     统一文件/目录选择：取消、起始目录与本地路径转换
 │  ├─ PngWriter.cs             零依赖 RGBA PNG 编码（ZLibStream + CRC32）
-│  ├─ MapJsonService.cs        Unity 口径 JSON 导出
+│  ├─ MapJsonService.cs        Unity 口径 JSON 导出入口、物件/角色组装与共享字段填充
+│  ├─ MapJsonService.GridTraffic.cs  占据格、区域、格子、红绿灯与横道载荷组装
+│  ├─ MapJsonService.Payloads.cs     运行时 JSON 载荷 DTO（配置、物件、角色、交通与收集物）
 │  ├─ MapJsonLoader.cs         地图 JSON 反序列化（--open-map 打开存档用）
-│  ├─ MapPublishService.cs     发布目标、预检、入口、清单、格式辅助与 Unity JSON 出口
-│  ├─ MapPublishService.Cocos.cs Cocos Lua 主表、角色/建筑/物件/路径/交通子表与章节索引
+│  ├─ MapPublishService.cs     发布目标/选项、预检、发布入口与 Unity JSON 出口
+│  ├─ MapPublishSettings.cs    发布设置持久化：默认输出目录与 PublishSettings.json 读写
+│  ├─ MapPublishService.Files.cs  发布文件写入：清单、源哈希与原子写文件
+│  ├─ MapPublishService.Lua.cs    Lua 格式辅助：文件头、转义、数值/布尔与数组字面量
+│  ├─ MapPublishService.Cocos.cs          Cocos Lua 发布入口、主表分段、共享输出辅助
+│  ├─ MapPublishService.Cocos.Entities.cs 角色/建筑/物件子表骨架与公共字段
+│  ├─ MapPublishService.Cocos.Traffic.cs  路径、红绿灯、横道、区域与格子
+│  ├─ MapPublishService.Cocos.Index.cs    章节索引创建、合并与关卡行
 │  ├─ XlsmTableReader.cs       零依赖 OOXML 表格读取（ZipArchive + 工作表/共享串解析）
+│  ├─ ItemFieldNames.cs        物件配置字段键、列名别名、数值列与表头识别词
+│  ├─ ItemTableFile.cs         单张 CSV / xlsm 表：列索引、行号分配与字段写回
+│  ├─ ItemConfigTableIO.cs     配置表 IO 统一入口：按格式分派 CSV / xlsm 实现
+│  ├─ ItemRowMapper.cs         配置表行映射：列索引、单元格取值与行模型绑定
+│  ├─ ItemCsvTableIO.cs        CSV 实现：读取、空表创建、单元格拆分与写回
+│  ├─ ItemXlsmTableIO.cs       xlsm 实现：OOXML 读取、列映射、单元格写回与数值判定
+│  ├─ ItemElementTable.cs     物品元件行模型：字段、模板双向映射与描述
+│  ├─ ItemConfigSet.cs         配置表文件夹入口：常量、字段、构造与公开属性
+│  ├─ ItemConfigSet.Persistence.cs 配置表集合持久化：夹内读取、按格式写回与保存编排
+│  ├─ ItemConfigSet.Mutations.cs   配置表集合增删改：按图片名匹配、分类落表与模板映射
+│  ├─ ItemConfigSet.Index.cs       配置表集合索引：图片名/模板名归一与跨表归属重建
+│  ├─ TableTextFormat.cs       配置表统一文本口径：紧凑数值与 CSV 单元格转义
 │  ├─ ChapterRepository.cs     章节表 / 主关卡表 → 章节 · 关卡目录（Excel 缺失回退 Lua 表）
 │  ├─ AssetLibrary.cs          资源根目录索引、按资源名找图、未配置 PNG 扫描
 │  ├─ ObjectHitRules.cs        统一命中规则：选中 / 路径加点模式、透明像素过滤、路径落点判定
@@ -956,26 +986,51 @@ MapEditorTool/
 │  ├─ PsdLayerRules.cs         PSD 图层名归一、层级分类、显示尺寸、切片安全名与整幅层判定
 │  ├─ SpriteAlphaProbe.cs      单像素 alpha 采样，不生成整图掩码
 │  ├─ TemplateCatalog.cs       内置模板库 + 空默认地图（CreateEmptyMap）
-│  ├─ TemplateStore.cs         模板 JSON/CSV 读写、ID 生成
+│  ├─ TemplateStore.cs         模板仓库入口：公开 CRUD、ID 生成与持久化编排
+│  ├─ TemplateStore.Json.cs    模板 JSON 读取、兼容载荷映射与布局常量
+│  ├─ TemplateStore.Csv.cs     Unity 口径 CSV 列定义、表头识别与单元格解析
 │  ├─ EditorSettingsStore.cs   地图配置落盘（EditorSettings.json，替代 EditorPrefs）
 │  └─ TemplateSyncService.cs   模板 → 场景实例字段同步
 └─ Controls/
    ├─ MapCanvas.cs             自绘画布：常量、字段、构造、公开 API 与坐标换算
-   ├─ MapCanvas.Rendering.cs   画布绘制：底图、网格、精灵、选中框、路径与交通标记
+   ├─ MapCanvas.Properties.cs  画布状态属性：视口、选中、摆放、图层显隐与动画预览
+   ├─ MapCanvas.Rendering.cs   绘制总入口：性能采样、底图、边界、图层顺序与整图绘制
+   ├─ MapCanvas.TrafficRender.cs 交通绘制：人行道/道路轮廓、横道、红绿灯、雾效与笔刷
+   ├─ MapCanvas.AnimationRender.cs 预览与动画：路径演示包围盒、序列帧缓存、Spine 播放
+   ├─ MapCanvas.ObjectRender.cs 物件绘制：精灵、九宫格、平铺、标签与对象层
+   ├─ MapCanvas.SelectionRender.cs 选中与编辑：选中框、占格、区域框、当前格与路径编辑
    ├─ MapCanvas.Interaction.cs 画布交互：缩放、平移、拖动、右键与键盘
    ├─ MapCanvas.Placement.cs   摆放与拾取：点击落位、命中检测、路径加点与选中
    ├─ MapCanvas.FogBrush.cs    迷雾笔刷：采样、落笔、擦除与区域提交
-   ├─ ItemElementPanel.cs      物品元件面板：常量、列表、工具条与公开入口
+   ├─ AnimationPreviewWindow.cs 场景动画预览窗：常量、字段、构造与关闭生命周期
+   ├─ AnimationPreviewWindow.Layout.cs 预览布局骨架：根网格、顶栏、主体与底栏
+   ├─ AnimationPreviewWindow.Panes.cs 预览三栏：物体列表、中心画布与右侧信息区
+   ├─ AnimationPreviewWindow.List.cs 预览列表：筛选、排序、行构建、选中高亮与右侧信息
+   ├─ AnimationPreviewWindow.Playback.cs 预览播放：播放控制、逐帧推进、Spine 导入与解析辅助
+   ├─ CollectibleWizardWindow.cs 收集物向导窗口：字段、构造与结果属性
+   ├─ CollectibleWizardWindow.Shell.cs 向导外壳：窗口骨架、步骤切换与底栏按钮
+   ├─ CollectibleWizardWindow.Quantity.cs 向导第一步：目标数量、层级与地图预览
+   ├─ CollectibleWizardWindow.Material.cs 向导第二步：已选槽位、候选素材网格与缩略图
+   ├─ ItemElementPanel.cs      物品元件面板：常量、状态、构造与公开入口
+   ├─ ItemElementPanel.Toolbar.cs 元件工具条：标题、状态、保存/添加/导入/导出与按钮工厂
+   ├─ ItemElementPanel.Layout.cs 元件布局骨架：左侧列表、右侧属性表单与整体分栏
+   ├─ ItemElementPanel.List.cs 元件列表：分页切换、行构建、缩略图加载与选中同步
+   ├─ ItemElementPanel.Events.cs 元件事件参数：模板可见性变化
    ├─ ItemElementPanel.Form.cs 元件表单骨架：折叠分组、字段行与九宫格编辑区
    ├─ ItemElementPanel.Binding.cs 元件字段绑定与回填：控件事件、字段写回、选中刷新
    ├─ ItemElementPanel.Persistence.cs 元件增删与持久化：模板 CRUD、JSON/CSV、保存
    ├─ ConfirmWindow.cs         通用确认弹窗（二选一 / 可选“不保存”三选一，切换关卡前保存提醒）
    ├─ MapConfigWindow.cs       地图配置弹窗：六路径 + 基线步长
-   ├─ FogEditPanel.cs          迷雾编辑面板：笔刷设置 + 内嵌画布 + 区域列表
+   ├─ FogEditPanel.cs          迷雾编辑面板：状态、绑定与公开接口
+   ├─ FogEditPanel.Layout.cs   迷雾布局：顶栏、笔刷设置、区域列表与内嵌画布
+   ├─ FogEditPanel.Regions.cs  迷雾区域：新增、清空、刷新、行构建、撤销与重命名
+   ├─ FogEditPanel.Drawing.cs  迷雾绘制：开始/停止绘制、同步设置与提交回调
    ├─ ResourceOrganizePanel.cs 资源整理面板：常量、绑定、构造与分类过滤
    ├─ ResourceOrganizePanel.Layout.cs 资源面板布局：扫描预览、字段表与配置表骨架
    ├─ ResourceOrganizePanel.Unconfigured.cs 未配置资源：扫描、过滤、预览、补字段与加入配置表
-   ├─ ResourceOrganizePanel.Table.cs 已配置资源表：四行表头、可编辑单元格与操作列
+   ├─ ResourceOrganizePanel.Table.cs 已配置资源表：列定义、当前表解析与模板移除
+   ├─ ResourceOrganizePanel.Table.Rows.cs 已配置资源表：行渲染、行内编辑、删除与撤销
+   ├─ ResourceOrganizePanel.Table.Grid.cs 已配置资源表：四行表头、单元格工厂与整体网格刷新
    └─ ResourceOrganizePanel.Persistence.cs 资源持久化：配置表保存、打开与路径选择
 ```
 

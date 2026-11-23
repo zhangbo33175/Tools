@@ -87,24 +87,13 @@ public sealed partial class AnimationPreviewWindow : Window
     /// </summary>
     private async Task ImportSpineAsync()
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "选择 Spine 骨架（.json / .skel）",
-            AllowMultiple = false,
-            FileTypeFilter = new[]
+        var local = await FileDialogService.PickFileAsync(
+            this,
+            "选择 Spine 骨架（.json / .skel）",
+            new FilePickerFileType("Spine 骨架")
             {
-                new FilePickerFileType("Spine 骨架")
-                {
-                    Patterns = new[] { "*.json", "*.skel" },
-                },
-            },
-        });
-        if (files.Count == 0)
-        {
-            return;
-        }
-
-        var local = files[0].TryGetLocalPath();
+                Patterns = new[] { "*.json", "*.skel" },
+            });
         if (string.IsNullOrWhiteSpace(local))
         {
             return;
@@ -193,9 +182,9 @@ public sealed partial class AnimationPreviewWindow : Window
     /// <summary>取得类型对应的强调色；未知类型回退到物件色。</summary>
     private static IBrush TypeBrush(MapObjectType type) => type switch
     {
-        MapObjectType.Building => BuildingBrush,
-        MapObjectType.Character => CharacterBrush,
-        _ => PropBrush,
+        MapObjectType.Building => UiTheme.ObjectTag.Building,
+        MapObjectType.Character => UiTheme.ObjectTag.Character,
+        _ => UiTheme.ObjectTag.Prop,
     };
 
     /// <summary>取得图层中文显示名，统一由地图图层键解析。</summary>

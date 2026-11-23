@@ -253,17 +253,7 @@ public partial class MainWindow : Window
         // 文件选择器会抢走焦点，部分窗口管理器下会导致画布选中态被清掉；
         // 先记下导入目标，选完目录仍能自动绑定到用户刚才选中的实例。
         var target = Canvas.Selected;
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "选择序列帧图片目录",
-            AllowMultiple = false,
-        });
-        if (folders.Count == 0)
-        {
-            return;
-        }
-
-        var local = folders[0].TryGetLocalPath();
+        var local = await FileDialogService.PickFolderAsync(this, "选择序列帧图片目录");
         if (string.IsNullOrWhiteSpace(local))
         {
             return;
@@ -344,24 +334,13 @@ public partial class MainWindow : Window
     private async Task ImportSpineAsync()
     {
         var target = Canvas.Selected;
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "选择 Spine 骨架（.json / .skel）",
-            AllowMultiple = false,
-            FileTypeFilter = new[]
+        var local = await FileDialogService.PickFileAsync(
+            this,
+            "选择 Spine 骨架（.json / .skel）",
+            new FilePickerFileType("Spine 骨架")
             {
-                new FilePickerFileType("Spine 骨架")
-                {
-                    Patterns = new[] { "*.json", "*.skel" },
-                },
-            },
-        });
-        if (files.Count == 0)
-        {
-            return;
-        }
-
-        var local = files[0].TryGetLocalPath();
+                Patterns = new[] { "*.json", "*.skel" },
+            });
         if (string.IsNullOrWhiteSpace(local))
         {
             return;
