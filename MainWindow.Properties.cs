@@ -33,11 +33,13 @@ public partial class MainWindow : Window
 {
     #region 数据同步
 
+    /// <summary>
+    /// 把当前选中实例的完整状态回填到右侧属性区，并按选中状态启用 / 清空控件。
+    /// <para>回填期间用 <c>_suppressSync</c> 防止控件事件反向写回实例；交通标记先统一同步再刷新 UI。</para>
+    /// </summary>
     private void SyncProperties()
     {
-        TrafficMarkService.SyncObjectAreas(_config);
-        TrafficMarkService.SyncObjectCrosswalks(_config);
-        TrafficMarkService.SyncObjectLights(_config);
+        TrafficMarkService.SyncObjectMarks(_config);
         var item = Canvas.Selected;
         _suppressSync = true;
 
@@ -61,8 +63,7 @@ public partial class MainWindow : Window
             PropBandInfoBox.IsVisible = false;
             SetPropertyPanelEnabled(false);
             _suppressSync = false;
-            RefreshLightBindList();
-            RefreshTrafficMarkButtons();
+            RefreshTrafficUi();
             return;
         }
 
@@ -118,8 +119,7 @@ public partial class MainWindow : Window
         SelectComboByText(PropTrafficRole, TrafficRoles.ToDisplay(item.TrafficRole));
         PropStopLine.Text = $"{item.StopLineX:0}, {item.StopLineY:0}";
         PropYellowAsRed.IsChecked = item.YellowTreatAsRed;
-        RefreshLightBindList();
-        RefreshTrafficMarkButtons();
+        RefreshTrafficUi();
 
         var band = LayerBands.Of(item);
         PropSummary.Text =

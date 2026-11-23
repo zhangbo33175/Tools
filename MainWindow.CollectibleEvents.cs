@@ -5,7 +5,7 @@
  * filename:  MainWindow.CollectibleEvents.cs
  * author:    云毅
  * created:   2026
- * descrip:   主窗口收集物事件：向导接线、计划同步、随机生成与清空。
+ * descrip:   主窗口收集物事件：向导接线、计划同步、随机生成、清空与添加收集。
  ***************************************************************/
 using System;
 using System.Collections.Generic;
@@ -296,9 +296,69 @@ public partial class MainWindow : Window
         SetMessage($"已清空 {removed} 个收集物；面板素材与目标数量保留。");
     }
 
-    /// <summary>
-    /// 资源行左侧小图标：模板配了 <c>ImagePath</c> 且能解析到贴图时显示 18×18 缩略图（Unity 资源列表同款），
-    /// 解析不到就退回图层色块占位。
-    /// </summary>
+    /// <summary>「添加收集」：两步向导（数量 → 素材），完成后打开收集物浮窗。</summary>
+    private async Task AddCollectibleAsync()
+    {
+        var candidates = BuildCollectibleCandidates();
+        if (candidates.Count == 0)
+        {
+            SetMessageError("没有可用作收集物的物件表素材：请先在「物品元件编辑」里配置物件素材。");
+            return;
+        }
+
+        var wizard = new CollectibleWizardWindow(_config, candidates, _config.Collectibles, _assets);
+        bool confirmed;
+        try
+        {
+            confirmed = await wizard.ShowDialog<bool>(this);
+        }
+        catch (Exception error)
+        {
+            SetMessageError($"打开添加收集向导失败：{error.Message}");
+            return;
+        }
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _config.Collectibles.Total = wizard.TotalCount;
+        _config.Collectibles.LayerMode = wizard.LayerMode;
+        _config.Collectibles.Kinds = wizard.SelectedTemplates
+            .Select(CollectibleKindData.FromTemplate)
+            .ToList();
+
+        _pendingTemplate = null;
+        Canvas.PendingTemplate = null;
+        Canvas.PendingCollectibleTemplate = null;
+        // 新建计划时确保收集物层处于可见状态：即使用户之前关过该层，也能立刻看到摆放结果
+        if (LayerCollectible.IsChecked != true)
+        {
+            LayerCollectible.IsChecked = true;
+        }
+
+        Canvas.HiddenLayers.Remove(MapLayerKeys.Collectible);
+        SyncCollectibleEntry();
+        ShowCollectiblePanel(CollectibleDockSide.None);
+        SetMessage($"收集物计划已建立：目标 {_config.Collectibles.Total} 个、{_config.Collectibles.Kinds.Count} 种素材、{CollectibleLayers.DisplayName(_config.Collectibles.LayerMode)}。可在右侧收集物面板拖放或随机生成。");
+    }
+
+    /// <summary>收集物候选池：优先用物件表（与资源列表同源），没有表时退回模板库里的 Prop。</summary>
+    /// <returns>去重后的模板列表。</returns>
+    private List<ObjectTemplate> BuildCollectibleCandidates()
+    {
+        var table = _itemTable?.FileForCategory(ObjectTypeNames.Of(MapObjectType.Prop));
+        var candidates = table is null
+            ? _templates.Where(template => template.Type == MapObjectType.Prop).ToList()
+            : table.Rows.Select(row => BuildTablePaletteTemplate(row, MapObjectType.Prop)).ToList();
+
+        return candidates
+            .Where(template => !string.IsNullOrWhiteSpace(template.TemplateId))
+            .GroupBy(template => template.TemplateId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+    }
+
 }
 

@@ -50,6 +50,12 @@ public static class LayerOrder
 
     #region 层键与基线
 
+    /// <summary>可用层键总数（Unity 八层）。</summary>
+    public static int LayerCount => MapLayerKeys.AllKeys.Length;
+
+    /// <summary>全局 SortOrder 上界：最后一层的最高档位。</summary>
+    public static int MaxSortOrder => (LayerCount - 1) * BaselineStep + (SlotCount - 1);
+
     /// <summary>把任意层键 / 旧键归一成八层键（ground/grass/plant → greenery，cat → character，effect → foreground）。</summary>
     /// <param name="layerKey">原始键（可为空）。</param>
     /// <returns>八层键之一，无法识别回退道具层。</returns>
@@ -79,7 +85,11 @@ public static class LayerOrder
     /// <summary>层基线 SortOrder：background 0 / greenery 10 / … / bubble 70。</summary>
     /// <param name="layerKey">层键（旧键会先归一）。</param>
     /// <returns>基线值。</returns>
-    public static int Base(string? layerKey) => MapLayerKeys.AllKeys.ToList().IndexOf(Normalize(layerKey)) * BaselineStep;
+    public static int Base(string? layerKey)
+    {
+        var index = Array.IndexOf(MapLayerKeys.AllKeys, Normalize(layerKey));
+        return Math.Max(0, index) * BaselineStep;
+    }
 
     /// <summary>
     /// 参与排序的基线：默认取有效层基线；手改过「遮挡带」时按带位抬到该带的代表基线

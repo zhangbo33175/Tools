@@ -5,7 +5,7 @@
  * filename:  MainWindow.EventWiring.cs
  * author:    云毅
  * created:   2026
- * descrip:   主窗口事件装配：模式/资源/交通/雾效/属性/画布的控件接线。
+ * descrip:   主窗口核心事件装配：模式、雾效、资源与物品元件面板的控件接线。
  ***************************************************************/
 using System;
 using System.Collections.Generic;

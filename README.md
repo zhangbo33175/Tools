@@ -923,14 +923,18 @@ MapEditorTool/
 ├─ Program.cs                  入口，含 --psd / --export-config / --import-config 无界面模式
 ├─ App.axaml(.cs)              主题（TexturePacker 浅色皮肤）
 ├─ MainWindow.axaml(.cs)       窗口壳与字段 / 构造 / 辅助
-├─ MainWindow.LeftPanel.cs     左侧章节、分类 Tab、资源列表
+├─ MainWindow.LeftPanel.cs     左侧章节、分类 Tab、资源列表与类型切换
+├─ MainWindow.CollectiblePanel.cs  收集物统计格、素材行与数量刷新
+├─ MainWindow.CollectibleLayout.cs 收集物浮窗显示/停靠/拖动与边界约束
+├─ MainWindow.CollectibleEvents.cs 收集物向导接线、计划同步、随机生成、清空与添加收集
 ├─ MainWindow.EventWiring.cs   模式、雾效、资源、物品元件与公共 Tab 事件装配
 ├─ MainWindow.TrafficEvents.cs 交通四标记、停止线与绑定灯列表事件
 ├─ MainWindow.SceneEvents.cs   工具条、画布、图层开关与场景字段事件
 ├─ MainWindow.ObjectEvents.cs  物件字段、动画导入、预览与路径绘制事件
 ├─ MainWindow.PropertyEvents.cs 属性输入、区域与变换、层级排序事件
 ├─ MainWindow.Properties.cs    对象字段、图层、路径列表、场景字段与地图配置同步
-├─ MainWindow.SaveImport.cs    保存、发布、导出切片、PSD 导入与资源目录解析
+├─ MainWindow.SaveImport.cs    保存、重载、发布、保存目录、迷雾载入与切片导出
+├─ MainWindow.PsdImport.cs     PSD 源探测、重导入、切片落盘、失败回滚与导入日志
 ├─ Models/
 │  ├─ EditorModels.cs          常量、枚举、模板、摆放对象、地图配置
 │  ├─ EditorSettings.cs        地图配置弹窗的编辑级设置 + 路径口径（Assets/… 与 ../…）解析
@@ -942,6 +946,8 @@ MapEditorTool/
 │  ├─ PngWriter.cs             零依赖 RGBA PNG 编码（ZLibStream + CRC32）
 │  ├─ MapJsonService.cs        Unity 口径 JSON 导出
 │  ├─ MapJsonLoader.cs         地图 JSON 反序列化（--open-map 打开存档用）
+│  ├─ MapPublishService.cs     发布目标、预检、入口、清单、格式辅助与 Unity JSON 出口
+│  ├─ MapPublishService.Cocos.cs Cocos Lua 主表、角色/建筑/物件/路径/交通子表与章节索引
 │  ├─ XlsmTableReader.cs       零依赖 OOXML 表格读取（ZipArchive + 工作表/共享串解析）
 │  ├─ ChapterRepository.cs     章节表 / 主关卡表 → 章节 · 关卡目录（Excel 缺失回退 Lua 表）
 │  ├─ AssetLibrary.cs          资源根目录索引、按资源名找图、未配置 PNG 扫描

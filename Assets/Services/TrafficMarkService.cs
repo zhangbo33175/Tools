@@ -205,6 +205,18 @@ public static class TrafficMarkService
         }
     }
 
+    /// <summary>
+    /// 物件变化后的交通标记统一同步入口。
+    /// <para>顺序固定：先同步人行道/道路区域，再同步横道几何，最后同步灯与横道的绑定关系，避免后者读到旧几何。</para>
+    /// </summary>
+    /// <param name="config">地图配置。</param>
+    public static void SyncObjectMarks(MapConfigData config)
+    {
+        SyncObjectAreas(config);
+        SyncObjectCrosswalks(config);
+        SyncObjectLights(config);
+    }
+
     /// <summary>物件被移动/缩放后，把以它为范围的人行道 / 道路区域同步到最新包围盒。</summary>
     /// <param name="config">地图配置。</param>
     public static void SyncObjectAreas(MapConfigData config)

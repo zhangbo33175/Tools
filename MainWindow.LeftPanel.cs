@@ -5,7 +5,7 @@
  * filename:  MainWindow.LeftPanel.cs
  * author:    云毅
  * created:   2026
- * descrip:   主窗口左侧装配：章节树、关卡行、资源列表与收集物面板。
+ * descrip:   主窗口左侧装配：章节树、关卡行、资源列表与类型切换。
  ***************************************************************/
 using System;
 using System.Collections.Generic;
@@ -569,6 +569,10 @@ public partial class MainWindow : Window
         return row;
     }
 
+    /// <summary>
+    /// 资源行左侧小图标：模板配了 <c>ImagePath</c> 且能解析到贴图时显示 18×18 缩略图（Unity 资源列表同款），
+    /// 解析不到就退回图层色块占位。
+    /// </summary>
     private Control BuildResourceIcon(ObjectTemplate template)
     {
         Avalonia.Media.Imaging.Bitmap? bitmap = null;

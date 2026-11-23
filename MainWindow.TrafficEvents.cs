@@ -31,6 +31,43 @@ namespace MapEditorTool;
 
 public partial class MainWindow : Window
 {
+    private const string SidewalkLabel = "人行道";
+    private const string RoadLabel = "道路";
+    private const string CrosswalkLabel = "横道";
+    private const string TrafficLightLabel = "红绿灯";
+
+    /// <summary>交通标记按钮与业务类型的对应关系，刷新状态时只维护这一张表。</summary>
+    private readonly record struct TrafficMarkButtonUi(
+        Button Button,
+        TrafficMarkKind Kind,
+        string Label,
+        string Shortcut);
+
+    private IEnumerable<TrafficMarkButtonUi> TrafficMarkButtonUis()
+    {
+        yield return new TrafficMarkButtonUi(BtnToolSidewalk, TrafficMarkKind.Sidewalk, SidewalkLabel, "F1");
+        yield return new TrafficMarkButtonUi(BtnToolRoad, TrafficMarkKind.Road, RoadLabel, "F2");
+        yield return new TrafficMarkButtonUi(BtnToolCrosswalk, TrafficMarkKind.Crosswalk, CrosswalkLabel, "F3");
+        yield return new TrafficMarkButtonUi(BtnToolLight, TrafficMarkKind.Light, TrafficLightLabel, "F4");
+    }
+
+    /// <summary>交通标记入口的统一前置校验：没有选中物件时给出类型化提示并刷新按钮。</summary>
+    /// <param name="markLabel">标记类型显示名。</param>
+    /// <param name="objectHint">期望选中的物件描述。</param>
+    /// <returns>当前选中物件；未选中时返回 null。</returns>
+    private PlacedObject? RequireSelectedObjectForMark(string markLabel, string objectHint)
+    {
+        var item = Canvas.Selected;
+        if (item is not null)
+        {
+            return item;
+        }
+
+        SetMessage($"标记{markLabel}：请先在画布上选中{objectHint}");
+        RefreshTrafficMarkButtons();
+        return null;
+    }
+
     /// <summary>场景编辑右栏「交通规则」区的装配：工具按钮、载具/角色、停止线、绑定灯、黄灯策略。</summary>
     private void WireTrafficPanel()
     {
@@ -152,12 +189,10 @@ public partial class MainWindow : Window
     /// <param name="type">区域类型：<see cref="RegionTypes.Sidewalk"/> 或 <see cref="RegionTypes.Road"/>。</param>
     private void ToggleSelectedTrafficArea(string type)
     {
-        var item = Canvas.Selected;
-        var roleName = type == RegionTypes.Sidewalk ? "人行道" : "道路";
+        var roleName = type == RegionTypes.Sidewalk ? SidewalkLabel : RoadLabel;
+        var item = RequireSelectedObjectForMark(roleName, "一个物件");
         if (item is null)
         {
-            SetMessage($"标记{roleName}：请先在画布上选中一个物件");
-            RefreshTrafficMarkButtons();
             return;
         }
 
@@ -184,11 +219,9 @@ public partial class MainWindow : Window
     /// </summary>
     private void ToggleSelectedCrosswalkMark()
     {
-        var item = Canvas.Selected;
+        var item = RequireSelectedObjectForMark(CrosswalkLabel, "一个斑马线物件");
         if (item is null)
         {
-            SetMessage("标记横道：请先在画布上选中一个斑马线物件");
-            RefreshTrafficMarkButtons();
             return;
         }
 
@@ -219,11 +252,9 @@ public partial class MainWindow : Window
     /// <summary>把当前选中物件标记 / 取消标记为红绿灯。</summary>
     private void ToggleSelectedTrafficLight()
     {
-        var item = Canvas.Selected;
+        var item = RequireSelectedObjectForMark(TrafficLightLabel, "一个红绿灯物件");
         if (item is null)
         {
-            SetMessage("标记红绿灯：请先在画布上选中一个红绿灯物件");
-            RefreshTrafficMarkButtons();
             return;
         }
 
@@ -250,28 +281,34 @@ public partial class MainWindow : Window
         CommitTrafficMarkChange();
     }
 
+    /// <summary>
+    /// 交通相关 UI 的统一刷新入口：绑定灯列表 + 四个标记按钮。
+    /// 选中变化、标记变更和属性回填都走这里，避免只刷新一半控件。
+    /// </summary>
+    private void RefreshTrafficUi()
+    {
+        RefreshLightBindList();
+        RefreshTrafficMarkButtons();
+    }
+
     /// <summary>同步四个交通标记按钮：未选中禁用，已标记的按钮变成「取消…」。</summary>
     private void RefreshTrafficMarkButtons()
     {
         var item = Canvas.Selected;
         var objectId = item?.Id;
-        var sidewalkMarked = TrafficMarkService.IsMarked(_config, objectId, TrafficMarkKind.Sidewalk);
-        var roadMarked = TrafficMarkService.IsMarked(_config, objectId, TrafficMarkKind.Road);
-        var crosswalkMarked = TrafficMarkService.IsMarked(_config, objectId, TrafficMarkKind.Crosswalk);
-        var lightMarked = TrafficMarkService.IsMarked(_config, objectId, TrafficMarkKind.Light);
-
-        RefreshTrafficMarkButton(BtnToolSidewalk, item, "人行道", "F1", sidewalkMarked);
-        RefreshTrafficMarkButton(BtnToolRoad, item, "道路", "F2", roadMarked);
-        RefreshTrafficMarkButton(BtnToolCrosswalk, item, "横道", "F3", crosswalkMarked);
-        RefreshTrafficMarkButton(BtnToolLight, item, "红绿灯", "F4", lightMarked);
+        foreach (var ui in TrafficMarkButtonUis())
+        {
+            var marked = TrafficMarkService.IsMarked(_config, objectId, ui.Kind);
+            RefreshTrafficMarkButton(ui.Button, item, ui.Label, ui.Shortcut, marked);
+        }
     }
 
-    /// <summary>交通标记变更后的统一收尾：重绘画布、标记文档已改、刷新四个按钮状态。</summary>
+    /// <summary>交通标记变更后的统一收尾：重绘画布、标记文档已改、刷新全部交通 UI。</summary>
     private void CommitTrafficMarkChange()
     {
         Canvas.Refresh();
         Canvas.NotifyDocumentChanged();
-        RefreshTrafficMarkButtons();
+        RefreshTrafficUi();
     }
 
     /// <summary>创建标记时是否附带“已清理其他交通标记”提示的统一定稿。</summary>

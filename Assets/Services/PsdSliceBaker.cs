@@ -659,6 +659,14 @@ public static class PsdSliceBaker
 
     #region 内部实现
 
+    /// <summary>
+    /// 把一组 PSD 图层按顺序合成到整幅 RGBA 画布（straight alpha、source-over）。
+    /// <para>源图层允许超出画布或带负偏移，只取与画布相交的区域；返回 Painted 便于判断是否真的画上过像素。</para>
+    /// </summary>
+    /// <param name="document">PSD 文档尺寸。</param>
+    /// <param name="psdPath">PSD 源文件路径。</param>
+    /// <param name="layers">参与合成的图层（按底到顶顺序）。</param>
+    /// <returns>合成画布、尺寸与实际绘制图层数；没有图层可画时为 null。</returns>
     private static (byte[] Rgba, int Width, int Height, int Painted)? BuildCompositeRgba(
         PsdDocument document,
         string psdPath,
@@ -736,12 +744,16 @@ public static class PsdSliceBaker
         return painted == 0 ? null : (canvas, width, height, painted);
     }
 
+    /// <summary>
+    /// source-over 单通道混合：结果 = (源 × α + 目标 × 目标α × (1-α)) / 输出α。
+    /// </summary>
     private static float Blend(byte source, byte target, float sourceAlpha, float dstAlpha, float outAlpha)
     {
         // src 覆盖在 dst 之上：结果 = (src × α + dst × dstA × (1-α)) / outA
         return (source * sourceAlpha + target * dstAlpha * (1f - sourceAlpha)) / outAlpha;
     }
 
+    /// <summary>浮点通道钳到 0–255 并四舍五入为字节。</summary>
     private static byte ToByte(float value)
     {
         if (value <= 0f)
@@ -752,6 +764,14 @@ public static class PsdSliceBaker
         return value >= 255f ? (byte)255 : (byte)(value + 0.5f);
     }
 
+    /// <summary>
+    /// 判断整幅底图缓存是否仍可复用：源路径、图层数、源文件修改时间三者必须全部一致。
+    /// 缓存戳缺失或解析失败时一律视为过期，宁可重新合成。
+    /// </summary>
+    /// <param name="stampPath">缓存戳文件路径。</param>
+    /// <param name="psdPath">PSD 源文件路径。</param>
+    /// <param name="layerCount">当前参与合成的图层数。</param>
+    /// <returns>true = 缓存仍有效。</returns>
     private static bool IsCompositeFresh(string stampPath, string psdPath, int layerCount)
     {
         try
@@ -773,6 +793,12 @@ public static class PsdSliceBaker
         }
     }
 
+    /// <summary>
+    /// 尝试复用已有整幅底图：按「Background 目录 + Composite_ + PSD 文件名」定位，存在时只记录路径，不重新编码。
+    /// </summary>
+    /// <param name="set">当前切片集合。</param>
+    /// <param name="levelDirectory">关卡资源目录。</param>
+    /// <param name="psdPath">PSD 源文件路径。</param>
     private static void TryReuseComposite(PsdSliceSet set, string levelDirectory, string psdPath)
     {
         var backgroundDirectory = Path.Combine(levelDirectory, MapLayerKeys.FolderName(MapLayerKeys.Background));

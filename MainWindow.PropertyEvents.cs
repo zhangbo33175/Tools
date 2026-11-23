@@ -196,9 +196,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        var max = LayerOrder.BaselineStep * MapLayerKeys.AllKeys.Length - 1;
+        var max = LayerOrder.MaxSortOrder;
         raw = Math.Clamp(raw, 0, max);
-        var layerIndex = Math.Clamp(raw / LayerOrder.BaselineStep, 0, MapLayerKeys.AllKeys.Length - 1);
+        var layerIndex = Math.Clamp(raw / LayerOrder.BaselineStep, 0, LayerOrder.LayerCount - 1);
         var layerKey = MapLayerKeys.AllKeys[layerIndex];
         var slot = Math.Clamp(raw % LayerOrder.BaselineStep, 0, LayerOrder.SlotCount - 1);
         item.DisplayLayer = layerKey;
