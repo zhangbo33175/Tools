@@ -307,6 +307,15 @@ public sealed partial class AnimationPreviewWindow : Window
             _clipValue.Text = $"{sprite.Frames.Count} 帧 · {sprite.Fps:0.##} FPS";
             _durationValue.Text = $"当前第 {frame + 1} 帧";
         }
+        else if (string.Equals(target.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase))
+        {
+            _sourceValue.Text = "Spine";
+            _assetValue.Text = string.IsNullOrWhiteSpace(target.SpineAsset) ? EmptyFieldText : target.SpineAsset;
+            _clipValue.Text = string.IsNullOrWhiteSpace(target.SpineAnimation)
+                ? "资源缺失 · 未指定动画"
+                : $"资源缺失 · {target.SpineAnimation}";
+            _durationValue.Text = EmptyFieldText;
+        }
         else
         {
             _sourceValue.Text = "静态贴图";
@@ -345,9 +354,11 @@ public sealed partial class AnimationPreviewWindow : Window
         _canvasTitle.Text = target.Name;
         _canvasSubtitle.Text = spine is not null
             ? $"Spine · {spine.Name} / {_canvas.CurrentSpineAnimation}"
-            : sprite is not null
-                ? $"序列帧 · {sprite.Name}"
-                : "静态贴图预览";
+            : string.Equals(target.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase)
+                ? $"Spine · {target.SpineAsset} / 资源缺失"
+                : sprite is not null
+                    ? $"序列帧 · {sprite.Name}"
+                    : "静态贴图预览";
     }
 
     /// <summary>填右下角路径三项指标；无有效路径时三项统一显示占位。</summary>

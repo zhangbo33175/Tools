@@ -48,7 +48,7 @@ public sealed partial class CollectibleWizardWindow : Window
     private readonly AssetLibrary _assets;
     private readonly List<ObjectTemplate> _selected = new();
 
-    private readonly NumericUpDown _totalBox;
+    private readonly NumberStepper _totalBox;
     private readonly ComboBox _layerCombo;
     private readonly ContentControl _contentHost = new();
     private readonly TextBlock _statusText = new();
@@ -95,17 +95,13 @@ public sealed partial class CollectibleWizardWindow : Window
         };
         CanResize = true;
 
-        _totalBox = new NumericUpDown
+        // ---TODO 视觉统一：收集规模改用主题化 NumberStepper，替代原生 NumericUpDown 的黑三角箭头。
+        _totalBox = new NumberStepper
         {
             Minimum = 1m,
             Maximum = 9999m,
-            Increment = 1m,
+            Step = 1m,
             Value = plan.Total > 0 ? plan.Total : 50m,
-            Width = 150,
-            Height = 34,
-            FontSize = 15,
-            FormatString = "0",
-            HorizontalContentAlignment = HorizontalAlignment.Right,
         };
         _layerCombo = new ComboBox
         {
@@ -128,6 +124,7 @@ public sealed partial class CollectibleWizardWindow : Window
 
         Content = BuildShell();
         ShowStep(0);
+        WindowChromeTheme.Attach(this);
     }
 
     #endregion
@@ -135,7 +132,7 @@ public sealed partial class CollectibleWizardWindow : Window
     #region 结果
 
     /// <summary>目标收集物数量。</summary>
-    public int TotalCount => (int)Math.Max(1, _totalBox.Value ?? 50m);
+    public int TotalCount => (int)Math.Max(1m, _totalBox.Value);
 
     /// <summary>层级代码：under / over。</summary>
     public string LayerMode => _layerCombo.SelectedIndex == 0

@@ -249,6 +249,7 @@ public partial class MainWindow : Window
 
         Canvas.Select(null);
 
+        WindowChromeTheme.Attach(this);
         Opened += (_, _) => Canvas.FitToView();
         Canvas.SizeChanged += (_, _) => Canvas.FitToView();
         KeyDown += OnWindowKeyDown;

@@ -76,6 +76,45 @@ public static class PathMath
 
     #region 里程取点
 
+    /// <summary>
+    /// 按累计里程取路径前进方向（单位向量）；用于预览时让角色朝向运动方向。
+    /// <para>里程夹在 0..总长，起点取第一段、终点取最后一段，避免在端点得到零向量。</para>
+    /// </summary>
+    /// <param name="points">路径点集合。</param>
+    /// <param name="distance">累计里程，世界像素。</param>
+    /// <returns>单位方向；路径无效返回 null。</returns>
+    public static Point? DirectionAtDistance(IReadOnlyList<MapPathPointData>? points, double distance)
+    {
+        if (points is null || points.Count < 2)
+        {
+            return null;
+        }
+
+        var remaining = Math.Max(0, distance);
+        Point? lastDirection = null;
+        for (var index = 0; index < points.Count - 1; index++)
+        {
+            var from = ToPoint(points[index]);
+            var to = ToPoint(points[index + 1]);
+            var segment = Distance(from, to);
+            if (segment <= 0)
+            {
+                continue;
+            }
+
+            var direction = new Point((to.X - from.X) / segment, (to.Y - from.Y) / segment);
+            lastDirection = direction;
+            if (remaining <= segment)
+            {
+                return direction;
+            }
+
+            remaining -= segment;
+        }
+
+        return lastDirection;
+    }
+
     /// <summary>按累计里程取路径上的点；超出范围时夹到起点/终点。</summary>
     /// <param name="points">路径点集合。</param>
     /// <param name="distance">累计里程，世界像素。</param>

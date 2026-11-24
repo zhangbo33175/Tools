@@ -2,22 +2,68 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="MapEditorTool.App"
              RequestedThemeVariant="Light">
-             <!-- TexturePacker 风格：浅灰面板 + 白色输入区 + 蓝色强调，统一走 Light 主题 -->
+            <!-- 冷蓝色板：浅蓝面板 + 白色输入区 + 深青蓝强调，统一走 Light 主题 -->
 
     <Application.Resources>
+        <!-- 统一配色：取自地图画布的深蓝 / 青蓝 / 冰蓝体系，所有控件只引用语义资源。 -->
+        <SolidColorBrush x:Key="Theme.Window" Color="#E8F4F8" />
+        <SolidColorBrush x:Key="Theme.Panel" Color="#F0F8FB" />
+        <SolidColorBrush x:Key="Theme.PanelAlt" Color="#F6FBFD" />
+        <SolidColorBrush x:Key="Theme.Card" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="Theme.Border" Color="#C5DDE8" />
+        <SolidColorBrush x:Key="Theme.BorderStrong" Color="#9FC6D6" />
+        <SolidColorBrush x:Key="Theme.Divider" Color="#D8E9F0" />
+        <SolidColorBrush x:Key="Theme.Text" Color="#17323D" />
+        <SolidColorBrush x:Key="Theme.TextMuted" Color="#577380" />
+        <SolidColorBrush x:Key="Theme.Primary" Color="#0D8CB6" />
+        <SolidColorBrush x:Key="Theme.PrimaryDark" Color="#075E7C" />
+        <SolidColorBrush x:Key="Theme.PrimarySoft" Color="#DDF2F9" />
+        <SolidColorBrush x:Key="Theme.PrimaryHover" Color="#D3EFF8" />
+        <SolidColorBrush x:Key="Theme.PrimaryPressed" Color="#B9E3F1" />
+        <SolidColorBrush x:Key="Theme.ButtonSurface" Color="#E7F3F8" />
+        <SolidColorBrush x:Key="Theme.ButtonBorder" Color="#B4D3E0" />
+        <SolidColorBrush x:Key="Theme.Disabled" Color="#EDF5F8" />
+        <SolidColorBrush x:Key="Theme.DisabledText" Color="#91A9B4" />
+        <SolidColorBrush x:Key="Theme.Danger" Color="#C0504D" />
+        <SolidColorBrush x:Key="Theme.DangerDark" Color="#A8463F" />
+        <SolidColorBrush x:Key="Theme.Teal" Color="#1E9E86" />
+        <SolidColorBrush x:Key="Theme.TealDark" Color="#147A69" />
+        <SolidColorBrush x:Key="Theme.Cyan" Color="#42B8D2" />
+        <SolidColorBrush x:Key="Theme.Status" Color="#005E8D" />
+        <SolidColorBrush x:Key="Theme.StatusBorder" Color="#004A70" />
+        <SolidColorBrush x:Key="Theme.ScrollSurface" Color="#E7F3F8" />
+        <SolidColorBrush x:Key="Theme.ScrollTrack" Color="#F5FBFD" />
+        <SolidColorBrush x:Key="Theme.ScrollButton" Color="#E3F1F6" />
+        <SolidColorBrush x:Key="Theme.ScrollThumb" Color="#8FC9DC" />
+        <SolidColorBrush x:Key="Theme.ScrollThumbBorder" Color="#5FA6BF" />
+        <SolidColorBrush x:Key="Theme.ScrollArrow" Color="#355663" />
+        <SolidColorBrush x:Key="Theme.Selection" Color="#330D8CB6" />
+
+        <!-- 标题底色：取自地图空态立方体顶面的冰青渐变，用于面板 / 卡片标题条 -->
+        <LinearGradientBrush x:Key="Theme.TitleBackground" StartPoint="0%,0%" EndPoint="100%,0%">
+            <GradientStop Color="#C5F8FA" Offset="0" />
+            <GradientStop Color="#5AC4D9" Offset="0.55" />
+            <GradientStop Color="#42B8D2" Offset="1" />
+        </LinearGradientBrush>
+        <SolidColorBrush x:Key="Theme.TitleBorder" Color="#2FA0BA" />
+        <SolidColorBrush x:Key="Theme.TitleText" Color="#06323F" />
+        <SolidColorBrush x:Key="Theme.TitleChip" Color="#DDF8FC" />
+        <SolidColorBrush x:Key="Theme.TitleHover" Color="#33FFFFFF" />
+        <SolidColorBrush x:Key="Theme.TitlePressed" Color="#55000000" />
+
         <!-- 经典竖向滚动条：14px 宽，上下箭头常显，中间蓝灰滑块 -->
         <ControlTheme x:Key="ClassicVScrollBar" TargetType="ScrollBar">
             <Setter Property="Width" Value="14" />
             <Setter Property="MinWidth" Value="14" />
-            <Setter Property="Background" Value="#EDEDED" />
+            <Setter Property="Background" Value="{StaticResource Theme.ScrollSurface}" />
             <Setter Property="AllowAutoHide" Value="False" />
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}" BorderBrush="#C6C6C6" BorderThickness="1,0,0,0">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource Theme.Border}" BorderThickness="1,0,0,0">
                         <Grid RowDefinitions="15,*,15">
                             <RepeatButton Grid.Row="0" x:Name="PART_LineUpButton" Padding="0" CornerRadius="0"
-                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,0,0,1">
-                                <Path Data="M0,4 L4,0 L8,4 Z" Fill="#5A5A5A" Width="8" Height="4"
+                                          Background="{StaticResource Theme.ScrollButton}" BorderBrush="{StaticResource Theme.Border}" BorderThickness="0,0,0,1">
+                                <Path Data="M0,4 L4,0 L8,4 Z" Fill="{StaticResource Theme.ScrollArrow}" Width="8" Height="4"
                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </RepeatButton>
                             <!-- 必须把 Minimum/Maximum/Value/ViewportSize 绑到模板父级，否则 Track 拿到默认值，
@@ -29,7 +75,7 @@
                                    Value="{TemplateBinding Value}"
                                    ViewportSize="{TemplateBinding ViewportSize}">
                                 <Track.Thumb>
-                                    <Thumb MinHeight="20" Background="#A9C6D8" BorderBrush="#7FA8C0" BorderThickness="1" CornerRadius="2">
+                                    <Thumb MinHeight="20" Background="{StaticResource Theme.ScrollThumb}" BorderBrush="{StaticResource Theme.ScrollThumbBorder}" BorderThickness="1" CornerRadius="2">
                                         <Thumb.Template>
                                             <ControlTemplate>
                                                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
@@ -40,8 +86,8 @@
                                 </Track.Thumb>
                             </Track>
                             <RepeatButton Grid.Row="2" x:Name="PART_LineDownButton" Padding="0" CornerRadius="0"
-                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,1,0,0">
-                                <Path Data="M0,0 L8,0 L4,4 Z" Fill="#5A5A5A" Width="8" Height="4"
+                                          Background="{StaticResource Theme.ScrollButton}" BorderBrush="{StaticResource Theme.Border}" BorderThickness="0,1,0,0">
+                                <Path Data="M0,0 L8,0 L4,4 Z" Fill="{StaticResource Theme.ScrollArrow}" Width="8" Height="4"
                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </RepeatButton>
                         </Grid>
@@ -54,15 +100,15 @@
         <ControlTheme x:Key="ClassicHScrollBar" TargetType="ScrollBar">
             <Setter Property="Height" Value="14" />
             <Setter Property="MinHeight" Value="14" />
-            <Setter Property="Background" Value="#EDEDED" />
+            <Setter Property="Background" Value="{StaticResource Theme.ScrollSurface}" />
             <Setter Property="AllowAutoHide" Value="False" />
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}" BorderBrush="#C6C6C6" BorderThickness="0,1,0,0">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource Theme.Border}" BorderThickness="0,1,0,0">
                         <Grid ColumnDefinitions="15,*,15">
                             <RepeatButton Grid.Column="0" x:Name="PART_LineUpButton" Padding="0" CornerRadius="0"
-                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,0,1,0">
-                                <Path Data="M4,0 L0,4 L4,8 Z" Fill="#5A5A5A" Width="4" Height="8"
+                                          Background="{StaticResource Theme.ScrollButton}" BorderBrush="{StaticResource Theme.Border}" BorderThickness="0,0,1,0">
+                                <Path Data="M4,0 L0,4 L4,8 Z" Fill="{StaticResource Theme.ScrollArrow}" Width="4" Height="8"
                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </RepeatButton>
                             <Track Grid.Column="1" x:Name="PART_Track" Orientation="Horizontal" Margin="2,2"
@@ -72,7 +118,7 @@
                                    Value="{TemplateBinding Value}"
                                    ViewportSize="{TemplateBinding ViewportSize}">
                                 <Track.Thumb>
-                                    <Thumb MinWidth="20" Background="#A9C6D8" BorderBrush="#7FA8C0" BorderThickness="1" CornerRadius="2">
+                                    <Thumb MinWidth="20" Background="{StaticResource Theme.ScrollThumb}" BorderBrush="{StaticResource Theme.ScrollThumbBorder}" BorderThickness="1" CornerRadius="2">
                                         <Thumb.Template>
                                             <ControlTemplate>
                                                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
@@ -83,8 +129,8 @@
                                 </Track.Thumb>
                             </Track>
                             <RepeatButton Grid.Column="2" x:Name="PART_LineDownButton" Padding="0" CornerRadius="0"
-                                          Background="#E8E8E8" BorderBrush="#D4D4D4" BorderThickness="0,0,0,0">
-                                <Path Data="M0,0 L4,4 L0,8 Z" Fill="#5A5A5A" Width="4" Height="8"
+                                          Background="{StaticResource Theme.ScrollButton}" BorderBrush="{StaticResource Theme.Border}" BorderThickness="0,0,0,0">
+                                <Path Data="M0,0 L4,4 L0,8 Z" Fill="{StaticResource Theme.ScrollArrow}" Width="4" Height="8"
                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </RepeatButton>
                         </Grid>
@@ -97,13 +143,13 @@
     <Application.Styles>
         <FluentTheme />
 
-        <!-- 按钮：浅灰底 + 1px 灰边 + 深色文字，悬停变浅蓝，按下加深 -->
+        <!-- 按钮：冷白蓝底 + 1px 蓝灰边 + 深蓝文字，悬停变浅蓝，按下加深 -->
         <Style Selector="Button">
-            <Setter Property="Background" Value="#E3E3E3" />
-            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="Background" Value="{StaticResource Theme.ButtonSurface}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="2" />
-            <Setter Property="Foreground" Value="#262626" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
             <Setter Property="Padding" Value="8,3" />
         </Style>
         <!-- 所有按钮文字统一水平 / 垂直居中，避免宽按钮内文字贴左 -->
@@ -112,23 +158,89 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#D5E9F6" />
-            <Setter Property="BorderBrush" Value="#70B4DA" />
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
         </Style>
         <Style Selector="Button:pressed /template/ ContentPresenter">
-            <Setter Property="Background" Value="#BBDBEF" />
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryPressed}" />
         </Style>
         <Style Selector="Button:disabled /template/ ContentPresenter">
-            <Setter Property="Background" Value="#EFEFEF" />
-            <Setter Property="BorderBrush" Value="#D2D2D2" />
-            <Setter Property="Foreground" Value="#9A9A9A" />
+            <Setter Property="Background" Value="{StaticResource Theme.Disabled}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Divider}" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.DisabledText}" />
+        </Style>
+
+        <!-- 步进器箭头：贴合输入框的上下三角按钮，常态透明、悬停浅青、按下加深 -->
+        <Style Selector="Button.spin">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="24" />
+            <Setter Property="MinWidth" Value="24" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="MinHeight" Value="12" />
+            <Setter Property="FontSize" Value="8" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.spin:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimarySoft}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.spin:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryPressed}" />
+        </Style>
+
+        <!-- 自绘标题栏的系统按钮：透明贴边，悬停用白色叠光，关闭按钮单独转红 -->
+        <Style Selector="Button.caption">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="MinWidth" Value="46" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TitleText}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.caption:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#33FFFFFF" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.caption:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#55000000" />
+        </Style>
+        <Style Selector="Button.caption.dark">
+            <Setter Property="Foreground" Value="#D6ECF5" />
+        </Style>
+        <Style Selector="Button.caption.dark:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#22FFFFFF" />
+        </Style>
+        <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.Danger}" />
+        </Style>
+        <Style Selector="Button.caption.close:pointerover">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.caption.close:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.DangerDark}" />
         </Style>
 
         <!-- 左侧资源类型：分段式 Tab，未选中透明、选中蓝底白字，避免五个按钮各带一圈灰边 -->
         <Style Selector="Button.sideTab">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#52616B" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TextMuted}" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Height" Value="26" />
             <Setter Property="MinHeight" Value="26" />
@@ -140,43 +252,43 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Button.sideTab:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#E8F2F8" />
+            <Setter Property="Background" Value="{StaticResource Theme.PrimarySoft}" />
             <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="Foreground" Value="#0F6B96" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
         </Style>
         <Style Selector="Button.sideTab.active">
-            <Setter Property="Background" Value="#1387BE" />
-            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Background" Value="{StaticResource Theme.Primary}" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Card}" />
         </Style>
         <Style Selector="Button.sideTab.active:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#0F6B96" />
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryDark}" />
             <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Card}" />
         </Style>
 
-        <!-- 输入框：白底 + 灰边 -->
+        <!-- 输入框：白底 + 蓝灰边 -->
         <Style Selector="TextBox">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="Background" Value="{StaticResource Theme.Card}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="2" />
-            <Setter Property="Foreground" Value="#1B1B1B" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
         </Style>
         <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
-            <Setter Property="BorderBrush" Value="#1387BE" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
         </Style>
         <!-- Fluent 文本框的文字 presenter 默认贴模板上沿，数字 / 中文墨迹会比 24px 框中心高约 2px；统一下移 2px 回到视觉中线。 -->
         <Style Selector="TextBox.field /template/ TextPresenter">
             <Setter Property="Margin" Value="0,2,0,0" />
         </Style>
 
-        <!-- 下拉框：浅灰底 + 灰边，与截图的下拉控件一致 -->
+        <!-- 下拉框：冷白底 + 蓝灰边，与整体色板一致 -->
         <Style Selector="ComboBox">
-            <Setter Property="Background" Value="#EDEDED" />
-            <Setter Property="BorderBrush" Value="#ADADAD" />
+            <Setter Property="Background" Value="{StaticResource Theme.PanelAlt}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="2" />
-            <Setter Property="Foreground" Value="#262626" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
         </Style>
         <!-- Fluent 模板里的选中内容默认贴顶，把模板内 ContentPresenter 压回垂直居中；
              可编辑下拉框内部的 TextBox 也要单独居中，否则「动画名称」这类值会浮在框顶。 -->
@@ -194,7 +306,7 @@
 
         <!-- 复选框：被勾选时用强调蓝；文字与勾选框同高居中，避免文字贴行顶 -->
         <Style Selector="CheckBox">
-            <Setter Property="Foreground" Value="#262626" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
             <Setter Property="MinHeight" Value="24" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -212,53 +324,87 @@
             </Setter>
         </Style>
         <Style Selector="GridSplitter:pointerover">
-            <Setter Property="Background" Value="#331387BE" />
+            <Setter Property="Background" Value="{StaticResource Theme.Selection}" />
         </Style>
 
-        <!-- 卡片：底部三栏统一的白底 + 1px 灰边 + 圆角 -->
+        <!-- 卡片：底部三栏统一的白底 + 1px 蓝灰边 + 圆角 -->
         <Style Selector="Border.card">
-            <Setter Property="Background" Value="#FCFCFC" />
-            <Setter Property="BorderBrush" Value="#CDCDCD" />
+            <Setter Property="Background" Value="{StaticResource Theme.Card}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Border}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="CornerRadius" Value="4" />
         </Style>
 
         <!-- 外层分区框：比卡片重一级的描边，用来把「左侧栏 / 工具条 / 画布」这些大区块框出来 -->
         <Style Selector="Border.frame">
-            <Setter Property="Background" Value="#FAFAFA" />
-            <Setter Property="BorderBrush" Value="#BFBFBF" />
+            <Setter Property="Background" Value="{StaticResource Theme.Panel}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Border}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="CornerRadius" Value="4" />
         </Style>
 
         <!-- 卡片内白色分组框 -->
         <Style Selector="Border.inset">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#E4E4E4" />
+            <Setter Property="Background" Value="{StaticResource Theme.Card}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Divider}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="CornerRadius" Value="3" />
         </Style>
 
         <!-- 表单标签：右对齐、统一灰色、垂直居中（不再额外上提，和文本框内容共用同一条视觉中线）。 -->
         <Style Selector="TextBlock.lbl">
-            <Setter Property="Foreground" Value="#565656" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TextMuted}" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="TextAlignment" Value="Right" />
             <Setter Property="Margin" Value="0,0,6,0" />
         </Style>
 
-        <!-- 区块标题 -->
-        <Style Selector="TextBlock.section">
-            <Setter Property="Foreground" Value="#0B6E9B" />
+        <!-- 卡片标题条：冰青渐变打底，底边用深一档的青蓝收口；标题文字改为深墨青保证对比度 -->
+        <Style Selector="Border.titleBar">
+            <Setter Property="Background" Value="{StaticResource Theme.TitleBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.TitleBorder}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="CornerRadius" Value="4,4,0,0" />
+            <Setter Property="Padding" Value="10,4" />
+        </Style>
+        <Style Selector="TextBlock.cardTitle">
+            <Setter Property="Foreground" Value="{StaticResource Theme.TitleText}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
+        <!-- 标题条上的文字按钮：默认透明融入底色，悬停 / 按下时才浮出白色 / 黑色蒙层 -->
+        <Style Selector="Button.titleAction">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TitleText}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
+        <Style Selector="Button.titleAction:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.TitleHover}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.titleAction:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.TitlePressed}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+
+        <!-- 区块标题 -->
+        <Style Selector="TextBlock.section">
+            <Setter Property="Background" Value="{StaticResource Theme.TitleChip}" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Padding" Value="5,1" />
+        </Style>
+
         <!-- 小号提示文字 -->
         <Style Selector="TextBlock.tip">
-            <Setter Property="Foreground" Value="#7A7A7A" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TextMuted}" />
             <Setter Property="FontSize" Value="10" />
         </Style>
 

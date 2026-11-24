@@ -274,9 +274,11 @@ public sealed partial class MapCanvas : Control
         // 遮挡关系统一走 LayerBands：地表带在最底，立体带跨图层按脚底 Y，叠加带永远最上。
         // 显隐跟随「有效显示层」而不是归属层：手改过显示层后，顶部图层勾选与画面看到的一致。
         // 收集物单独走 collectible 显隐键，避免和普通道具共用「道具」开关。
+        // 预览模式传当前脚底基准：角色沿路径移动时，树 / 建筑的遮挡跟着角色当前位置实时变化。
+        Func<PlacedObject, double>? baseline = PreviewMode ? PreviewSortBaseline : null;
         return LayerBands.Sort(config.Objects.Where(item =>
             !HiddenLayers.Contains(VisibilityLayer(item))
-            && !HiddenTemplateIds.Contains(item.TemplateId)));
+            && !HiddenTemplateIds.Contains(item.TemplateId)), baseline);
     }
 
     /// <summary>顶部图层勾选使用的显隐键：收集物独立成组，其余跟随有效显示层。</summary>

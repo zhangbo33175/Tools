@@ -31,18 +31,23 @@ public sealed partial class MapCanvas : Control
     {
         // 预览中的角色若带路径，按预览时钟把脚底插值到路径上；编辑器里始终用落盘坐标
         var bounds = PreviewRenderBounds(item);
+        // 预览行走时按路径切向自动翻面；静态摆放仍按实例自身的 FlipX 绘制。
+        // ---TODO 朝向：所有视觉源（Spine / 序列帧 / 静态图）共用同一镜像结果。
+        var renderFlipX = ResolveRenderFlipX(item);
 
         // 占位色 / 背景特殊绘制都跟随「有效显示层」：手改到背景层的图元按背景画法走，
         // 顶部图层勾选时也能和画面一致（显示层优先，未设置才回落到归属层）。
         var displayLayer = item.IsCollectible ? MapLayerKeys.Collectible : LayerOrder.EffectiveLayer(item);
         var color = MapLayerPalette.Of(displayLayer);
 
-        // Spine 命中时完全替换静态贴图，避免骨骼与旧 PNG 叠加；未命中仍回退静态贴图。
-        var spineAsset = IsSpineAnimated(item) ? _spineAnimations?.Find(item.SpineAsset) : null;
+        // Spine 是唯一视觉源：命中时完全替换静态贴图，并且不回退旧 PNG / 旧序列帧；
+        // 资产缺失时只画虚线占位，避免把旧背景图重新露出来。
+        var spineVisual = UsesSpineVisual(item);
+        var spineAsset = spineVisual ? _spineAnimations?.Find(item.SpineAsset) : null;
         var spinePlayer = spineAsset is null ? null : GetSpinePlayer(item);
-        var staticSprite = spinePlayer is null ? Sprite(item) : null;
-        var animation = spinePlayer is null ? ResolveClip(item) : null;
-        var sprite = spinePlayer is not null
+        var staticSprite = spineVisual ? null : Sprite(item);
+        var animation = spineVisual ? null : ResolveClip(item);
+        var sprite = spineVisual
             ? null
             : animation is not null ? AnimatedSprite(item, animation) ?? staticSprite : staticSprite;
         var pixelSize = staticSprite is not null
@@ -62,7 +67,7 @@ public sealed partial class MapCanvas : Control
         // 用手改后的有效显示层判断：把道具层图元改成背景层后，也应该走背景画法。
         if (displayLayer == MapLayerKeys.Background)
         {
-            using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, item.FlipX, bounds)))
+            using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, renderFlipX, bounds)))
             {
                 if (spinePlayer is not null && spineAsset is not null)
                 {
@@ -81,6 +86,14 @@ public sealed partial class MapCanvas : Control
                             new Rect(0, 0, sprite.PixelSize.Width, sprite.PixelSize.Height),
                             bounds);
                     }
+                }
+                else if (spineVisual)
+                {
+                    // Spine 资产缺失：只留虚线占位，不铺图层色块，避免看起来像旧背景图。
+                    context.DrawRectangle(
+                        null,
+                        new Pen(new SolidColorBrush(Color.FromArgb(0xC0, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
+                        bounds);
                 }
                 else
                 {
@@ -130,7 +143,7 @@ public sealed partial class MapCanvas : Control
         }
 
         // 有贴图与没贴图（色块占位）都要吃旋转与水平镜像，保证改角度后画布上有明确反馈
-        using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, item.FlipX, bounds)))
+        using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, renderFlipX, bounds)))
         {
             if (spinePlayer is not null && spineAsset is not null)
             {
@@ -153,6 +166,14 @@ public sealed partial class MapCanvas : Control
                         new Rect(0, 0, sprite.PixelSize.Width, sprite.PixelSize.Height),
                         drawBounds);
                 }
+            }
+            else if (spineVisual)
+            {
+                // Spine 资产缺失：虚线占位，绝不回退到旧静态图，避免动画位置又出现背景图。
+                context.DrawRectangle(
+                    null,
+                    new Pen(new SolidColorBrush(Color.FromArgb(0xC0, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
+                    bounds);
             }
             else
             {

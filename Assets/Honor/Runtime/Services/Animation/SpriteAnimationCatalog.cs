@@ -26,6 +26,8 @@ public sealed class SpriteAnimationCatalog
     private readonly Dictionary<string, SpriteAnimationClip> _clips =
         new(StringComparer.OrdinalIgnoreCase);
 
+    private IReadOnlyList<string>? _names;
+
     #endregion
 
     #region 属性
@@ -35,7 +37,7 @@ public sealed class SpriteAnimationCatalog
 
     /// <summary>按名称排序的动画名列表，供下拉框与预览列表使用。</summary>
     public IReadOnlyList<string> Names =>
-        _clips.Keys.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+        _names ??= _clips.Keys.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
 
     /// <summary>全部动画片段（按名称排序）。</summary>
     public IReadOnlyList<SpriteAnimationClip> Clips =>
@@ -46,7 +48,11 @@ public sealed class SpriteAnimationCatalog
     #region 公开方法
 
     /// <summary>清空目录。加载配置或导入失败时使用。</summary>
-    public void Clear() => _clips.Clear();
+    public void Clear()
+    {
+        _clips.Clear();
+        _names = null;
+    }
 
     /// <summary>注册一个片段；同名覆盖，空名称 / 无帧的片段忽略。</summary>
     /// <param name="clip">动画片段。</param>
@@ -58,6 +64,7 @@ public sealed class SpriteAnimationCatalog
         }
 
         _clips[clip.Name.Trim()] = clip.Clone();
+        _names = null;
     }
 
     /// <summary>按动画名查找片段。</summary>

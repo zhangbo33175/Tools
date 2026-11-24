@@ -299,6 +299,14 @@ public static class LayerBands
     /// <returns>自底向上的绘制顺序。</returns>
     public static List<PlacedObject> Sort(IEnumerable<PlacedObject> items) => LayerOrder.Sort(items);
 
+    /// <summary>按「遮挡带 → 当前脚底 Y → 层序兜底」排序，允许预览覆盖移动中的脚底。</summary>
+    /// <param name="items">实例集合。</param>
+    /// <param name="baseline">脚底基准提供器；null 时使用摆放包围盒底边。</param>
+    /// <returns>自底向上的绘制顺序。</returns>
+    public static List<PlacedObject> Sort(
+        IEnumerable<PlacedObject> items,
+        Func<PlacedObject, double>? baseline) => LayerOrder.Sort(items, baseline);
+
     /// <summary>比较两个实例的渲染先后（实现见 <see cref="LayerOrder.Compare"/>）。</summary>
     /// <param name="a">实例 A。</param>
     /// <param name="b">实例 B。</param>

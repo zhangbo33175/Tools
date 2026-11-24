@@ -108,6 +108,8 @@ public sealed class MapPreviewWindow : Window
             _statusTimer.Stop();
             _canvas.PreviewMode = false;
         };
+
+        WindowChromeTheme.Attach(this);
     }
 
     #endregion

@@ -175,8 +175,23 @@ public static class LayerOrder
     /// <returns>自底向上的绘制顺序。</returns>
     public static List<PlacedObject> Sort(IEnumerable<PlacedObject> items)
     {
+        return Sort(items, null);
+    }
+
+    /// <summary>
+    /// 按「遮挡带 → 当前脚底 Y → 层序兜底 → Id」排序。
+    /// <para>params baseline 可覆盖立体带的脚底基准（预览沿路径移动时传入当前脚底），
+    /// 其余带与层序规则保持不变。</para>
+    /// </summary>
+    /// <param name="items">实例集合。</param>
+    /// <param name="baseline">脚底基准提供器；null 时使用摆放包围盒底边。</param>
+    /// <returns>自底向上的绘制顺序。</returns>
+    public static List<PlacedObject> Sort(
+        IEnumerable<PlacedObject> items,
+        Func<PlacedObject, double>? baseline)
+    {
         var list = new List<PlacedObject>(items);
-        list.Sort(Compare);
+        list.Sort((a, b) => Compare(a, b, baseline));
         return list;
     }
 
@@ -184,7 +199,17 @@ public static class LayerOrder
     /// <param name="a">实例 A。</param>
     /// <param name="b">实例 B。</param>
     /// <returns>负数表示 A 先画（在下面）。</returns>
-    public static int Compare(PlacedObject a, PlacedObject b)
+    public static int Compare(PlacedObject a, PlacedObject b) => Compare(a, b, null);
+
+    /// <summary>比较两个实例的渲染先后，允许预览覆盖立体带脚底基准。</summary>
+    /// <param name="a">实例 A。</param>
+    /// <param name="b">实例 B。</param>
+    /// <param name="baseline">脚底基准提供器；null 时使用摆放包围盒底边。</param>
+    /// <returns>负数表示 A 先画（在下面）。</returns>
+    public static int Compare(
+        PlacedObject a,
+        PlacedObject b,
+        Func<PlacedObject, double>? baseline)
     {
         var bandA = LayerBands.Of(a);
         var bandB = LayerBands.Of(b);
@@ -204,8 +229,8 @@ public static class LayerOrder
                 return rankA.CompareTo(rankB);
             }
 
-            var footA = LayerBands.Baseline(a);
-            var footB = LayerBands.Baseline(b);
+            var footA = Baseline(a, baseline);
+            var footB = Baseline(b, baseline);
             if (footA != footB)
             {
                 return footA.CompareTo(footB);
@@ -229,9 +254,18 @@ public static class LayerOrder
         }
 
         // 旧档里 SortOrder 可能相同，最后一档仍用脚底 Y，再按 Id 保证顺序稳定
-        order = LayerBands.Baseline(a).CompareTo(LayerBands.Baseline(b));
+        order = Baseline(a, baseline).CompareTo(Baseline(b, baseline));
         return order != 0 ? order : string.CompareOrdinal(a.Id, b.Id);
     }
+
+    /// <summary>取实例的排序脚底：预览覆盖值优先，否则用摆放包围盒底边加 Y 偏移。</summary>
+    /// <param name="item">实例。</param>
+    /// <param name="baseline">脚底基准提供器，可为 null。</param>
+    /// <returns>排序用脚底 Y。</returns>
+    private static double Baseline(PlacedObject item, Func<PlacedObject, double>? baseline) =>
+        baseline is null
+            ? LayerBands.Baseline(item)
+            : baseline(item) + item.YSortOffset;
 
     /// <summary>
     /// 立体带内的收集物夹层序号：0 = 物件下，1 = 普通立体物，2 = 物件上。

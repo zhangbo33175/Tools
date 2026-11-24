@@ -328,6 +328,7 @@ public partial class MainWindow : Window
         AnimEnabledToggle.IsChecked = false;
         SpineAssetField.SelectedItem = null;
         SpineAnimationField.ItemsSource = Array.Empty<string>();
+        SpineWalkAnimationField.ItemsSource = Array.Empty<string>();
         UpdateAnimationControlState();
 
         PropVehicle.IsChecked = false;

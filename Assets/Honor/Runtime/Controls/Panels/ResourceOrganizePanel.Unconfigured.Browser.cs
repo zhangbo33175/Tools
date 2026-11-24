@@ -39,6 +39,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
 
         RefreshUnconfiguredList();
+        _resourceListScroll?.SetCurrentValue(ScrollViewer.OffsetProperty, new Vector(0, 0));
         if (_itemTable is not null)
         {
             // 分类按钮切过去，右下「已配置资源列表」跟着换成那张表
@@ -48,6 +49,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
     private void ScanUnconfigured(bool silent)
     {
+        _mapImageIndex = null;
         var configured = new List<string>();
         foreach (var template in _templates)
         {
@@ -62,6 +64,18 @@ public sealed partial class ResourceOrganizePanel : UserControl
             }
         }
 
+        // ---TODO 资源列表：配置表行即使没有对应模板，也要从「未配置」扫描中排除，避免左侧出现重复卡片。
+        if (_itemTable is not null)
+        {
+            foreach (var row in _itemTable.Rows)
+            {
+                if (!string.IsNullOrWhiteSpace(row.Icon))
+                {
+                    configured.Add(Path.GetFileNameWithoutExtension(row.Icon));
+                }
+            }
+        }
+
         var scanRoot = _mapDirectory;
         _unconfigured = _assets
             .ScanUnconfigured(configured, scanRoot)
@@ -73,11 +87,27 @@ public sealed partial class ResourceOrganizePanel : UserControl
             var where = string.IsNullOrWhiteSpace(scanRoot)
                 ? string.Join("、", _assets.Roots)
                 : scanRoot;
+            var tableRows = _itemTable?.RowCount ?? 0;
+            var configuredHint = tableRows > 0 ? $"，配置表 {tableRows} 行已显示在资源列表" : string.Empty;
             _notify(_unconfigured.Count == 0
-                ? $"扫描完成：{where} 下没有未配置的 PNG"
-                : $"扫描完成：{where} 下发现 {_unconfigured.Count} 个未配置资源");
+                ? $"扫描完成：{where} 下没有未配置的 PNG{configuredHint}"
+                : $"扫描完成：{where} 下发现 {_unconfigured.Count} 个未配置资源{configuredHint}");
         }
     }
+
+    #region 资源列表条目
+
+    // ---TODO 资源列表：未配置图片与配置表行统一成同一套卡片，副标题按「分类 · 表 · 配置表 #ID」显示。
+    /// <summary>左侧统一资源条目：未配置图片与配置表行共用一张卡片。</summary>
+    /// <param name="Name">资源名（不含扩展名）。</param>
+    /// <param name="Path">磁盘 PNG 路径；配置表行没有图片时为空。</param>
+    /// <param name="Row">命中的配置表行；未配置资源为空。</param>
+    /// <param name="Table">配置表行所在表；未配置资源为空。</param>
+    private readonly record struct ResourceListEntry(
+        string Name,
+        string? Path,
+        ItemElementRow? Row,
+        ItemTableFile? Table);
 
     /// <summary>当前分类 + 搜索词过滤后的未配置资源；Shift 连选也按这同一份顺序取区间。</summary>
     private List<(string Name, string Path)> FilteredUnconfiguredItems()
@@ -93,28 +123,197 @@ public sealed partial class ResourceOrganizePanel : UserControl
             .ToList();
     }
 
+    /// <summary>
+    /// 左侧资源列表的完整条目：未配置图片 + 当前分类的配置表行。
+    /// 配置表行即使没有磁盘图片也保留，缩略图缺失时显示占位块。
+    /// </summary>
+    private List<ResourceListEntry> FilteredResourceEntries()
+    {
+        var entries = new List<ResourceListEntry>();
+        foreach (var pair in _unconfigured)
+        {
+            if (MatchesResourceFilter(pair.Key, pair.Value, null, null))
+            {
+                entries.Add(new ResourceListEntry(pair.Key, pair.Value, null, null));
+            }
+        }
+
+        if (_itemTable is not null)
+        {
+            var categoryTable = ResourceCategories.IsAll(_filter) ? null : _itemTable.FileForCategory(_filter);
+            IReadOnlyList<ItemTableFile> files = categoryTable is null ? _itemTable.Files : new[] { categoryTable };
+            var seen = new HashSet<string>(entries.Select(item => item.Name), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var file in files)
+            {
+                foreach (var row in file.Rows)
+                {
+                    var name = Path.GetFileNameWithoutExtension(row.Icon);
+                    if (name.Length == 0)
+                    {
+                        name = row.TemplateName.Trim();
+                    }
+
+                    if (name.Length == 0 || !seen.Add(name))
+                    {
+                        continue;
+                    }
+
+                    var path = ResolveConfiguredImage(row);
+                    if (MatchesResourceFilter(name, path, row, file))
+                    {
+                        entries.Add(new ResourceListEntry(name, path, row, file));
+                    }
+                }
+            }
+        }
+
+        return entries
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>分类与搜索词过滤；配置表行优先按所在表归类，混合表再回退资源名分类。</summary>
+    private bool MatchesResourceFilter(string name, string? path, ItemElementRow? row, ItemTableFile? table)
+    {
+        var keyword = _search.Text?.Trim() ?? string.Empty;
+        if (keyword.Length > 0
+            && !name.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            && !(path?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false)
+            && !(row?.Id.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false)
+            && !(row?.TemplateName.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false))
+        {
+            return false;
+        }
+
+        if (ResourceCategories.IsAll(_filter))
+        {
+            return true;
+        }
+
+        var category = CategoryOfResource(name, path, row, table);
+        return string.Equals(category, _filter, StringComparison.Ordinal);
+    }
+
+    /// <summary>资源条目的分类显示名。</summary>
+    private string CategoryOfResource(
+        string name,
+        string? path,
+        ItemElementRow? row,
+        ItemTableFile? table)
+    {
+        if (row is null || table is null)
+        {
+            return CategoryDisplay(ResourceCategories.Classify(path ?? name));
+        }
+
+        var namedCategory = NamedCategoryOfTable(table);
+        // 分类表里可能混入其他分类行（例如 TableProps 里的 cat_）；按当前筛选回退到资源名分类。
+        if (namedCategory is not null
+            && (ResourceCategories.IsAll(_filter) || namedCategory == _filter))
+        {
+            return namedCategory;
+        }
+
+        return CategoryDisplay(ResourceCategories.Classify(name));
+    }
+
+    /// <summary>表名对应的分类；汇总表等无明确分类的表返回 null。</summary>
+    private static string? NamedCategoryOfTable(ItemTableFile table)
+    {
+        var stem = Path.GetFileNameWithoutExtension(table.Name);
+        return ResourceCategories.ConfiguredCategories
+            .FirstOrDefault(definition => definition.TableHints.Any(hint =>
+                stem.Contains(hint, StringComparison.OrdinalIgnoreCase)))
+            ?.DisplayName;
+    }
+
+    /// <summary>配置表行补磁盘图片：先走资源库，再查地图保存目录索引。</summary>
+    private string? ResolveConfiguredImage(ItemElementRow row)
+    {
+        var resolved = _assets.Resolve(row.Icon);
+        if (resolved is not null)
+        {
+            return resolved;
+        }
+
+        EnsureMapImageIndex();
+        var name = Path.GetFileNameWithoutExtension(row.Icon);
+        return _mapImageIndex is not null && _mapImageIndex.TryGetValue(name, out var path) ? path : null;
+    }
+
+    /// <summary>构建地图保存目录的 PNG 索引；只在需要给配置表行补图时惰性扫描一次。</summary>
+    private void EnsureMapImageIndex()
+    {
+        if (_mapImageIndex is not null || string.IsNullOrWhiteSpace(_mapDirectory))
+        {
+            return;
+        }
+
+        var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(_mapDirectory, "*.png", SearchOption.AllDirectories))
+            {
+                var name = Path.GetFileNameWithoutExtension(file);
+                if (name.Length > 0 && !index.ContainsKey(name))
+                {
+                    index[name] = file;
+                }
+            }
+        }
+        catch
+        {
+            // 目录被移除 / 无权限时保留空索引，列表仍可按配置表显示。
+        }
+
+        _mapImageIndex = index;
+    }
+
+    /// <summary>卡片副标题：未配置显示「层 · 目录」，已配置按图一追加「配置表 #ID」。</summary>
+    private string BuildResourceDescription(ResourceListEntry entry)
+    {
+        if (entry.Row is not null)
+        {
+            var category = CategoryOfResource(entry.Name, entry.Path, entry.Row, entry.Table);
+            var table = TableLabelOf(entry.Table);
+            return $"{category} · {table} · 配置表 #{entry.Row.Id}";
+        }
+
+        var folder = Path.GetDirectoryName(entry.Path)?.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        return $"{LayerNameOf(entry.Path ?? entry.Name)} · {folder}";
+    }
+
+    /// <summary>表名去掉 Table 前缀，显示为 Props / Buildings 这类短名。</summary>
+    private static string TableLabelOf(ItemTableFile? table)
+    {
+        var stem = Path.GetFileNameWithoutExtension(table?.Name ?? string.Empty);
+        if (stem.StartsWith("Table", StringComparison.OrdinalIgnoreCase))
+        {
+            stem = stem["Table".Length..];
+        }
+
+        return stem.Length > 0 ? stem : "Props";
+    }
+
     private void RefreshUnconfiguredList()
     {
         _unconfiguredHost.Children.Clear();
 
         var keyword = _search.Text?.Trim() ?? string.Empty;
-        var items = FilteredUnconfiguredItems();
+        var entries = FilteredResourceEntries();
+        var unconfiguredCount = entries.Count(item => item.Row is null);
+        var configuredCount = entries.Count(item => item.Row is not null);
+        var summary = $"共 {entries.Count} 个资源（{unconfiguredCount} 个未配置，{configuredCount} 个已配置）";
+        _countText.Text = keyword.Length == 0 ? summary : $"筛选出 {entries.Count} 个资源（{unconfiguredCount} 个未配置，{configuredCount} 个已配置）";
 
-        var bound = _unconfigured.Count(pair => _itemTable?.Find(pair.Key) is not null);
-        var tableInfo = _itemTable is null
-            ? string.Empty
-            : $" · 表 {_itemTable.Files.Count} 张 {_itemTable.RowCount} 行";
-        _countText.Text = keyword.Length == 0
-            ? $"共 {_unconfigured.Count} 个未配置资源" + (bound > 0 ? $"（{bound} 个已绑定物件配置表{tableInfo}）" : string.Empty)
-            : $"共 {_unconfigured.Count} 个未配置资源，当前筛选 {items.Count} 个";
-
-        if (items.Count == 0)
+        if (entries.Count == 0)
         {
             _unconfiguredHost.Children.Add(new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(_mapDirectory)
-                    ? "（暂无未配置资源；先在地图配置里设置「地图保存目录」，再点「扫描」）"
-                    : $"（{_mapDirectory} 下暂无未配置资源，点「扫描」重新读取）",
+                    ? "（暂无资源；先在地图配置里设置「地图保存目录」，再点「扫描」）"
+                    : $"（{_mapDirectory} 下暂无资源，点「扫描」重新读取）",
                 Foreground = UiTheme.TextSecondary,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(2, 4),
@@ -122,13 +321,13 @@ public sealed partial class ResourceOrganizePanel : UserControl
             return;
         }
 
-        foreach (var (name, path) in items)
+        foreach (var entry in entries)
         {
-            _unconfiguredHost.Children.Add(BuildUnconfiguredRow(name, path));
+            _unconfiguredHost.Children.Add(BuildResourceRow(entry));
         }
     }
 
-    private Control BuildUnconfiguredRow(string name, string path)
+    private Control BuildResourceRow(ResourceListEntry entry)
     {
         var thumb = new Border
         {
@@ -139,19 +338,18 @@ public sealed partial class ResourceOrganizePanel : UserControl
             ClipToBounds = true,
         };
 
-        if (TryLoadThumbnail(path) is { } bitmap)
+        if (entry.Path is { Length: > 0 } path && TryLoadThumbnail(path) is { } bitmap)
         {
             thumb.Child = new Image { Source = bitmap, Stretch = Stretch.Uniform };
         }
 
-        var title = new TextBlock { Text = name, Foreground = UiTheme.TextPrimary };
-        var folder = Path.GetDirectoryName(path)?.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-        var csvRow = _itemTable?.Find(name);
+        var title = new TextBlock { Text = entry.Name, Foreground = UiTheme.TextPrimary };
         var desc = new TextBlock
         {
-            Text = $"{LayerNameOf(path)} · {folder}" + (csvRow is null ? string.Empty : $" · 配置表 #{csvRow.Id}"),
+            Text = BuildResourceDescription(entry),
             Foreground = UiTheme.TextSecondary,
             FontSize = 11,
+            TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
         var text = new StackPanel
@@ -165,11 +363,58 @@ public sealed partial class ResourceOrganizePanel : UserControl
         var content = new StackPanel { Orientation = Orientation.Horizontal, Children = { thumb, text } };
 
         // 与左侧章节/物件列表同款「卡片行」：缩略图 + 上下 5px 留白
-        var row = new ListRowCard(UnconfiguredRowHeight, IsPathSelected(path)) { Child = content };
+        var row = new ListRowCard(UnconfiguredRowHeight, IsEntrySelected(entry)) { Child = content };
 
-        row.PointerPressed += (_, e) => SelectUnconfigured(name, path, e.KeyModifiers);
+        row.PointerPressed += (_, e) =>
+        {
+            if (entry.Row is not null)
+            {
+                SelectConfiguredRow(entry);
+                return;
+            }
+
+            if (entry.Path is not null)
+            {
+                SelectUnconfigured(entry.Name, entry.Path, e.KeyModifiers);
+            }
+        };
         return row;
     }
+
+    /// <summary>配置表行点击：复用「编辑已配置模板」流程，避免把它当作未配置资源再添加一遍。</summary>
+    private void SelectConfiguredRow(ResourceListEntry entry)
+    {
+        if (entry.Row is null)
+        {
+            return;
+        }
+
+        _selection.Clear();
+        _selectionAnchorPath = entry.Path;
+        var template = _templates.FirstOrDefault(item => _itemTable?.FindByTemplate(item) == entry.Row);
+        if (template is null)
+        {
+            var category = CategoryOfResource(entry.Name, entry.Path, entry.Row, entry.Table);
+            template = ItemConfigSet.CreateTemplate(entry.Row, ResourceCategories.ObjectTypeOfKey(
+                ResourceCategories.FindByDisplay(category)?.Key ?? ResourceCategories.PropKey));
+            _templates.Add(template);
+        }
+
+        SelectTemplateForEdit(template);
+    }
+
+    /// <summary>条目是否选中：未配置按路径，已配置按正在编辑的配置表行。</summary>
+    private bool IsEntrySelected(ResourceListEntry entry)
+    {
+        if (entry.Row is not null)
+        {
+            return _editing is not null && ReferenceEquals(_itemTable?.FindByTemplate(_editing), entry.Row);
+        }
+
+        return entry.Path is not null && IsPathSelected(entry.Path);
+    }
+
+    #endregion
 
     /// <summary>是否为当前多选集合中的资源。</summary>
     private bool IsPathSelected(string path)

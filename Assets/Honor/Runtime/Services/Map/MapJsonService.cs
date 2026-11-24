@@ -207,6 +207,8 @@ public static partial class MapJsonService
         payload.AnimationKind = item.AnimationKind;
         payload.SpineAsset = item.SpineAsset;
         payload.SpineAnimation = item.SpineAnimation;
+        payload.SpineWalkAnimation = item.SpineWalkAnimation;
+        payload.MoveAnimName = item.MoveAnimName;
         payload.Loop = item.Loop;
         payload.Speed = item.Speed;
         payload.Interactable = item.Interactable;

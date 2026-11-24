@@ -74,7 +74,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private readonly StackPanel _configuredHost = new();
     private readonly StackPanel _configuredHeaderHost = new();
     private readonly Grid _previewHost = new();
-    private readonly TextBox _search = new();
+
+    /// <summary>左侧资源列表滚动容器；切分类时回到顶部，避免沿用上一张长表的偏移。</summary>
+    private ScrollViewer? _resourceListScroll;    private readonly TextBox _search = new();
     private readonly TextBlock _countText = new();
     private readonly Dictionary<string, Button> _filterButtons = new();
     private readonly TextBox _fieldId = new();
@@ -110,6 +112,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
     /// 资源整理是整理 Map 的图片（烘焙切片 / 分区底图），不是扫整个工程。
     /// </summary>
     private string _mapDirectory = string.Empty;
+
+    /// <summary>地图保存目录的「资源名 → PNG 路径」惰性索引，供配置表行补缩略图。</summary>
+    private Dictionary<string, string>? _mapImageIndex;
 
     /// <summary>地图物件配置表文件夹（夹内多张表）：按图片名绑定的行数据。</summary>
     private ItemConfigSet? _itemTable;
@@ -198,6 +203,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
 
         _mapDirectory = normalized;
+        _mapImageIndex = null;
         ScanUnconfigured(silent: true);
     }
 

@@ -129,5 +129,17 @@ public sealed class ConfirmWindow : Window
             Padding = new Thickness(18, 16, 18, 14),
             Child = new StackPanel { Spacing = 16, Children = { text, buttons } },
         };
+
+        WindowChromeTheme.Attach(this, closeAction: () =>
+        {
+            if (threeWay)
+            {
+                Close(ConfirmChoice.Cancel);
+            }
+            else
+            {
+                Close(false);
+            }
+        });
     }
 }

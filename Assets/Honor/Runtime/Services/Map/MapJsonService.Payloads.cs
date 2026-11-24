@@ -145,6 +145,12 @@ public static partial class MapJsonService
         /// <summary>Spine 骨架动画名；空串表示资产默认动画。</summary>
         [JsonPropertyName("spineAnimation")] public string SpineAnimation { get; set; } = string.Empty;
 
+        /// <summary>Spine 骨架行走动画名；沿路径移动时播放。</summary>
+        [JsonPropertyName("spineWalkAnimation")] public string SpineWalkAnimation { get; set; } = string.Empty;
+
+        /// <summary>序列帧行走动画名；沿路径移动时播放。</summary>
+        [JsonPropertyName("moveAnimName")] public string MoveAnimName { get; set; } = string.Empty;
+
         [JsonPropertyName("loop")] public bool Loop { get; set; }
 
         [JsonPropertyName("speed")] public double Speed { get; set; }

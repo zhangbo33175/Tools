@@ -57,15 +57,26 @@ public sealed partial class MapCanvas : Control
             // 用手改后的有效显示层判断，显示层改为绿化时同样不铺调试填充。
             var greenery = LayerOrder.EffectiveLayer(item) == MapLayerKeys.Greenery;
 
-            // 碰撞 / 阴影区域：只对当前选中实例描绘，便于在画布上对准「碰撞区域 / 阴影区域」的数值
+            // 碰撞 / 阴影区域：只对当前选中实例描绘，便于在画布上对准「碰撞区域 / 阴影区域」的数值。
+            // Spine 动画本身透明，若继续铺半透明填充，会在角色背后露出一整块「背景图」；
+            // 因此 Spine 物件只保留虚线轮廓，不画填充。
+            var spineVisual = UsesSpineVisual(item);
             if (item.CollisionEnabled && !greenery)
             {
-                DrawEditableArea(context, item.CollisionBounds, CollisionAreaFillBrush, CollisionAreaStrokeBrush);
+                DrawEditableArea(
+                    context,
+                    item.CollisionBounds,
+                    spineVisual ? null : CollisionAreaFillBrush,
+                    CollisionAreaStrokeBrush);
             }
 
             if (item.ShadowEnabled && !greenery)
             {
-                DrawEditableArea(context, item.ShadowBounds, ShadowAreaFillBrush, ShadowAreaStrokeBrush);
+                DrawEditableArea(
+                    context,
+                    item.ShadowBounds,
+                    spineVisual ? null : ShadowAreaFillBrush,
+                    ShadowAreaStrokeBrush);
             }
 
             foreach (var corner in new[] { bounds.TopLeft, bounds.TopRight, bounds.BottomRight, bounds.BottomLeft })
@@ -105,7 +116,7 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
-        DrawOccupancyCells(context, item, emphasized: true);
+        DrawOccupancyCells(context, item, emphasized: true, suppressFill: UsesSpineVisual(item));
     }
 
     /// <summary>
@@ -138,7 +149,8 @@ public sealed partial class MapCanvas : Control
     /// <param name="context">绘制上下文（世界坐标）。</param>
     /// <param name="item">实例。</param>
     /// <param name="emphasized">是否强调（选中实例）。</param>
-    private void DrawOccupancyCells(DrawingContext context, PlacedObject item, bool emphasized)
+    /// <param name="suppressFill">是否只画描边不铺填充（Spine 透明动画用）。</param>
+    private void DrawOccupancyCells(DrawingContext context, PlacedObject item, bool emphasized, bool suppressFill = false)
     {
         var config = _config;
         if (config is null)
@@ -167,7 +179,7 @@ public sealed partial class MapCanvas : Control
         var stroke = emphasized
             ? new Pen(OccupancyStrokeBrush, 2.0 * thin)
             : new Pen(OccupancyIdleStrokeBrush, thin);
-        var fill = emphasized ? OccupancyFillBrush : null;
+        var fill = emphasized && !suppressFill ? OccupancyFillBrush : null;
         var mapWidth = config.Width;
         var mapHeight = config.Height;
 
@@ -325,19 +337,23 @@ public sealed partial class MapCanvas : Control
         return true;
     }
 
-    /// <summary>绘制选中实例的可编辑区域（碰撞 / 阴影）：半透明填充 + 虚线描边，线宽按缩放保持设备像素。</summary>
+    /// <summary>绘制选中实例的可编辑区域（碰撞 / 阴影）：可选半透明填充 + 虚线描边，线宽按缩放保持设备像素。</summary>
     /// <param name="context">绘制上下文。</param>
     /// <param name="area">区域矩形（世界坐标）。</param>
-    /// <param name="fill">填充画刷。</param>
+    /// <param name="fill">填充画刷；为 null 时只画虚线轮廓。</param>
     /// <param name="stroke">描边画刷。</param>
-    private void DrawEditableArea(DrawingContext context, Rect area, IBrush fill, IBrush stroke)
+    private void DrawEditableArea(DrawingContext context, Rect area, IBrush? fill, IBrush stroke)
     {
         if (area.Width <= 0 || area.Height <= 0)
         {
             return;
         }
 
-        context.FillRectangle(fill, area);
+        if (fill is not null)
+        {
+            context.FillRectangle(fill, area);
+        }
+
         context.DrawRectangle(null, new Pen(stroke, 1.5 * Hairline, DashStyle.Dash), area);
     }
 

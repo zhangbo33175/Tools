@@ -225,6 +225,8 @@ public sealed partial class AnimationPreviewWindow : Window
             _timer.Stop();
             _clock.Stop();
         };
+
+        WindowChromeTheme.Attach(this);
     }
 
     #endregion

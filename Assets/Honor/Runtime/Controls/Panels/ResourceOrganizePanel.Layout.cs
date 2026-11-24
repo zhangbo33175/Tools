@@ -64,7 +64,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         var title = new TextBlock
         {
-            Text = "未配置资源",
+            Text = "资源列表",
             Foreground = UiTheme.AccentDark,
             FontWeight = FontWeight.Bold,
         };
@@ -124,7 +124,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         _countText.Foreground = UiTheme.TextSecondary;
         _countText.FontSize = 11;
-        _countText.Text = "共 0 个未配置资源";
+        _countText.Text = "共 0 个资源";
         Grid.SetRow(_countText, 4);
         stack.Children.Add(_countText);
 
@@ -152,6 +152,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         };
         // 与左侧「章节/物件列表」同款：1px 描边外框 + 右侧 14px 经典箭头滚动条
         list.VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden;
+        _resourceListScroll = list;
         var listFrame = UiFactory.ScrollListFrame(list);
         Grid.SetRow(listFrame, 6);
         stack.Children.Add(listFrame);

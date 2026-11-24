@@ -76,6 +76,155 @@ public sealed partial class MapCanvas : Control
         return PathMath.PointAtDistance(item.PathPoints, walked);
     }
 
+    /// <summary>
+    /// 实例在预览中是否处于「行走」状态：带路径、开启路径演示且没有走到单程终点。
+    /// <para>暂停不改变动作归属，恢复播放时直接继续原动作；循环 / 往返路径始终视为行走。</para>
+    /// </summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>应播放行走动作时为 true。</returns>
+    private bool IsPreviewPathMoving(PlacedObject item)
+    {
+        if (!PreviewMode || !PreviewShowPaths || !HasPreviewPath(item))
+        {
+            return false;
+        }
+
+        var total = PathMath.Length(item.PathPoints);
+        if (total <= 0)
+        {
+            return false;
+        }
+
+        if (PathMath.ParseWalkMode(item.WalkMode) != PathPlaybackMode.Once)
+        {
+            return true;
+        }
+
+        var speed = AnimationSpeeds.DefaultPreviewMovement * AnimationSpeeds.Clamp(item.Speed);
+        return Math.Max(0, _previewElapsedSeconds) * speed < total;
+    }
+
+    /// <summary>
+    /// 预览排序脚底：带路径的实例按当前插值位置取脚底 Y，其余仍用摆放包围盒底边。
+    /// <para>角色走到树 / 建筑后面时，遮挡关系会和它当前所在位置一致，而不是停在摆放坐标上。</para>
+    /// </summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>排序用脚底世界 Y。</returns>
+    private double PreviewSortBaseline(PlacedObject item) =>
+        PreviewMode && PreviewShowPaths && HasPreviewPath(item)
+            ? PreviewFootPoint(item)?.Y ?? item.Bounds.Bottom
+            : item.Bounds.Bottom;
+
+    /// <summary>
+    /// 预览行走时的实际水平镜像：按路径当前八方向决定朝左还是朝右，再叠加实例自身的「水平翻转」。
+    /// <para>默认美术按朝左绘制；初始朝向标成 right 的美术反向处理，避免所有资源都靠方向字段手工纠正。</para>
+    /// <para>资产里存在方向动作（如 <c>walk_up_right</c>）时，方向已经画在动画里，不再额外镜像。</para>
+    /// </summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>本次绘制是否水平镜像。</returns>
+    // ---TODO 朝向：预览沿路径移动时按八方向自动翻面，静态摆放仍沿用实例自身的 FlipX。
+    private bool ResolveRenderFlipX(PlacedObject item)
+    {
+        var flip = item.FlipX;
+        var direction = PreviewMoveDirection8(item);
+        if (direction is null)
+        {
+            return flip;
+        }
+
+        if (PreviewShowAnimations && item.AnimEnabled && IsPreviewPathMoving(item)
+            && HasDirectionalWalk(item, direction.Value))
+        {
+            return flip;
+        }
+
+        var baseFacesRight = string.Equals(item.FacingDirection, Facings.Right, StringComparison.OrdinalIgnoreCase);
+        var invert = baseFacesRight
+            ? MoveDirectionResolver.IsLeft(direction.Value)
+            : MoveDirectionResolver.IsRight(direction.Value);
+        return flip ^ invert;
+    }
+
+    /// <summary>预览路径上的八方向；路径在端点或静止时返回 null。</summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>当前八方向；无有效方向时为 null。</returns>
+    private MoveDirection8? PreviewMoveDirection8(PlacedObject item)
+    {
+        var direction = PreviewMoveDirection(item);
+        return direction is null
+            ? null
+            : MoveDirectionResolver.FromVector(direction.Value.X, direction.Value.Y);
+    }
+
+    /// <summary>预览路径上的当前切向；往返模式后半程自动取反。</summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>归一化方向向量；路径无效时为 null。</returns>
+    private Point? PreviewMoveDirection(PlacedObject item)
+    {
+        if (!PreviewMode || !PreviewShowPaths || !HasPreviewPath(item))
+        {
+            return null;
+        }
+
+        var total = PathMath.Length(item.PathPoints);
+        if (total <= 0)
+        {
+            return null;
+        }
+
+        var speed = AnimationSpeeds.DefaultPreviewMovement * AnimationSpeeds.Clamp(item.Speed);
+        var raw = Math.Max(0, _previewElapsedSeconds) * speed;
+        var mode = PathMath.ParseWalkMode(item.WalkMode);
+        var walked = PathMath.NormalizeDistance(raw, total, mode);
+        var direction = PathMath.DirectionAtDistance(item.PathPoints, walked);
+        if (direction is null)
+        {
+            return null;
+        }
+
+        // 往返模式后半程沿原路返回，路段本身仍指向前进方向，需要取反。
+        if (mode == PathPlaybackMode.PingPong && raw % (total * 2) > total)
+        {
+            direction = new Point(-direction.Value.X, -direction.Value.Y);
+        }
+
+        return direction;
+    }
+
+    /// <summary>当前方向是否存在对应的 Spine / 序列帧行走动作。</summary>
+    /// <param name="item">地图实例。</param>
+    /// <param name="direction">八方向。</param>
+    /// <returns>命中方向动作时为 true。</returns>
+    private bool HasDirectionalWalk(PlacedObject item, MoveDirection8 direction)
+    {
+        if (!UsesSpineVisual(item) && ResolveClip(item) is null)
+        {
+            return false;
+        }
+
+        var available = AvailableAnimationNames(item);
+        if (available is null || available.Count == 0)
+        {
+            return false;
+        }
+
+        var walkAction = AnimationActionResolver.Resolve(item, true);
+        return DirectionalAnimationResolver.HasDirectional(walkAction, direction, available);
+    }
+
+    /// <summary>取实例当前视觉源可用的动作名。</summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>Spine 骨架动画名或序列帧目录名；视觉源缺失时为 null。</returns>
+    private IReadOnlyList<string>? AvailableAnimationNames(PlacedObject item)
+    {
+        if (string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase))
+        {
+            return _spineAnimations?.Find(item.SpineAsset)?.Animations;
+        }
+
+        return _animations?.Names;
+    }
+
     /// <summary>预览中描出所有角色路径、路径点序号，以及角色当前脚底位置。</summary>
     /// <param name="context">绘制上下文（世界坐标）。</param>
     /// <param name="config">地图配置。</param>
@@ -220,14 +369,20 @@ public sealed partial class MapCanvas : Control
         ? _previewElapsedSeconds
         : _animationClock.Elapsed.TotalSeconds;
 
-    /// <summary>判断实例当前是否应走 Spine 绘制。</summary>
+    /// <summary>物件是否以 Spine 作为视觉来源：只看动画来源，不看资产是否加载成功。</summary>
     /// <param name="item">地图实例。</param>
-    /// <returns>有可用资产并启用动画时为 true。</returns>
+    /// <returns>AnimationKind 为 spine 时为 true。</returns>
+    private static bool UsesSpineVisual(PlacedObject item) =>
+        string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>判断实例当前是否应推进 Spine 播放；视觉来源与是否播放分开。</summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>有可用资产、启用动画且允许预览动画时为 true。</returns>
     private bool IsSpineAnimated(PlacedObject item)
     {
         return PreviewShowAnimations
             && item.AnimEnabled
-            && string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase)
+            && UsesSpineVisual(item)
             && _spineAnimations?.Find(item.SpineAsset) is not null;
     }
 
@@ -318,7 +473,17 @@ public sealed partial class MapCanvas : Control
                 continue;
             }
 
-            player.EnsureAnimation(item.SpineAnimation, item.Loop);
+            // 动作切换：沿路径移动时走行走动作，停住 / 单程终点回待机动作；
+            // 行走动作强制循环，避免 Loop=false 的待机配置让角色走一半就停帧。
+            // 资产提供 walk_up / walk_down_right 等方向动作时优先使用，否则回落到通用 walk。
+            var moving = IsPreviewPathMoving(item);
+            var action = AnimationActionResolver.Resolve(item, moving);
+            if (moving && PreviewMoveDirection8(item) is { } direction)
+            {
+                action = DirectionalAnimationResolver.Resolve(action, direction, AvailableAnimationNames(item));
+            }
+
+            player.EnsureAnimation(action, moving || item.Loop);
             player.Update(delta, AnimationSpeeds.Clamp(item.Speed));
             count++;
         }
@@ -371,7 +536,7 @@ public sealed partial class MapCanvas : Control
                 clip,
                 elapsed,
                 AnimationSpeeds.Clamp(item.Speed),
-                item.Loop);
+                IsAnimationLooping(item));
             signature = unchecked(signature * 31 + item.Id.GetHashCode() * 17L + frame);
             animated++;
         }
@@ -384,10 +549,26 @@ public sealed partial class MapCanvas : Control
     /// <returns>片段；未启用 / 未配置 / 缺帧时返回 null。</param>
     private SpriteAnimationClip? ResolveClip(PlacedObject item)
     {
-        return PreviewShowAnimations && item.AnimEnabled && _animations?.Find(item.AnimName) is { } clip
-            ? clip
-            : null;
+        if (!PreviewShowAnimations || !item.AnimEnabled || UsesSpineVisual(item) || _animations is null)
+        {
+            return null;
+        }
+
+        var moving = IsPreviewPathMoving(item);
+        var action = AnimationActionResolver.Resolve(item, moving);
+        if (moving && PreviewMoveDirection8(item) is { } direction)
+        {
+            action = DirectionalAnimationResolver.Resolve(action, direction, _animations.Names);
+        }
+
+        return _animations.Find(action)
+            ?? (moving ? _animations.Find(item.AnimName) : null);
     }
+
+    /// <summary>预览中行走动作强制循环；待机动作仍按实例的「循环」开关。</summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>当前动作是否循环。</returns>
+    private bool IsAnimationLooping(PlacedObject item) => IsPreviewPathMoving(item) || item.Loop;
 
     /// <summary>取实例当前帧位图；帧路径解析失败时返回 null，由调用方回退静态贴图。</summary>
     /// <param name="item">地图实例。</param>
@@ -404,7 +585,7 @@ public sealed partial class MapCanvas : Control
             clip,
             CurrentAnimationTime,
             AnimationSpeeds.Clamp(item.Speed),
-            item.Loop);
+            IsAnimationLooping(item));
         var path = clip.Frames[Math.Clamp(frame, 0, clip.Frames.Count - 1)];
         var key = string.Concat(clip.Name, "|", frame, "|", path);
         if (_animationFrameCache.TryGetValue(key, out var cached))

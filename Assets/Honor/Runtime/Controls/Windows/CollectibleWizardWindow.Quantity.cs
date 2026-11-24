@@ -183,6 +183,13 @@ public sealed partial class CollectibleWizardWindow : Window
         field.Width = double.NaN;
         field.Height = 38;
         field.HorizontalAlignment = HorizontalAlignment.Stretch;
+
+        // NumberStepper 内部已维护输入框、箭头与外框，避免外层主题再次覆盖形成双层描边。
+        if (field is NumberStepper)
+        {
+            return;
+        }
+
         field.Background = UiTheme.Card;
         field.BorderBrush = UiTheme.Divider;
         field.BorderThickness = new Avalonia.Thickness(1);

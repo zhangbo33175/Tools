@@ -238,7 +238,7 @@ public sealed class AnimationPreviewCanvas : Control
         }
 
         _timeSeconds += deltaSeconds;
-        if (_spinePlayer is not null && _target is not null)
+        if (_spinePlayer is not null && _target is not null && _target.AnimEnabled)
         {
             _spinePlayer.Update(deltaSeconds, EffectiveAnimationSpeed(_target));
         }
@@ -258,12 +258,12 @@ public sealed class AnimationPreviewCanvas : Control
         InvalidateVisual();
     }
 
-    /// <summary>解析实例的 Spine 资产；未启用 / 未导入时返回 null。</summary>
+    /// <summary>解析实例的 Spine 资产；只看视觉来源，AnimEnabled 只控制是否推进时间。</summary>
     /// <param name="item">地图实例。</param>
     /// <returns>Spine 资产或 null。</returns>
     public SpineAnimationAsset? ResolveSpineAsset(PlacedObject? item)
     {
-        return item is { AnimEnabled: true }
+        return item is not null
             && string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase)
             ? _spineCatalog?.Find(item.SpineAsset)
             : null;
@@ -294,7 +294,9 @@ public sealed class AnimationPreviewCanvas : Control
     /// <returns>动画片段或 null。</param>
     public SpriteAnimationClip? ResolveClip(PlacedObject? item)
     {
-        return item is { AnimEnabled: true } && _catalog?.Find(item.AnimName) is { } clip
+        return item is { AnimEnabled: true }
+            && !string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase)
+            && _catalog?.Find(item.AnimName) is { } clip
             ? clip
             : null;
     }
@@ -479,11 +481,19 @@ public sealed class AnimationPreviewCanvas : Control
 
         var bitmap = ResolveBitmap(target);
         var spineAsset = ResolveSpineAsset(target);
-        if (spineAsset is not null && _spinePlayer is not null)
+        if (spineAsset is not null)
         {
-            using (context.PushTransform(SpriteLayout.ContentTransform(target.Rotation, target.FlipX, screenRect)))
+            if (_spinePlayer is not null)
             {
-                SpineRenderer.Draw(context, _spinePlayer, spineAsset, screenRect, 0, false);
+                using (context.PushTransform(SpriteLayout.ContentTransform(target.Rotation, target.FlipX, screenRect)))
+                {
+                    SpineRenderer.Draw(context, _spinePlayer, spineAsset, screenRect, 0, false);
+                }
+            }
+            else
+            {
+                // Spine 资源缺失：只画虚线占位，不再回退旧静态图。
+                context.DrawRectangle(null, FootprintPen, screenRect);
             }
         }
         else if (bitmap is not null)
@@ -512,6 +522,12 @@ public sealed class AnimationPreviewCanvas : Control
 
     private Bitmap? ResolveBitmap(PlacedObject target)
     {
+        // Spine 是唯一视觉源：序列帧解析为空时也不再落到静态贴图，避免背景图重新出现。
+        if (string.Equals(target.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
         var clip = ResolveClip(target);
         if (clip is not null)
         {

@@ -126,10 +126,7 @@ public sealed partial class AnimationPreviewWindow : Window
         var target = _canvas.Target;
         if (target is not null)
         {
-            target.AnimationKind = AnimationKinds.Spine;
-            target.SpineAsset = asset.Name;
-            target.SpineAnimation = asset.DefaultAnimation;
-            target.AnimEnabled = true;
+            SpineBinding.Apply(target, asset);
             _canvas.SetSpineCatalog(_spineCatalog);
             _canvas.Target = target;
             _canvas.RestartPlayback();
@@ -145,23 +142,23 @@ public sealed partial class AnimationPreviewWindow : Window
 
     #region 辅助
 
-    /// <summary>解析序列帧片段。</summary>
+    /// <summary>解析序列帧片段；Spine 视觉源不再解析旧序列帧。</summary>
     /// <param name="item">地图实例。</param>
     /// <returns>片段或 null。</returns>
     private SpriteAnimationClip? ResolveSprite(PlacedObject item)
     {
         return item is { AnimEnabled: true }
+            && !string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase)
             ? _spriteCatalog.Find(item.AnimName)
             : null;
     }
 
-    /// <summary>解析 Spine 资产。</summary>
+    /// <summary>解析 Spine 资产；只看视觉来源，AnimEnabled 只控制播放状态。</summary>
     /// <param name="item">地图实例。</param>
     /// <returns>资产或 null。</returns>
     private SpineAnimationAsset? ResolveSpine(PlacedObject item)
     {
-        return item is { AnimEnabled: true }
-            && string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase)
+        return string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase)
             ? _spineCatalog.Find(item.SpineAsset)
             : null;
     }

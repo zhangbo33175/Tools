@@ -173,6 +173,12 @@ public static class MapJsonLoader
                 AnimationKind = NormalizeAnimationKind(ReadString(element, "animationKind")),
                 SpineAsset = ReadString(element, "spineAsset"),
                 SpineAnimation = ReadString(element, "spineAnimation"),
+                SpineWalkAnimation = ReadString(element, "spineWalkAnimation") is { Length: > 0 } spineWalk
+                    ? spineWalk
+                    : MapToolDefaults.DefaultMoveAnimName,
+                MoveAnimName = ReadString(element, "moveAnimName") is { Length: > 0 } moveAnim
+                    ? moveAnim
+                    : MapToolDefaults.DefaultMoveAnimName,
                 Loop = ReadBool(element, "loop", true),
                 Speed = ReadDouble(element, "speed", 1),
                 Interactable = ReadBool(element, "interactable", true),

@@ -85,6 +85,8 @@ public sealed class PublishMapWindow : Window
         _targetBox.SelectionChanged += (_, _) => OnTargetChanged();
         UpdateVisibility();
         UpdatePreview();
+
+        WindowChromeTheme.Attach(this, dark: true, closeAction: () => Close(null));
     }
 
     #endregion

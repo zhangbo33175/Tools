@@ -83,8 +83,11 @@ public sealed class PlacedObject
     /// <summary>Spine 资产名（对应 <c>SpineAnimations.json</c> 的 Name）。</summary>
     public string SpineAsset { get; set; } = string.Empty;
 
-    /// <summary>Spine 骨架内的动画名；空串表示使用资产默认动画。</summary>
+    /// <summary>Spine 骨架内的动画名；空串表示使用资产默认动画。预览中作为待机动作。</summary>
     public string SpineAnimation { get; set; } = string.Empty;
+
+    /// <summary>Spine 骨架内的行走动画名；沿路径移动时播放，空串回落到待机动作。</summary>
+    public string SpineWalkAnimation { get; set; } = MapToolDefaults.DefaultMoveAnimName;
 
     /// <summary>
     /// 是否启用动画。关闭时画布始终使用静态贴图；
@@ -173,8 +176,8 @@ public sealed class PlacedObject
     /// <summary>可移动。</summary>
     public bool IsMovable { get; set; }
 
-    /// <summary>移动动画名。</summary>
-    public string MoveAnimName { get; set; } = "walk";
+    /// <summary>序列帧行走动画名；沿路径移动时播放，空串回落到 <see cref="AnimName"/>。</summary>
+    public string MoveAnimName { get; set; } = MapToolDefaults.DefaultMoveAnimName;
 
     /// <summary>行走模式。</summary>
     public string WalkMode { get; set; } = "loop";

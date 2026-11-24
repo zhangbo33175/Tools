@@ -101,6 +101,7 @@ public sealed class MapConfigWindow : Window
         };
 
         Content = BuildRoot();
+        WindowChromeTheme.Attach(this, closeAction: () => Close(null));
     }
 
     #endregion

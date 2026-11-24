@@ -4,11 +4,16 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>Assets\App\app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\App\MapEditorTool.ico</ApplicationIcon>
     <DefaultItemExcludes>$(DefaultItemExcludes);Assets\ThirdParty\SpineRuntime\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="Assets\ThirdParty\SpineRuntime\SpineRuntime.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\App\MapEditorTool.ico" />
   </ItemGroup>
 
   <ItemGroup>

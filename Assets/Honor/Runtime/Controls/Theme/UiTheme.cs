@@ -39,111 +39,130 @@ public static class UiTheme
     public static readonly IBrush Card = Rgb(0xFF, 0xFF, 0xFF);
 
     /// <summary>主强调蓝，选中态、主按钮、活动标签。</summary>
-    public static readonly IBrush Accent = Rgb(0x13, 0x87, 0xBE);
+    public static readonly IBrush Accent = Rgb(0x0D, 0x8C, 0xB6);
 
     /// <summary>深强调蓝，普通强调文字与图标。</summary>
-    public static readonly IBrush AccentDark = Rgb(0x0B, 0x6E, 0x9B);
+    public static readonly IBrush AccentDark = Rgb(0x07, 0x5E, 0x7C);
 
     /// <summary>错误/危险态文字与描边。</summary>
     public static readonly IBrush Error = Rgb(0xC0, 0x50, 0x4D);
 
     /// <summary>预览窗分隔线。</summary>
-    public static readonly IBrush Divider = Rgb(0xE3, 0xE9, 0xF0);
+    public static readonly IBrush Divider = Rgb(0xD8, 0xE9, 0xF0);
+
+    #endregion
+
+    #region 窗口标题栏色
+
+    /// <summary>自绘标题栏渐变起始色：与卡面标题条的浅青一致。</summary>
+    public static readonly Color TitleBarBackgroundLight = Color.FromRgb(0xC5, 0xF8, 0xFA);
+
+    /// <summary>自绘标题栏渐变中段色：与标题条冰青主色同源。</summary>
+    public static readonly Color TitleBarBackground = Color.FromRgb(0x5A, 0xC4, 0xD9);
+
+    /// <summary>自绘标题栏渐变收束色：立方体顶面的深青。</summary>
+    public static readonly Color TitleBarBackgroundDeep = Color.FromRgb(0x42, 0xB8, 0xD2);
+
+    /// <summary>标题栏文字 / 图标颜色，使用深墨青保证浅青底上的对比度。</summary>
+    public static readonly Color TitleBarText = Color.FromRgb(0x06, 0x32, 0x3F);
+
+    /// <summary>标题栏底边颜色。</summary>
+    public static readonly Color TitleBarBorder = Color.FromRgb(0x2F, 0xA0, 0xBA);
 
     #endregion
 
     #region 编辑器面板色
 
     /// <summary>编辑器面板底色。</summary>
-    public static readonly IBrush PanelSurface = Rgb(0xF7, 0xF7, 0xF7);
+    public static readonly IBrush PanelSurface = Rgb(0xF0, 0xF8, 0xFB);
 
     /// <summary>编辑器面板外框。</summary>
-    public static readonly IBrush PanelBorder = Rgb(0xC9, 0xC9, 0xC9);
+    public static readonly IBrush PanelBorder = Rgb(0xC5, 0xDD, 0xE8);
 
     /// <summary>编辑器主文字。</summary>
-    public static readonly IBrush TextPrimary = Rgb(0x26, 0x26, 0x26);
+    public static readonly IBrush TextPrimary = Rgb(0x17, 0x32, 0x3D);
 
     /// <summary>编辑器次要文字/提示。</summary>
-    public static readonly IBrush TextSecondary = Rgb(0x6C, 0x6C, 0x6C);
+    public static readonly IBrush TextSecondary = Rgb(0x57, 0x73, 0x80);
 
     /// <summary>信息提示文字（蓝色说明行）。</summary>
-    public static readonly IBrush InfoText = Rgb(0x0B, 0x6E, 0x9B);
+    public static readonly IBrush InfoText = Rgb(0x07, 0x5E, 0x7C);
 
     /// <summary>对话框底色。</summary>
-    public static readonly IBrush DialogSurface = Rgb(0xF4, 0xF6, 0xF8);
+    public static readonly IBrush DialogSurface = Rgb(0xED, 0xF7, 0xFB);
 
     /// <summary>对话框次按钮底。</summary>
-    public static readonly IBrush DialogSecondary = Rgb(0xE8, 0xEC, 0xF0);
+    public static readonly IBrush DialogSecondary = Rgb(0xDF, 0xEE, 0xF5);
 
     #endregion
 
     #region 预览与向导色
 
     /// <summary>预览窗/向导窗底色。</summary>
-    public static readonly IBrush PreviewPanel = Rgb(0xEE, 0xF2, 0xF7);
+    public static readonly IBrush PreviewPanel = Rgb(0xEA, 0xF6, 0xFA);
 
     /// <summary>预览窗主文字。</summary>
-    public static readonly IBrush PreviewText = Rgb(0x1F, 0x29, 0x37);
+    public static readonly IBrush PreviewText = Rgb(0x17, 0x32, 0x3D);
 
     /// <summary>预览窗提示文字。</summary>
-    public static readonly IBrush PreviewHint = Rgb(0x78, 0x86, 0x95);
+    public static readonly IBrush PreviewHint = Rgb(0x5B, 0x78, 0x85);
 
     /// <summary>预览窗更浅的次要文字。</summary>
-    public static readonly IBrush PreviewMuted = Rgb(0xA8, 0xB1, 0xBB);
+    public static readonly IBrush PreviewMuted = Rgb(0x93, 0xAC, 0xB8);
 
     /// <summary>预览窗强调蓝的浅底。</summary>
-    public static readonly IBrush PreviewAccentSoft = Rgb(0xE8, 0xF5, 0xFB);
+    public static readonly IBrush PreviewAccentSoft = Rgb(0xDD, 0xF2, 0xF9);
 
     /// <summary>收集物向导的槽位浅底。</summary>
-    public static readonly IBrush PreviewSlot = Rgb(0xF3, 0xF6, 0xFA);
+    public static readonly IBrush PreviewSlot = Rgb(0xF6, 0xFB, 0xFD);
 
     /// <summary>收集物向导的绿色强调。</summary>
-    public static readonly IBrush WizardAccent = Rgb(0x2F, 0xC5, 0x8B);
+    public static readonly IBrush WizardAccent = Rgb(0x1E, 0x9E, 0x86);
 
     /// <summary>收集物向导的深绿描边。</summary>
-    public static readonly IBrush WizardAccentDark = Rgb(0x23, 0xA3, 0x71);
+    public static readonly IBrush WizardAccentDark = Rgb(0x14, 0x7A, 0x69);
 
     /// <summary>收集物向导标题绿。</summary>
-    public static readonly IBrush WizardTitle = Rgb(0x1B, 0x8F, 0x66);
+    public static readonly IBrush WizardTitle = Rgb(0x11, 0x6B, 0x60);
 
     /// <summary>收集物向导说明卡底色。</summary>
-    public static readonly IBrush WizardInfoSurface = Rgb(0xF7, 0xFB, 0xFD);
+    public static readonly IBrush WizardInfoSurface = Rgb(0xF7, 0xFC, 0xFE);
 
     /// <summary>收集物向导说明卡描边。</summary>
-    public static readonly IBrush WizardInfoBorder = Rgb(0xD8, 0xEA, 0xF3);
+    public static readonly IBrush WizardInfoBorder = Rgb(0xD4, 0xE9, 0xF2);
 
     /// <summary>收集物向导说明文字。</summary>
-    public static readonly IBrush WizardInfoText = Rgb(0x46, 0x66, 0x78);
+    public static readonly IBrush WizardInfoText = Rgb(0x40, 0x63, 0x74);
 
     /// <summary>收集物向导地图预览底色。</summary>
-    public static readonly IBrush WizardMapSurface = Rgb(0xF7, 0xFA, 0xFD);
+    public static readonly IBrush WizardMapSurface = Rgb(0xF7, 0xFC, 0xFE);
 
     /// <summary>收集物向导地图预览深色背景。</summary>
     public static readonly IBrush WizardMapBackdrop = Rgb(0x1C, 0x25, 0x33);
 
     /// <summary>收集物向导的绿色浅底。</summary>
-    public static readonly IBrush WizardAccentSoft = Rgb(0xE8, 0xFA, 0xF3);
+    public static readonly IBrush WizardAccentSoft = Rgb(0xE3, 0xF7, 0xF2);
 
     /// <summary>收集物向导的移除/危险操作色。</summary>
     public static readonly IBrush WizardDanger = Rgb(0xFF, 0x6B, 0x6B);
 
     /// <summary>收集物向导空槽描边。</summary>
-    public static readonly IBrush WizardEmptySlotBorder = Rgb(0xD4, 0xDD, 0xE7);
+    public static readonly IBrush WizardEmptySlotBorder = Rgb(0xCC, 0xE2, 0xEC);
 
     /// <summary>收集物向导空槽提示色。</summary>
-    public static readonly IBrush WizardEmptySlotHint = Rgb(0xB4, 0xC1, 0xCE);
+    public static readonly IBrush WizardEmptySlotHint = Rgb(0xA4, 0xBC, 0xC8);
 
     /// <summary>收集物向导缩略图底色。</summary>
-    public static readonly IBrush WizardThumbSurface = Rgb(0xF5, 0xF8, 0xFB);
+    public static readonly IBrush WizardThumbSurface = Rgb(0xF4, 0xFA, 0xFD);
 
     /// <summary>收集物向导无图占位底色。</summary>
-    public static readonly IBrush WizardThumbFallback = Rgb(0xEE, 0xF3, 0xF8);
+    public static readonly IBrush WizardThumbFallback = Rgb(0xEA, 0xF5, 0xFA);
 
     /// <summary>收集物向导窗体渐变顶色。</summary>
-    public static readonly Color WizardWindowTop = Color.FromRgb(0xF4, 0xF8, 0xFB);
+    public static readonly Color WizardWindowTop = Color.FromRgb(0xF4, 0xFB, 0xFD);
 
     /// <summary>收集物向导窗体渐变底色。</summary>
-    public static readonly Color WizardWindowBottom = Color.FromRgb(0xEA, 0xF6, 0xF1);
+    public static readonly Color WizardWindowBottom = Color.FromRgb(0xE7, 0xF6, 0xFA);
 
     /// <summary>收集物向导地图预览卡的深色叠层与信息条配色。</summary>
     public static class WizardMapPreview
@@ -167,7 +186,7 @@ public static class UiTheme
         public static readonly IBrush EmptyGlyph = Rgb(0xD7, 0xE8, 0xE2);
 
         /// <summary>空态说明文字。</summary>
-        public static readonly IBrush EmptyHint = Rgb(0xA9, 0xBC, 0xC7);
+        public static readonly IBrush EmptyHint = Rgb(0x9F, 0xBB, 0xC6);
 
         /// <summary>「场景预览」标签底。</summary>
         public static readonly IBrush TagSurface = Argb(0x33, 0x00, 0x00, 0x00);
@@ -182,7 +201,7 @@ public static class UiTheme
         public static readonly IBrush StatChipSurface = Argb(0x1F, 0xFF, 0xFF, 0xFF);
 
         /// <summary>尺寸信息胶囊文字。</summary>
-        public static readonly IBrush StatChipText = Rgb(0xC5, 0xD5, 0xDE);
+        public static readonly IBrush StatChipText = Rgb(0xC5, 0xDD, 0xE8);
     }
 
     #endregion
@@ -230,34 +249,34 @@ public static class UiTheme
     public static class ResourceTable
     {
         /// <summary>单元格描边。</summary>
-        public static readonly IBrush CellBorder = Rgb(0xD6, 0xD6, 0xD6);
+        public static readonly IBrush CellBorder = Rgb(0xC5, 0xDD, 0xE8);
 
         /// <summary>表头与表格外框线。</summary>
-        public static readonly IBrush Line = Rgb(0x80, 0x80, 0x80);
+        public static readonly IBrush Line = Rgb(0x5B, 0x78, 0x85);
 
         /// <summary>标题行底色。</summary>
-        public static readonly IBrush TitleRow = Rgb(0xC5, 0xD9, 0xF1);
+        public static readonly IBrush TitleRow = Rgb(0xCF, 0xEA, 0xF6);
 
         /// <summary>注释行底色。</summary>
-        public static readonly IBrush CommentRow = Rgb(0x92, 0xD0, 0x50);
+        public static readonly IBrush CommentRow = Rgb(0xBF, 0xE6, 0xD6);
 
         /// <summary>名称列文字。</summary>
-        public static readonly IBrush NameText = Rgb(0x26, 0x26, 0x26);
+        public static readonly IBrush NameText = Rgb(0x17, 0x32, 0x3D);
 
         /// <summary>类型列文字。</summary>
-        public static readonly IBrush TypeText = Rgb(0x80, 0x80, 0x80);
+        public static readonly IBrush TypeText = Rgb(0x5B, 0x78, 0x85);
 
         /// <summary>只读单元格文字（序号等不可编辑列）。</summary>
-        public static readonly IBrush ReadOnlyText = Rgb(0x55, 0x55, 0x55);
+        public static readonly IBrush ReadOnlyText = Rgb(0x55, 0x73, 0x80);
 
         /// <summary>行内编辑按钮底色。</summary>
-        public static readonly IBrush EditSurface = Rgb(0xE8, 0xF3, 0xFA);
+        public static readonly IBrush EditSurface = Rgb(0xE1, 0xF4, 0xFA);
 
         /// <summary>行内编辑按钮描边。</summary>
-        public static readonly IBrush EditBorder = Rgb(0x13, 0x87, 0xBE);
+        public static readonly IBrush EditBorder = Rgb(0x0D, 0x8C, 0xB6);
 
         /// <summary>行内编辑按钮文字。</summary>
-        public static readonly IBrush EditText = Rgb(0x0B, 0x6E, 0x9B);
+        public static readonly IBrush EditText = Rgb(0x07, 0x5E, 0x7C);
 
         /// <summary>行内删除按钮底色。</summary>
         public static readonly IBrush DeleteSurface = Rgb(0xFD, 0xEC, 0xEA);
@@ -278,13 +297,13 @@ public static class UiTheme
     public static class ResourcePanel
     {
         /// <summary>选中素材预览区底色。</summary>
-        public static readonly IBrush PreviewSurface = Rgb(0xE9, 0xE9, 0xE9);
+        public static readonly IBrush PreviewSurface = Rgb(0xEB, 0xF6, 0xFA);
 
         /// <summary>配置表滚动条槽底色。</summary>
-        public static readonly IBrush ScrollLane = Rgb(0xED, 0xED, 0xED);
+        public static readonly IBrush ScrollLane = Rgb(0xE7, 0xF3, 0xF8);
 
         /// <summary>表单字段标签文字。</summary>
-        public static readonly IBrush FieldLabel = Rgb(0x56, 0x56, 0x56);
+        public static readonly IBrush FieldLabel = Rgb(0x57, 0x73, 0x80);
     }
 
     #endregion
@@ -298,28 +317,28 @@ public static class UiTheme
     public static class ScrollBar
     {
         /// <summary>滑块填充。</summary>
-        public static readonly IBrush ThumbFill = Rgb(0xA9, 0xC6, 0xD8);
+        public static readonly IBrush ThumbFill = Rgb(0x8F, 0xC9, 0xDC);
 
         /// <summary>滑块描边。</summary>
-        public static readonly IBrush ThumbBorder = Rgb(0x7F, 0xA8, 0xC0);
+        public static readonly IBrush ThumbBorder = Rgb(0x5F, 0xA6, 0xBF);
 
         /// <summary>滑块轨道底色。</summary>
-        public static readonly IBrush Track = Rgb(0xF4, 0xF4, 0xF4);
+        public static readonly IBrush Track = Rgb(0xF5, 0xFB, 0xFD);
 
         /// <summary>滚动条整体底色。</summary>
-        public static readonly IBrush Surface = Rgb(0xED, 0xED, 0xED);
+        public static readonly IBrush Surface = Rgb(0xE7, 0xF3, 0xF8);
 
         /// <summary>滚动条整体描边。</summary>
-        public static readonly IBrush Border = Rgb(0xC6, 0xC6, 0xC6);
+        public static readonly IBrush Border = Rgb(0xC5, 0xDD, 0xE8);
 
         /// <summary>箭头填充。</summary>
-        public static readonly IBrush Arrow = Rgb(0x5A, 0x5A, 0x5A);
+        public static readonly IBrush Arrow = Rgb(0x35, 0x56, 0x63);
 
         /// <summary>箭头按钮底色。</summary>
-        public static readonly IBrush ArrowSurface = Rgb(0xE8, 0xE8, 0xE8);
+        public static readonly IBrush ArrowSurface = Rgb(0xE3, 0xF1, 0xF6);
 
         /// <summary>箭头按钮描边。</summary>
-        public static readonly IBrush ArrowBorder = Rgb(0xD4, 0xD4, 0xD4);
+        public static readonly IBrush ArrowBorder = Rgb(0xC5, 0xDD, 0xE8);
     }
 
     /// <summary>
@@ -329,13 +348,13 @@ public static class UiTheme
     public static class ScrollRail
     {
         /// <summary>轨道底色。</summary>
-        public static readonly IBrush Track = Rgb(0xE6, 0xEC, 0xF2);
+        public static readonly IBrush Track = Rgb(0xE3, 0xF1, 0xF6);
 
         /// <summary>滑块常态。</summary>
-        public static readonly IBrush Thumb = Rgb(0xB7, 0xC8, 0xD6);
+        public static readonly IBrush Thumb = Rgb(0xA9, 0xCB, 0xD8);
 
         /// <summary>滑块悬浮态。</summary>
-        public static readonly IBrush ThumbHover = Rgb(0x8F, 0xB4, 0xC9);
+        public static readonly IBrush ThumbHover = Rgb(0x73, 0xAE, 0xC4);
 
         /// <summary>滑块拖动态，复用全局强调蓝。</summary>
         public static readonly IBrush ThumbActive = Accent;
@@ -348,7 +367,7 @@ public static class UiTheme
     public static class PlaybackSlider
     {
         /// <summary>轨道底色。</summary>
-        public static readonly IBrush Track = Rgb(0xDD, 0xE5, 0xEC);
+        public static readonly IBrush Track = Rgb(0xD7, 0xE8, 0xEF);
 
         /// <summary>已选区间填充。</summary>
         public static readonly IBrush Fill = Accent;
@@ -357,10 +376,10 @@ public static class UiTheme
         public static readonly IBrush Thumb = White;
 
         /// <summary>禁用态轨道。</summary>
-        public static readonly IBrush DisabledTrack = Rgb(0xE8, 0xEA, 0xED);
+        public static readonly IBrush DisabledTrack = Rgb(0xEA, 0xF2, 0xF5);
 
         /// <summary>禁用态填充。</summary>
-        public static readonly IBrush DisabledFill = Rgb(0xC8, 0xD3, 0xDC);
+        public static readonly IBrush DisabledFill = Rgb(0xB9, 0xCD, 0xD7);
     }
 
     #endregion
@@ -373,32 +392,44 @@ public static class UiTheme
     /// </summary>
     public static class PublishWindow
     {
-        /// <summary>窗口与内容根底色。</summary>
-        public static readonly IBrush Background = Rgb(0x1B, 0x1B, 0x1F);
+        /// <summary>窗口与内容根底色（深蓝夜空）。</summary>
+        public static readonly IBrush Background = Rgb(0x0B, 0x24, 0x30);
+
+        /// <summary>发布窗自绘标题栏渐变起始色：比窗体底色略亮的深海蓝。</summary>
+        public static readonly Color TitleBarBackgroundLight = Color.FromRgb(0x1C, 0x52, 0x67);
+
+        /// <summary>发布窗自绘标题栏渐变收束色，与窗体深蓝背景一致。</summary>
+        public static readonly Color TitleBarBackground = Color.FromRgb(0x0B, 0x24, 0x30);
+
+        /// <summary>发布窗标题栏文字 / 图标颜色。</summary>
+        public static readonly Color TitleBarText = Color.FromRgb(0xD6, 0xEC, 0xF5);
+
+        /// <summary>发布窗标题栏边框颜色。</summary>
+        public static readonly Color TitleBarBorder = Color.FromRgb(0x2C, 0x4F, 0x60);
 
         /// <summary>副标题等次要文字。</summary>
-        public static readonly IBrush SubtitleText = Rgb(0xA8, 0xA8, 0xB3);
+        public static readonly IBrush SubtitleText = Rgb(0xA7, 0xC2, 0xCF);
 
         /// <summary>标题下方分隔线。</summary>
-        public static readonly IBrush Divider = Rgb(0x34, 0x34, 0x3C);
+        public static readonly IBrush Divider = Rgb(0x22, 0x41, 0x4F);
 
         /// <summary>预览卡片底色。</summary>
-        public static readonly IBrush PreviewSurface = Rgb(0x25, 0x25, 0x2C);
+        public static readonly IBrush PreviewSurface = Rgb(0x10, 0x2C, 0x3A);
 
         /// <summary>预览卡片描边。</summary>
-        public static readonly IBrush PreviewBorder = Rgb(0x3A, 0x3A, 0x44);
+        public static readonly IBrush PreviewBorder = Rgb(0x2C, 0x4F, 0x60);
 
         /// <summary>预览内容文字。</summary>
-        public static readonly IBrush PreviewText = Rgb(0xD6, 0xD6, 0xDE);
+        public static readonly IBrush PreviewText = Rgb(0xD6, 0xEC, 0xF5);
 
         /// <summary>底部说明与路径提示文字。</summary>
-        public static readonly IBrush NoteText = Rgb(0x8C, 0x8C, 0x97);
+        public static readonly IBrush NoteText = Rgb(0x8F, 0xB2, 0xC0);
 
         /// <summary>发布失败/校验错误文字。</summary>
         public static readonly IBrush ErrorText = Rgb(0xFF, 0x8A, 0x8A);
 
         /// <summary>表单左侧字段标签文字。</summary>
-        public static readonly IBrush LabelText = Rgb(0xC8, 0xC8, 0xD2);
+        public static readonly IBrush LabelText = Rgb(0xC5, 0xE2, 0xEC);
     }
 
     #endregion
@@ -408,11 +439,11 @@ public static class UiTheme
     /// <summary>九宫格预览的棋盘格、切片填充与拖拽手柄配色。</summary>
     public static class NineSlice
     {
-        /// <summary>预览背景底色。</summary>
-        public static readonly IBrush Backdrop = Rgb(0x2C, 0x2C, 0x2C);
+        /// <summary>预览背景底色（深蓝）。</summary>
+        public static readonly IBrush Backdrop = Rgb(0x10, 0x2A, 0x33);
 
         /// <summary>棋盘格深色块，与背景形成透明区参照。</summary>
-        public static readonly IBrush CheckerDark = Rgb(0x24, 0x24, 0x24);
+        public static readonly IBrush CheckerDark = Rgb(0x0A, 0x1F, 0x26);
 
         /// <summary>九宫格非中心区域的半透明填充。</summary>
         public static readonly IBrush SliceFill = Argb(0x24, 0x4C, 0xD9, 0x64);
@@ -430,7 +461,7 @@ public static class UiTheme
         public static readonly IBrush InvalidGuide = Rgb(0xE5, 0x53, 0x3D);
 
         /// <summary>素材外框线。</summary>
-        public static readonly IBrush Frame = Rgb(0x80, 0x80, 0x80);
+        public static readonly IBrush Frame = Rgb(0x5B, 0x78, 0x85);
 
         /// <summary>底部尺寸与边距说明文字。</summary>
         public static readonly IBrush Hint = Rgb(0xD8, 0xD8, 0xD8);
@@ -439,7 +470,7 @@ public static class UiTheme
         public static readonly IBrush Error = Rgb(0xFF, 0x9A, 0x8A);
 
         /// <summary>拖拽手柄描边，保证手柄在浅色素材上也可见。</summary>
-        public static readonly IBrush HandleBorder = Rgb(0x1A, 0x1A, 0x1A);
+        public static readonly IBrush HandleBorder = Rgb(0x0F, 0x23, 0x2B);
     }
 
     #endregion
@@ -453,7 +484,7 @@ public static class UiTheme
     public static readonly IBrush RowBorder = Rgb(0xAD, 0xAD, 0xAD);
 
     /// <summary>列表行悬停底色。</summary>
-    public static readonly IBrush RowHoverBack = Rgb(0xED, 0xED, 0xED);
+    public static readonly IBrush RowHoverBack = Rgb(0xE7, 0xF3, 0xF8);
 
     /// <summary>列表行选中底色（带透明叠加）。</summary>
     public static readonly IBrush RowSelectedBack = Argb(0x38, 0x13, 0x87, 0xBE);
@@ -469,7 +500,7 @@ public static class UiTheme
     public static class Chrome
     {
         /// <summary>左侧类型页签未选中时的文字色。</summary>
-        public static readonly IBrush SideTabText = Rgb(0x52, 0x61, 0x6B);
+        public static readonly IBrush SideTabText = Rgb(0x3B, 0x5E, 0x6B);
 
         /// <summary>状态栏错误提示文字（深色状态条上的浅红）。</summary>
         public static readonly IBrush MessageErrorText = Rgb(0xFF, 0xD7, 0xD7);
@@ -481,10 +512,10 @@ public static class UiTheme
         public static readonly IBrush SaveSuccessText = Rgb(0x2E, 0x7D, 0x32);
 
         /// <summary>保存中性提示文字（当前文件/未改动）。</summary>
-        public static readonly IBrush SaveNeutralText = Rgb(0x6B, 0x72, 0x80);
+        public static readonly IBrush SaveNeutralText = Rgb(0x57, 0x73, 0x80);
 
         /// <summary>属性卡未选中对象时的图层色点。</summary>
-        public static readonly IBrush EmptyLayerDot = Rgb(0xC9, 0xD2, 0xD8);
+        public static readonly IBrush EmptyLayerDot = Rgb(0xB4, 0xC8, 0xD2);
     }
 
     /// <summary>属性卡「数字 ID 来源」三态徽标：无命中 / 配置表 / PSD 切片。</summary>
@@ -498,15 +529,15 @@ public static class UiTheme
 
         /// <summary>配置表与切片都没有命中。</summary>
         public static readonly Style Missing = new(
-            Rgb(0x7C, 0x87, 0x90),
-            Rgb(0xEE, 0xF1, 0xF3),
-            Rgb(0xDC, 0xE2, 0xE6));
+            Rgb(0x5B, 0x78, 0x85),
+            Rgb(0xEF, 0xF6, 0xF9),
+            Rgb(0xD8, 0xE9, 0xF0));
 
         /// <summary>数字 ID 来自物件配置表。</summary>
         public static readonly Style Config = new(
-            Rgb(0x3A, 0x7F, 0x9E),
-            Rgb(0xEA, 0xF4, 0xFA),
-            Rgb(0xD2, 0xE6, 0xF1));
+            Rgb(0x07, 0x5E, 0x7C),
+            Rgb(0xDD, 0xF2, 0xF9),
+            Rgb(0xC5, 0xDD, 0xE8));
 
         /// <summary>配置表无此行，数字 ID 回退到 PSD 切片序号。</summary>
         public static readonly Style Slice = new(
@@ -526,47 +557,47 @@ public static class UiTheme
     public static class CollectiblePanel
     {
         /// <summary>统计数值。</summary>
-        public static readonly IBrush StatValueText = Rgb(0x0C, 0x6F, 0x9E);
+        public static readonly IBrush StatValueText = Rgb(0x07, 0x5E, 0x7C);
 
         /// <summary>统计项标题。</summary>
-        public static readonly IBrush StatLabelText = Rgb(0x7A, 0x8A, 0x95);
+        public static readonly IBrush StatLabelText = Rgb(0x5B, 0x78, 0x85);
 
         /// <summary>统计项之间的细分隔线。</summary>
-        public static readonly IBrush StatSeparator = Rgb(0xD9, 0xE8, 0xF0);
+        public static readonly IBrush StatSeparator = Rgb(0xD8, 0xE9, 0xF0);
 
         /// <summary>汇总卡底色。</summary>
-        public static readonly IBrush SummarySurface = Rgb(0xF3, 0xF9, 0xFC);
+        public static readonly IBrush SummarySurface = Rgb(0xF2, 0xFA, 0xFD);
 
         /// <summary>汇总卡描边。</summary>
         public static readonly IBrush SummaryBorder = Rgb(0xD7, 0xE8, 0xF1);
 
         /// <summary>分区标题文字。</summary>
-        public static readonly IBrush SectionText = Rgb(0x42, 0x51, 0x5C);
+        public static readonly IBrush SectionText = Rgb(0x3B, 0x5E, 0x6B);
 
         /// <summary>素材行右侧已放数量。</summary>
         public static readonly IBrush CountText = Rgb(0x0F, 0x6B, 0x96);
 
         /// <summary>素材行描边。</summary>
-        public static readonly IBrush RowBorder = Rgb(0xE1, 0xE8, 0xEE);
+        public static readonly IBrush RowBorder = Rgb(0xDF, 0xEF, 0xF5);
     }
 
     /// <summary>左侧章节树、关卡行与资源缩略图的专用色。</summary>
     public static class LeftPanel
     {
         /// <summary>章节标题行常态底。</summary>
-        public static readonly IBrush ChapterHeaderSurface = Rgb(0xF1, 0xF3, 0xF5);
+        public static readonly IBrush ChapterHeaderSurface = Rgb(0xF0, 0xF8, 0xFB);
 
         /// <summary>章节标题行底部分隔线。</summary>
-        public static readonly IBrush ChapterHeaderBorder = Rgb(0xDD, 0xE2, 0xE7);
+        public static readonly IBrush ChapterHeaderBorder = Rgb(0xD8, 0xE9, 0xF0);
 
         /// <summary>关卡已落盘时的文件大小文字。</summary>
         public static readonly IBrush LevelFileSizeText = Rgb(0x2B, 0xA6, 0x6A);
 
         /// <summary>资源缩略图占位描边。</summary>
-        public static readonly IBrush ThumbnailBorder = Rgb(0xD2, 0xD2, 0xD2);
+        public static readonly IBrush ThumbnailBorder = Rgb(0xC5, 0xDD, 0xE8);
 
         /// <summary>资源缩略图未加载时的占位底。</summary>
-        public static readonly IBrush ThumbnailFill = Rgb(0xE0, 0xE0, 0xE0);
+        public static readonly IBrush ThumbnailFill = Rgb(0xD8, 0xE9, 0xF0);
     }
 
     #endregion
@@ -577,25 +608,25 @@ public static class UiTheme
     public static class Form
     {
         /// <summary>输入框/下拉框描边。</summary>
-        public static readonly IBrush FieldBorder = Rgb(0xB4, 0xBE, 0xC4);
+        public static readonly IBrush FieldBorder = Rgb(0xA9, 0xC0, 0xCB);
 
         /// <summary>分组卡片描边。</summary>
-        public static readonly IBrush GroupBorder = Rgb(0xD6, 0xDE, 0xE3);
+        public static readonly IBrush GroupBorder = Rgb(0xD8, 0xE9, 0xF0);
 
         /// <summary>面板/字段条浅底。</summary>
         public static readonly IBrush SubtleSurface = Rgb(0xF0, 0xF0, 0xF0);
 
         /// <summary>只读字段底。</summary>
-        public static readonly IBrush FieldReadOnly = Rgb(0xEF, 0xF0, 0xF1);
+        public static readonly IBrush FieldReadOnly = Rgb(0xEF, 0xF6, 0xF9);
 
         /// <summary>下拉字段底。</summary>
-        public static readonly IBrush FieldCombo = Rgb(0xEE, 0xF0, 0xF2);
+        public static readonly IBrush FieldCombo = Rgb(0xEF, 0xF6, 0xF9);
 
         /// <summary>分组标题常态底。</summary>
-        public static readonly IBrush GroupHeader = Rgb(0xF1, 0xF7, 0xFA);
+        public static readonly IBrush GroupHeader = Rgb(0xF2, 0xFA, 0xFD);
 
         /// <summary>分组标题悬停底。</summary>
-        public static readonly IBrush GroupHeaderHover = Rgb(0xE3, 0xEF, 0xF6);
+        public static readonly IBrush GroupHeaderHover = Rgb(0xE1, 0xF4, 0xFA);
 
         /// <summary>未激活标签底。</summary>
         public static readonly IBrush IdleTab = Rgb(0xE4, 0xE4, 0xE4);
@@ -611,11 +642,11 @@ public static class UiTheme
     /// <summary>主地图画布的语义色：底色、图层、编辑提示、碰撞/阴影占位、路径与红绿灯。</summary>
     public static class MapView
     {
-        /// <summary>画布外底色（视口空白处）。</summary>
-        public static readonly IBrush Backdrop = Rgb(0x06, 0x5A, 0x7A);
+        /// <summary>画布外底色（视口空白处），延续状态栏深蓝。</summary>
+        public static readonly IBrush Backdrop = Rgb(0x00, 0x4A, 0x70);
 
-        /// <summary>地图有效区域底色。</summary>
-        public static readonly IBrush Surface = Rgb(0x07, 0x84, 0xB6);
+        /// <summary>地图有效区域底色，与全局主强调色同源。</summary>
+        public static readonly IBrush Surface = Rgb(0x0D, 0x8C, 0xB6);
 
         /// <summary>地图图层叠加色。</summary>
         public static readonly Color Layer = Color.FromRgb(0x14, 0x96, 0xCB);
@@ -630,7 +661,7 @@ public static class UiTheme
         public static readonly IBrush Handle = Rgb(0xFF, 0xD2, 0x4A);
 
         /// <summary>画布内文字。</summary>
-        public static readonly IBrush Label = Rgb(0xF2, 0xFB, 0xFF);
+        public static readonly IBrush Label = Rgb(0xF2, 0xFB, 0xFE);
 
         /// <summary>选中格填充。</summary>
         public static readonly IBrush SelectedCellFill = Argb(0x66, 0x4C, 0xD9, 0x64);
@@ -770,7 +801,7 @@ public static class UiTheme
         public static readonly IBrush Empty = Argb(0xCC, 0xFF, 0xD2, 0x4A);
 
         /// <summary>预览画布外框。</summary>
-        public static readonly IBrush FrameBorder = Rgb(0xA9, 0xB7, 0xBE);
+        public static readonly IBrush FrameBorder = Rgb(0xA9, 0xC0, 0xCB);
     }
 
     #endregion

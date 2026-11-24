@@ -107,12 +107,19 @@ public partial class MainWindow : Window
 
             var item = Canvas.Selected;
             item.AnimationKind = AnimKindField.SelectedIndex == 1 ? AnimationKinds.Spine : AnimationKinds.Sprite;
-            if (item.AnimationKind == AnimationKinds.Spine && string.IsNullOrWhiteSpace(item.SpineAsset)
-                && _spineAnimations.Names.Count > 0)
+            if (item.AnimationKind == AnimationKinds.Spine)
             {
-                item.SpineAsset = _spineAnimations.Names[0];
-                var asset = _spineAnimations.Find(item.SpineAsset);
-                item.SpineAnimation = asset?.DefaultAnimation ?? string.Empty;
+                // 视觉源切到 Spine 后，旧序列帧名不再参与绘制，避免两套动画互相兜底。
+                item.AnimName = string.Empty;
+                if (string.IsNullOrWhiteSpace(item.SpineAsset) && _spineAnimations.Names.Count > 0)
+                {
+                    item.SpineAsset = _spineAnimations.Names[0];
+                    var asset = _spineAnimations.Find(item.SpineAsset);
+                    item.SpineAnimation = asset?.DefaultAnimation ?? string.Empty;
+                    item.SpineWalkAnimation = asset is null
+                        ? MapToolDefaults.DefaultMoveAnimName
+                        : SpineBinding.ResolveWalkAnimation(asset);
+                }
             }
 
             UpdateAnimationControlState();
@@ -146,10 +153,16 @@ public partial class MainWindow : Window
             var item = Canvas.Selected;
             item.SpineAsset = SpineAssetField.SelectedItem as string ?? string.Empty;
             item.AnimationKind = AnimationKinds.Spine;
+            item.AnimName = string.Empty;
             var asset = _spineAnimations.Find(item.SpineAsset);
             SpineAnimationField.ItemsSource = asset?.Animations ?? Array.Empty<string>();
+            SpineWalkAnimationField.ItemsSource = asset?.Animations ?? Array.Empty<string>();
             item.SpineAnimation = asset?.DefaultAnimation ?? string.Empty;
+            item.SpineWalkAnimation = asset is null
+                ? MapToolDefaults.DefaultMoveAnimName
+                : SpineBinding.ResolveWalkAnimation(asset);
             SpineAnimationField.SelectedItem = item.SpineAnimation;
+            SpineWalkAnimationField.SelectedItem = item.SpineWalkAnimation;
             Canvas.RefreshAnimations();
             Canvas.NotifyDocumentChanged();
         };
@@ -162,6 +175,18 @@ public partial class MainWindow : Window
             }
 
             Canvas.Selected.SpineAnimation = SpineAnimationField.SelectedItem as string ?? string.Empty;
+            Canvas.RefreshAnimations();
+            Canvas.NotifyDocumentChanged();
+        };
+
+        SpineWalkAnimationField.SelectionChanged += (_, _) =>
+        {
+            if (_suppressSync || Canvas.Selected is null)
+            {
+                return;
+            }
+
+            Canvas.Selected.SpineWalkAnimation = SpineWalkAnimationField.SelectedItem as string ?? string.Empty;
             Canvas.RefreshAnimations();
             Canvas.NotifyDocumentChanged();
         };
@@ -229,12 +254,21 @@ public partial class MainWindow : Window
         var asset = _spineAnimations.Find(item.SpineAsset);
         SpineAssetField.SelectedItem = asset?.Name;
         SpineAnimationField.ItemsSource = asset?.Animations ?? Array.Empty<string>();
+        SpineWalkAnimationField.ItemsSource = asset?.Animations ?? Array.Empty<string>();
         if (asset is not null && string.IsNullOrWhiteSpace(item.SpineAnimation))
         {
             item.SpineAnimation = asset.DefaultAnimation;
         }
 
+        if (string.IsNullOrWhiteSpace(item.SpineWalkAnimation))
+        {
+            item.SpineWalkAnimation = asset is null
+                ? MapToolDefaults.DefaultMoveAnimName
+                : SpineBinding.ResolveWalkAnimation(asset);
+        }
+
         SpineAnimationField.SelectedItem = item.SpineAnimation;
+        SpineWalkAnimationField.SelectedItem = item.SpineWalkAnimation;
     }
 
     /// <summary>按动画来源启用 / 禁用对应控件，避免在 Spine 模式下显示无效的序列帧输入。</summary>
@@ -244,6 +278,7 @@ public partial class MainWindow : Window
         AnimNameField.IsEnabled = !spine;
         SpineAssetField.IsEnabled = spine;
         SpineAnimationField.IsEnabled = spine;
+        SpineWalkAnimationField.IsEnabled = spine;
     }
 
     /// <summary>导入一个目录下的序列帧：按文件名排序，12 FPS、循环，命名为目录名。</summary>
@@ -369,10 +404,7 @@ public partial class MainWindow : Window
         RefreshAnimationOptions();
         if (target is not null)
         {
-            target.AnimationKind = AnimationKinds.Spine;
-            target.SpineAsset = asset.Name;
-            target.SpineAnimation = asset.DefaultAnimation;
-            target.AnimEnabled = true;
+            SpineBinding.Apply(target, asset);
             RefreshAnimationEditor(target);
             Canvas.RefreshAnimations();
             Canvas.NotifyDocumentChanged();
