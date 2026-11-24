@@ -25,8 +25,12 @@
 | 网格线 | 白色 20% / 40% 透明度 | 主次两级，随缩放抽稀 |
 | 状态栏 | `#0C7AAC` | 蓝底白字，同截图底栏 |
 
-滑动列表统一走「经典箭头滚动条」：14px 常显灰轨道（`#EDEDED`）+ 上下 ▲/▼ 重复按钮（`#E8E8E8` 底、`#D4D4D4` 分隔线、`#5A5A5A` 三角）+ 蓝灰滑块（`#A9C6D8` 底 / `#7FA8C0` 边 / 2px 圆角）。
-箭头按 48px 步进、轨道点击翻一屏、滑块可拖拽；左侧「章节列表 / 资源列表」和属性卡「属性」区都由自写控件 `Controls/ClassicScrollBar.cs` 提供（始终占位，无溢出时滑块铺满整条），
+滑动列表统一走「经典箭头滚动条」：14px 常显灰轨道（`#EDEDED`）+ 上下 ▲/▼ 重复按钮（`#E8E8E8` 底、`#D4D4D4` 分隔线、`#5A5A5A` 三角）+ 蓝灰滑块（`#A9C6D8` 底 / `#7FA8C0` 边 / 2px 圆角）；
+色值集中在 `UiTheme.ScrollBar`，与 `App.axaml` 的系统滚动条模板同套，自绘控件不再各写 RGB。
+主窗口文字、强调色、选中行与状态提示同样复用 `UiTheme.TextPrimary / TextSecondary / Accent / RowSelectedBack / Chrome`，`MainWindow` 不再维护局部画刷副本。
+属性卡「ID 来源」三态徽标与收集物浮窗也走具名主题：`UiTheme.IdSource`（无 / 配置 / 切片）与 `UiTheme.CollectiblePanel`（统计、汇总卡、素材行）。
+左侧章节树与资源缩略图走 `UiTheme.LeftPanel`；`MainWindow*.cs` 已不再直接 `Color.Parse` / `Color.FromRgb` / `new SolidColorBrush`。
+箭头按 48px 步进、轨道点击翻一屏、滑块可拖拽；左侧「章节列表 / 资源列表」和属性卡「属性」区都由自写控件 `Assets/Honor/Runtime/Controls/Common/ClassicScrollBar.cs` 提供（始终占位，无溢出时滑块铺满整条），
 属性区与右栏「物体编辑」滚动条因此完全同款；其余 `ScrollViewer` 走 `App.axaml` 的 `ClassicVScrollBar` / `ClassicHScrollBar` 主题（同样带常显箭头，`AllowAutoHide=False`）。
 主题里的 `Track` 必须把 `Minimum / Maximum / Value / ViewportSize` 用 `TemplateBinding` 绑到模板父级，竖向再设
 `IsDirectionReversed="True"`：否则 `Track` 拿到的是默认值，滑块会长度不变、位置贴在轨道底部且滚动时反向移动。
@@ -50,7 +54,7 @@ Fluent 的下拉框默认把选中文本贴到框顶，会出现「动画名称 
 画布外框加 `#A9B7BE` 描边 + 圆角 3，图层勾选行 `Spacing` 由 5 收到 4 以免「包围盒」贴边；左侧与主区之间那根 3px 分隔条由 `#D2D2D2` 调浅到 `#DCDCDC`，
 避免和分区卡描边叠成两条线。样式集中在 `App.axaml`：`Border.card`（内容卡）、`Border.frame`（分区卡）两级。
 
-四个面板的滑动列表共用控件 `Controls/ListRowCard.cs`（`IsSelected` 属性驱动选中/悬停态，行距、描边、色值集中一处）：
+四个面板的滑动列表共用控件 `Assets/Honor/Runtime/Controls/Common/ListRowCard.cs`（`IsSelected` 属性驱动选中/悬停态，行距、描边、色值集中一处）：
 「元件列表」行高 62（52px 缩略图）、「未配置资源列表」行高 46（36px 缩略图）、「迷雾区域列表」行高 40（两行文字）。
 「未配置资源」左卡片改为 `Grid` 六行（标题/扫描/分类/过滤/计数/预览 `Auto` + 列表 `*`），滚动区因此占满卡片剩余高度，
 箭头与轨道贴到卡片上下边，不再是固定 300px 上方留白。
@@ -63,7 +67,7 @@ Fluent 的下拉框默认把选中文本贴到框顶，会出现「动画名称 
 
 三处面板内列表的滚动区补齐「描边外框 + 14px 箭头条」，与左侧章节/物件列表完全同构：
 `Border(#C9C9C9 1px)` 包一层 `Grid ColumnDefinitions="*,14"`，左列 `ScrollViewer`（`VerticalScrollBarVisibility=Hidden`，
-不能用 `Disabled`——会连带禁用滚轮）承载行卡片，右列挂自绘 `ClassicScrollBar`（代码里 `new ClassicScrollBar { Target = list }`，与 `MainWindow.axaml` 里
+不能用 `Disabled`——会连带禁用滚轮）承载行卡片，右列挂自绘 `ClassicScrollBar`（代码里 `new ClassicScrollBar { Target = list }`，与 `Assets/Views/MainWindow/MainWindow.axaml` 里
 `Target="{Binding #ChapterScroll}"` 等价）。
 
 「已配置资源」表改成**冻结表头 + 只滚数据行**，并按 Unity 配置表的 Excel 样式重排：
@@ -128,7 +132,7 @@ SortOrder / DialogBubble / ShadowEnabled / IsCollectible / RespawnTime`，比旧
 | 摆放网格 | 菱形网格 / 矩形网格切换（`drawShape`），网格始终压在图层之上。菱形按 TileMap 的 45° 角网格逐格绘制，屏幕线距小于 2 设备像素时才按 2 的幂抽稀（`DiamondGridFactor`），10% 缩放下仍保持逐格密集斜线。网格范围恒等于地图矩形（`0,0,Width,Height`），菱形行列数走 `DiamondLattice.Cols/Rows`（行距半格 → 约为正交格的两倍），改宽高立即重铺；**菱形模式下两组 45° 斜线的截距相位取半个线距**，即整张网格相对格子原点向右下平移半格，边缘不再是贴边的残格。普通摆放网格使用绿色线（弱线每格、强线每 8 格） |
 | 路径网格 | 4 格宽的蓝色粗网格辅助线；进入路径绘制时自动打开并同步顶部「路径网格」勾选框，退出后保留当前勾选状态，可随时手动关闭 |
 | 图层显隐 | 背景 / 绿化 / 道路 / 建筑 / 道具 / 收集物 / 角色 / 前景 / 气泡 独立开关，另有包围盒开关；收集物开关只作用于 `isCollectible` 实例 |
-| 图片边框开关 | 场景设置卡的 `DrawBorder` 勾选项（`MainWindow.axaml` 的 `DrawBorderToggle` → `MapCanvas.ShowImageBorder`）：勾选时每个图元画 1px 黑色（44% 透明）外框 + 白色占格描边、背景层画虚线框；取消后只剩贴图本身，便于比对美术效果。包围盒（整张地图外框）不受它影响，仍由工具栏「包围盒」单独控制 |
+| 图片边框开关 | 场景设置卡的 `DrawBorder` 勾选项（`Assets/Views/MainWindow/MainWindow.axaml` 的 `DrawBorderToggle` → `MapCanvas.ShowImageBorder`）：勾选时每个图元画 1px 黑色（44% 透明）外框 + 白色占格描边、背景层画虚线框；取消后只剩贴图本身，便于比对美术效果。包围盒（整张地图外框）不受它影响，仍由工具栏「包围盒」单独控制 |
 | 裁剪越界开关 | 场景设置卡的「裁剪越界」勾选项（`ClipOutsideMapToggle` → `MapCanvas.ShowClipOutsideMap`，默认开启）：勾选时 ground / traffic / upper / traffic markers 美术和选中框统一裁到地图 `0,0,Width,Height`，边角 605×351 的 `bg_grass_2` 只画地图内部分；取消后完整显示越界美术与实例包围盒，便于检查边缘出血。只影响显示，不改实例坐标 / 尺寸 / 分层数据 |
 | 包围盒 | 工具栏「包围盒」勾选后给**整张地图**（`0,0,Width,Height`）套一圈纯绿 `#00FF00` 实线外框，口径与 Unity 场景工具的 `Gizmos` 边框一致（见 `docs/bounding-box-map-frame.png`）。画法在屏幕空间做：把地图矩形用 `ViewMatrix` 换算成设备像素后取整，四条边各 `FillRectangle` 一条 1 像素实心条，并 `PushRenderOptions(EdgeMode.Aliased)`，所以任何缩放下都是 1 设备像素的实心纯绿线，不会被缩放拉粗、也不会和底色混成半透明。注意它与「图片边框」「选中框」是三层独立的东西：选中框是白实线 + 黄色手柄（跟物体旋转），图片边框是每图元的虚线框，包围盒只描地图边界 |
 | 摆放 | 左侧资源列表点选模板 → 画布点击落位，自动吸附到 32px 格子；列表按分类 Tab 直接读「地图物件配置表文件夹」里的表行（建筑 / 人物 / 物件各一张表），没有对应表时退回 JSON 模板 |
@@ -151,17 +155,17 @@ SortOrder / DialogBubble / ShadowEnabled / IsCollectible / RespawnTime`，比旧
 
 | 原工具模块 | 本工程 |
 | --- | --- |
-| `SenceMapTool.uxml` / `.uss` | `MainWindow.axaml`（203px 左栏 + 主区 + 底部属性横排，按 uxml 复查复刻） |
+| `SenceMapTool.uxml` / `.uss` | `Assets/Views/MainWindow/MainWindow.axaml`（203px 左栏 + 主区 + 底部属性横排，按 uxml 复查复刻） |
 | 底部三栏 | 420px 场景设置 / 自适应「对象编辑」/ 900px「属性」+ 280px 交通设置，三张等高卡片（高 336） |
-| `SceneEditModule` | `Controls/MapCanvas.*.cs` + `MainWindow.*.cs` 的场景编辑部分 |
-| `ItemElementEditModule` | `Controls/ItemElementPanel.cs` + `Services/TemplateStore*.cs`（模板 CRUD 与配置表读写） |
-| `ObjectTemplateManager` / `TemplateFieldView` | `Services/TemplateCatalog.cs`（19 个内置模板）+ `Models/TemplateDisplay.cs`（枚举显示名映射） |
-| `TemplateConfigReader` / `TemplateConfigWriter` | `Services/TemplateStore.Csv.cs`（29 列兼容 + 4 扩展列） |
-| `TemplateIdGenerator` | `Services/TemplateStore.cs` 的 `NextTemplateId()`（人物 1000+/建筑 2000+/物件 3000+） |
-| `MapToolModels.cs` | `Models/EditorModels.cs` |
-| `MapToolConstants.cs` | `Models/EditorModels.cs` 的 `MapToolDefaults` |
-| `common/psd_import.py` | `Services/PsdReader.cs`（自写解析器）+ 导入归类逻辑 |
-| `MapDataLuaExporter.cs` | `Services/MapJsonService.cs`（JSON 部分） |
+| `SceneEditModule` | `Assets/Honor/Runtime/Controls/Canvas/MapCanvas.*.cs` + `Assets/Views/MainWindow/MainWindow.*.cs` 的场景编辑部分 |
+| `ItemElementEditModule` | `Assets/Honor/Runtime/Controls/Panels/ItemElementPanel.cs` + `Assets/Honor/Runtime/Services/Templates/Store/TemplateStore*.cs`（模板 CRUD 与配置表读写） |
+| `ObjectTemplateManager` / `TemplateFieldView` | `Assets/Honor/Runtime/Services/Templates/Store/TemplateCatalog.cs`（19 个内置模板）+ `Assets/Honor/Runtime/Models/Template/TemplateDisplay.cs`（枚举显示名映射） |
+| `TemplateConfigReader` / `TemplateConfigWriter` | `Assets/Honor/Runtime/Services/Templates/Store/TemplateStore.Csv.cs`（29 列兼容 + 4 扩展列） |
+| `TemplateIdGenerator` | `Assets/Honor/Runtime/Services/Templates/Store/TemplateStore.cs` 的 `NextTemplateId()`（人物 1000+/建筑 2000+/物件 3000+） |
+| `MapToolModels.cs` | `Assets/Honor/Runtime/Models/Core/EditorModels.cs` |
+| `MapToolConstants.cs` | `Assets/Honor/Runtime/Models/Core/EditorModels.cs` 的 `MapToolDefaults` |
+| `common/psd_import.py` | `Assets/Honor/Runtime/Services/Psd/PsdReader.cs`（自写解析器）+ 导入归类逻辑 |
+| `MapDataLuaExporter.cs` | `Assets/Honor/Runtime/Services/Map/MapJsonService.cs`（JSON 部分） |
 | `AtlasPacker`、`PsdImportModule` 的切片出图 | 未复刻（依赖 Unity 的 Sprite/AssetDatabase 管线） |
 
 ### 尚未实现
@@ -215,7 +219,7 @@ SortOrder / DialogBubble / ShadowEnabled / IsCollectible / RespawnTime`，比旧
 收集物不是新的 `MapObjectType`，仍是 `Type = Prop` 的 `PlacedObject`；靠既有的 `isCollectible` 字段标记，
 另加 `collectibleOverObjects` 表示它显示在普通物件上方还是下方。这样 Unity 端对象类型 / 导出结构不用改。
 
-1. 顶部工具条点绿色 **「添加收集」**，弹出两步向导 `Controls/CollectibleWizardWindow.cs`：
+1. 顶部工具条点绿色 **「添加收集」**，弹出两步向导 `Assets/Honor/Runtime/Controls/Windows/CollectibleWizardWindow.cs`：
    - 第一步照参考图一：当前地图卡片 + **目标数量**（默认 50）+ **显示层级**（物件上 / 物件下）；
    - 第二步照参考图二：12 个已选槽位 + 物件表素材网格（`TableProps` 行，最多 12 种），点素材加入、点角标移除；
    - **「开始制作」** 只有在至少选中 1 种素材后才可用；完成后写回 `config.Collectibles` 并打开浮窗。
@@ -245,7 +249,7 @@ SortOrder / DialogBubble / ShadowEnabled / IsCollectible / RespawnTime`，比旧
 
 ### 地图配置（左上「配置」按钮）
 
-Unity 的「配置」按钮弹出 `MapConfigWindow`（uxml 3–46 行）。独立版 1:1 复刻成模态弹窗 `Controls/MapConfigWindow.cs`，
+Unity 的「配置」按钮弹出 `MapConfigWindow`（uxml 3–46 行）。独立版 1:1 复刻成模态弹窗 `Assets/Honor/Runtime/Controls/Windows/MapConfigWindow.cs`，
 六条路径 + 基线步长，默认值与 Unity `MapToolConstants` 逐条对齐；uxml 里的「地图预制体」行不复刻（场景面板那条行也已删除）。
 
 ![地图配置弹窗](docs/map-config-window.png)
@@ -264,7 +268,7 @@ Unity 的「配置」按钮弹出 `MapConfigWindow`（uxml 3–46 行）。独�
 
 - **路径口径**：工程内写 `Assets/…`，Assets 之外的写 `../…`（都相对 Unity 工程）；选文件 / 选目录后自动转相对路径，
   工程外的选择保留绝对路径。选择器初始目录取当前配置所在位置，找不到时退回 `Assets`。
-- **落盘**：确定写 `output\Config\EditorSettings.json`（`Services/EditorSettingsStore.cs`，替代 Unity 的 EditorPrefs），
+- **落盘**：确定写 `output\Config\EditorSettings.json`（`Assets/Honor/Runtime/Services/Infrastructure/EditorSettingsStore.cs`，替代 Unity 的 EditorPrefs），
   启动时装载；取消不改任何设置。文件缺失或损坏时回落默认值并立即重建，不阻塞启动。
 - **校验**：基线步长填非数字按当前值回退、越界按上下限钳制，此时底部提示行变红并说明实际取值，窗口不关闭。
 - **生效范围**：基线步长只随配置保存，当前不改变层号坐标（固定 10，与 Unity 对齐）；改「遮挡带 / 图层 / 位置」才会改变画面。
@@ -385,7 +389,7 @@ Unity 的「配置」按钮弹出 `MapConfigWindow`（uxml 3–46 行）。独�
 
 画布上的每个实例按 `image` 字段取真实 Sprite 绘制（背景层把 `bgName` 底图整幅铺满），不是只画图层色块：
 
-- `image` 写法与 Unity 一致（`Assets/Res/Textures/Map/.../bg_1.png`），由 `Services/AssetLibrary.cs` 解析；
+- `image` 写法与 Unity 一致（`Assets/Res/Textures/Map/.../bg_1.png`），由 `Assets/Honor/Runtime/Services/Resources/AssetLibrary.cs` 解析；
   `output\Config\resRoots.txt` 用一行 `project=<Unity 工程根>` 声明工程根，其余行是额外资源根。
 - 解析顺序：绝对路径 → 工程根/资源根 + 相对路径 → 在 `Assets\Res` 索引里按文件名查 → 同名保底。
 - 命中就画图，未命中才退回图层色块；占格描边、选中框、名称标签照常绘制，编辑能力不受影响。
@@ -415,7 +419,7 @@ Unity 的「配置」按钮弹出 `MapConfigWindow`（uxml 3–46 行）。独�
 | 选中实例 | 琥珀格线（`#FFC81E`，2 设备像素）+ 极淡琥珀底（`#FFD24A`，alpha 0x28） | 两组图元循环**之前**统一画一次，被所有贴图盖住 |
 | 未选中但带旋转 | 只画一圈淡描边（`#FFD24A`，alpha 0x55），不铺底 | 仍浮在图元之上，仅作提示 |
 
-实现要点（`Controls/MapCanvas.Rendering.cs`）：
+实现要点（`Assets/Honor/Runtime/Controls/Canvas/MapCanvas.Rendering.cs`）：
 
 - `Render()` 在 `DrawMapLayer()` 之后、两个物件循环（地表格 / 非地表格）之前调用一次 `DrawSelectedOccupancy(context)`；
   它只读 `_selected`，把格子与贴图放在同一条绘制序列里、并且顺序在前。
@@ -436,7 +440,7 @@ Unity 的「配置」按钮弹出 `MapConfigWindow`（uxml 3–46 行）。独�
 PSD 是一次性把 582 层「按层序」压成一张画，而地图运行时是几百个**独立实例**各自带包围盒穿插摆放。
 只要排序不按层序，就会出现「篮子画在店面之前」这类和原画不一致的遮挡。现在用「三带 + 立体带脚底 Y」解决：
 
-| 遮挡带 | 编号 | 归入条件（`Services/LayerBands.cs`） | 排序依据 |
+| 遮挡带 | 编号 | 归入条件（`Assets/Honor/Runtime/Services/Map/LayerBands.cs`） | 排序依据 |
 | --- | --- | --- | --- |
 | 地表 | 0 | `background` / `road` / `greenery` 图层；名字含 grass / lawn / floor / tile / carpet / sand / water / sea / road / 沙滩 / 水面 / 地毯 / 草地…，或以 `bg_` 前缀开头 | 八层层序（背景→道路→草地贴花） |
 | 立体 | 1 | 其余实例（树、花草、桶、灯、路牌、围栏、喷泉、摊位、建筑、人物、鱼摊…） | **跨图层按脚底 Y**：`包围盒底部 + ySortOffset`，越靠下越靠前；同 Y 才看八层层序 |
@@ -461,7 +465,7 @@ PSD 是一次性把 582 层「按层序」压成一张画，而地图运行时�
 - 不想按 Y 的对象，用「遮挡带」手改地表 / 叠加（或把图层改成前景）表达「永远最底 / 最上」，语义比改层序清楚。
 - 绘制与命中检测共用同一份排序（`MapCanvas.OrderedObjects`），点选命中与画面一致。
 - **命中规则（2026-11-23 修正）**：只跳过真正铺满画布的整幅 backdrop（与 `config.BgName` 同名，或包围盒 ≥ 地图 85%×85%）；`background` 组里的独立石板 / 草地 / 沙滩 / 停车位，以及自动提层的 `bg_rock_1_550_867` 灌木都可点中编辑。命中按绘制顺序取最上层，不再按包围盒面积选最小，避免底层小石板抢走压在它上面的道具。点到空白仍回退为“已选中格子”。
-- **统一策略入口**：所有自动遮挡修复都走 `Services/OcclusionAdjustmentStrategy.cs`，导入、刷新画面、刷新层级不再各写一套。
+- **统一策略入口**：所有自动遮挡修复都走 `Assets/Honor/Runtime/Services/Map/OcclusionAdjustmentStrategy.cs`，导入、刷新画面、刷新层级不再各写一套。
   顺序固定为「显式 `BandOverride` / 图层键 → 背景组立体美术提层 → 平面件接缝贴合 → 立体带脚底 Y → 层号兜底」。
   策略只做高置信度、可撤销的窄口修复：不删实例、不改尺寸 / 旋转 / 拉伸、不覆盖用户手改的 `BandOverride`。
 - 工具栏「遮挡」一行两个按钮（`MainWindow` 的 `BtnResortPicture` / `BtnResortPsd`）：
@@ -494,7 +498,7 @@ PSD 是一次性把 582 层「按层序」压成一张画，而地图运行时�
   「实例 / 三带 / 缺图 / 旋转 / 拉伸 / 平铺 / 尺寸补全 / 尺寸不一致 / 遮挡自动提层 / 接缝贴合」。
   其中“遮挡自动提层”命中**背景/道路/绿化组里的树、灌木、围栏、建筑、人物名**；
   名称被切片混进 `bg_` 时（典型是 `bg_rock_1_550_867` 实际为绿色灌木），刷新链路还会读
-  `Assets/Services/ArtSilhouetteInspector.cs` 的像素轮廓：绿色占比 ≥22%、有效高宽 ≥0.45、内容高 ≥40px、
+  `Assets/Honor/Runtime/Services/Resources/ArtSilhouetteInspector.cs` 的像素轮廓：绿色占比 ≥22%、有效高宽 ≥0.45、内容高 ≥40px、
   底边接触率 ≤95% 才提层，因此平面草地砖 / 停车位标记 / 散落扁石不会被误抬。
   写入的仍是可手改的 `bandOverride`，不会动坐标 / 尺寸 / 旋转；用户手改 `BandOverride` 时策略直接跳过。
   “接缝贴合”只上移**池塘/水面/地毯等大平面件** 1–24px，让顶边贴住上方围栏/摊位的脚底，不会动小草丛和两个立体物之间的自然间距。
@@ -585,14 +589,14 @@ ID 来源角标叠在输入框内右上角、Tag 色条叠在输入框内左上�
 
 模型与落盘：
 
-- `Models/EditorModels.cs` 新增 `PlacedObject.BandOverride`（`-1` 自动 / `0` 地表 / `1` 立体 / `2` 叠加）。
+- `Assets/Honor/Runtime/Models/Core/EditorModels.cs` 新增 `PlacedObject.BandOverride`（`-1` 自动 / `0` 地表 / `1` 立体 / `2` 叠加）。
 - `LayerBands.Of(PlacedObject)` 的优先级：`BandOverride >= 0` 直接采用 → 否则 `DisplayLayer` → `LayerType`
   → 名字关键词（原 `Of(layerKey, name)` 逻辑不变）。所以手定带只影响这一张图，不改变别的实例。
 - `LayerBands.MoveToBand(config, item, band)`：写 `BandOverride`，再用 `TopSlot(band)` 求同带当前最大档位、
   置到 `OrderBase(item) + 档位 + 1`（clamp 到层内 0–9）；`band = -1` 时恢复自动并按归属层置顶。
 - 导入 / 「按画面重排」/「还原层序」都会重算 `sortOrder` 数据：`BandOverride` 为 -1 的实例回到自己的自动带，
   手定过带的实例保持原带、只在带内重新排位；画面前后始终由「带 + 脚底 Y」决定。
-- JSON 往返（`Services/MapJsonService.cs`、`Services/MapJsonLoader.cs`）：两个存档 DTO 都多一个可选的
+- JSON 往返（`Assets/Honor/Runtime/Services/Map/MapJsonService.cs`、`Assets/Honor/Runtime/Services/Map/MapJsonLoader.cs`）：两个存档 DTO 都多一个可选的
   `"band": 0/1/2`，**只有手定过带的对象才写**（`DefaultIgnoreCondition.WhenWritingNull`），旧档读进来是 `-1`。
   旧档不用改数据：打开即按「带 + 脚底 Y」正确遮挡，`sortOrder` / `band` 继续供 Unity 侧消费。
 - 交互防抖：程序性改值（选中切换、拖拽、撤销）用 `_suppressBandMove` 挡住 `SelectionChanged` 回调，
@@ -629,7 +633,7 @@ Unity 侧对齐：建 `Ground / Standing / Overlay` 三个 Sorting Layer，立�
 | 章节配置表 | `../Docs/Designs/Excels/Tables/AlTables/LevelConfigs/TableChapters.xlsm` | 工作表 `Chapters`：`ID`（章节 ID）、`ChapterTitle`（章节名）、`ChapterInfoID`（关卡 ID 数组） |
 | 主关卡配置表 | `../Docs/Designs/Excels/Tables/AlTables/LevelConfigs/TableMainLevels.xlsm` | 工作表 `MainLevels`：`ID`、`LevelID`（Main_N）、`Level_bg`（关卡背景图），另带 `ItemName` / `FindType` / `LevelLife` 进 tooltip |
 
-两条路径都在「配置」弹窗里可改（`Controls/MapConfigWindow.cs` 的前两行），改完立即重读表并重画树。
+两条路径都在「配置」弹窗里可改（`Assets/Honor/Runtime/Controls/Windows/MapConfigWindow.cs` 的前两行），改完立即重读表并重画树。
 
 树的结构与交互：
 
@@ -650,9 +654,10 @@ Unity 侧对齐：建 `Ground / Standing / Overlay` 三个 Sorting Layer，立�
 | 旧档兼容 | 没有 `Map_xmY.json` 时退回老的 `{关卡ID}.json`（现有 `1.json` 就落在这一档，徽标仍显示 1.6MB） |
 | 保存 | 选中关卡后「保存」直接写该关卡文件；从旧档载入后再保存，等于把旧档迁到新文件名，旧文件不动 |
 | 空关卡 | 目标关卡没有存档时开一张空图（沿用当前宽高 / 格子 / 绘制形状 / 底图），保存才落盘，徽标随即变绿 |
+| 空态占位 | 没有地图存档路径且当前 0 物件时，画布显示 `MT / Map Tool` 占位层；载入存档或落下首个物件后自动隐藏，不拦截画布交互 |
 | 命令行打开 | `--open-map <路径>` 打开的文件，点「保存」写回**同一个文件**，不再按场景 ID 另存一份 |
 
-读取实现（零依赖，`Services/XlsmTableReader.cs`）：
+读取实现（零依赖，`Assets/Honor/Runtime/Services/Templates/ItemConfig/XlsmTableReader.cs`）：
 
 - `ZipArchive` 直接拆 xlsm 包，读 `xl/workbook.xml`（工作表名 → rId）、`xl/_rels/workbook.xml.rels`、`xl/sharedStrings.xml`、工作表 XML；
 - 单元格支持共享串（`t="s"`）、内联串（`t="inlineStr"`）、公式缓存值（`t="str"`）、布尔；行列按 `<c r="B5">` 的引用定位，空格补空串；
@@ -783,7 +788,7 @@ Unity 侧对齐：建 `Ground / Standing / Overlay` 三个 Sorting Layer，立�
 ### 保存与同步
 
 - 模板库落盘：`bin\Debug\net10.0\output\Config\ObjectTemplates.json`（当前 19 条内置模板）。
-- 同步规则（`Services/TemplateSyncService.cs`）：按 `TemplateId` 把模板的类型、图层、图片、动画、循环、速度、
+- 同步规则（`Assets/Honor/Runtime/Services/Templates/Store/TemplateSyncService.cs`）：按 `TemplateId` 把模板的类型、图层、图片、动画、循环、速度、
   交互、气泡、排序、YSort、碰撞、朝向、阴影、收集、重生、移动、传送门等字段刷到场景实例上；
   **实例自身的坐标、占格尺寸、Tag 名、旋转、路径保持不变**（占格尺寸是有意不同步的，布局微调不该被模板覆盖）。
 - 交互码双口径：模板侧 `none/click/talk/enter/pickup`，实例侧 `none/click/enter/dialog/pickup/view`，
@@ -844,7 +849,7 @@ LayerTypeKey, ObjectType
   - 打开面板会自动扫描一次；搜索框按资源名或所在目录实时过滤，标题同步显示筛选后的条数；
   - 行内缩略图走 `Bitmap.DecodeToWidth(36)` 直接解码成小图并缓存（上限 400 张），几百个资源也不会把原图全塞进内存；
 - 资源根目录来自 `output\Config\resRoots.txt`（`project=<Unity 工程根>` 行 + 若干资源目录），
-  `Services/AssetLibrary.cs` 解析 `Assets/…` 相对路径、按文件名索引查找，支持 `.png/.jpg/.jpeg`；
+  `Assets/Honor/Runtime/Services/Resources/AssetLibrary.cs` 解析 `Assets/…` 相对路径、按文件名索引查找，支持 `.png/.jpg/.jpeg`；
 - 「扫描」只扫「地图配置 → 地图保存目录」这一棵目录里的 Map 图片（见第 10 节最后一小节）；
 - 右「选中项」：`ID / ImagePath / Name / Anim / Loop / Speed / Order / Shadow / Collectible`，
   选中已绑定图片时按「地图物件配置表文件夹」里命中的行回填（分类 xlsm 优先、汇总 CSV 兜底），
@@ -920,119 +925,200 @@ loopRestartDelay / hideWhenOffMap / isTeleport / teleportTargetScene / teleportT
 ```
 MapEditorTool/
 ├─ MapEditorTool.csproj        Avalonia 12.1.6 / net10.0 / WinExe
-├─ Program.cs                  入口，含 --psd / --export-config / --import-config 无界面模式
-├─ App.axaml(.cs)              主题（TexturePacker 浅色皮肤）
-├─ MainWindow.axaml(.cs)       窗口壳与字段 / 构造 / 辅助
-├─ MainWindow.LeftPanel.cs     左侧章节、分类 Tab、资源列表与类型切换
-├─ MainWindow.CollectiblePanel.cs  收集物统计格、素材行与数量刷新
-├─ MainWindow.CollectibleLayout.cs 收集物浮窗显示/停靠/拖动与边界约束
-├─ MainWindow.CollectibleEvents.cs 收集物向导接线、计划同步、随机生成、清空与添加收集
-├─ MainWindow.EventWiring.cs   模式、雾效、资源、物品元件与公共 Tab 事件装配
-├─ MainWindow.TrafficEvents.cs 交通四标记、停止线与绑定灯列表事件
-├─ MainWindow.SceneEvents.cs   工具条、画布、图层开关与场景字段事件
-├─ MainWindow.ObjectEvents.cs  物件字段、动画导入、预览与路径绘制事件
-├─ MainWindow.PropertyEvents.cs 属性输入、区域与变换、层级排序事件
-├─ MainWindow.Properties.cs    对象字段、图层、路径列表、场景字段与地图配置同步
-├─ MainWindow.SaveImport.cs    保存、重载、发布、保存目录、迷雾载入与切片导出
-├─ MainWindow.PsdImport.cs     PSD 源探测、重导入、切片落盘、失败回滚与导入日志
-├─ Models/
-│  ├─ EditorModels.cs          基础常量、默认值、枚举、图层键与显示名映射
-│  ├─ EditorTemplateModels.cs  物体模板模型：公共属性、交互与层级字段
-│  ├─ NineSliceModels.cs       九宫格模型：边距、中心模式与显示名/代码互转
-│  ├─ AnimationModels.cs       动画模型：动画来源常量与序列帧片段
-│  ├─ PlacedObject.cs          地图实例模型：位姿、碰撞、阴影、路径与模板引用
-│  ├─ EditorMapModels.cs       地图数据模型：章节、关卡、区域、交通、迷雾与地图配置
-│  ├─ EditorSettings.cs        地图配置弹窗的编辑级设置 + 路径口径（Assets/… 与 ../…）解析
-│  ├─ TrafficModels.cs         交通（红绿灯/斑马线）与迷雾（区域/格子）模型
-│  └─ TemplateDisplay.cs       枚举显示名 ⇄ 编码，交互码双口径归一
-├─ Services/
-│  ├─ PsdReader.cs             零依赖 PSD/PSB 解析：图层结构 + 通道元信息 + RAW/RLE 像素解码
-│  ├─ PsdSliceBaker.cs         公开烘焙流程：导入预览、导出切片、整幅底图合成
-│  ├─ PsdSliceModels.cs        PSD 切片模型：切片记录、切片集合与清单缓存 DTO
-│  ├─ PsdSliceBaker.Dedupe.cs  切片去重：尺寸索引、0° 指纹与 90° 旋转匹配
-│  ├─ PsdSliceBaker.Composite.cs 底图合成与像素处理：source-over、透明边裁剪、旋转与安全命名
-│  ├─ PsdSliceBaker.Manifest.cs  切片清单：PSD 源文件戳与 slices.json 读写
-│  ├─ FileDialogService.cs     统一文件/目录选择：取消、起始目录与本地路径转换
-│  ├─ PngWriter.cs             零依赖 RGBA PNG 编码（ZLibStream + CRC32）
-│  ├─ MapJsonService.cs        Unity 口径 JSON 导出入口、物件/角色组装与共享字段填充
-│  ├─ MapJsonService.GridTraffic.cs  占据格、区域、格子、红绿灯与横道载荷组装
-│  ├─ MapJsonService.Payloads.cs     运行时 JSON 载荷 DTO（配置、物件、角色、交通与收集物）
-│  ├─ MapJsonLoader.cs         地图 JSON 反序列化（--open-map 打开存档用）
-│  ├─ MapPublishService.cs     发布目标/选项、预检、发布入口与 Unity JSON 出口
-│  ├─ MapPublishSettings.cs    发布设置持久化：默认输出目录与 PublishSettings.json 读写
-│  ├─ MapPublishService.Files.cs  发布文件写入：清单、源哈希与原子写文件
-│  ├─ MapPublishService.Lua.cs    Lua 格式辅助：文件头、转义、数值/布尔与数组字面量
-│  ├─ MapPublishService.Cocos.cs          Cocos Lua 发布入口、主表分段、共享输出辅助
-│  ├─ MapPublishService.Cocos.Entities.cs 角色/建筑/物件子表骨架与公共字段
-│  ├─ MapPublishService.Cocos.Traffic.cs  路径、红绿灯、横道、区域与格子
-│  ├─ MapPublishService.Cocos.Index.cs    章节索引创建、合并与关卡行
-│  ├─ XlsmTableReader.cs       零依赖 OOXML 表格读取（ZipArchive + 工作表/共享串解析）
-│  ├─ ItemFieldNames.cs        物件配置字段键、列名别名、数值列与表头识别词
-│  ├─ ItemTableFile.cs         单张 CSV / xlsm 表：列索引、行号分配与字段写回
-│  ├─ ItemConfigTableIO.cs     配置表 IO 统一入口：按格式分派 CSV / xlsm 实现
-│  ├─ ItemRowMapper.cs         配置表行映射：列索引、单元格取值与行模型绑定
-│  ├─ ItemCsvTableIO.cs        CSV 实现：读取、空表创建、单元格拆分与写回
-│  ├─ ItemXlsmTableIO.cs       xlsm 实现：OOXML 读取、列映射、单元格写回与数值判定
-│  ├─ ItemElementTable.cs     物品元件行模型：字段、模板双向映射与描述
-│  ├─ ItemConfigSet.cs         配置表文件夹入口：常量、字段、构造与公开属性
-│  ├─ ItemConfigSet.Persistence.cs 配置表集合持久化：夹内读取、按格式写回与保存编排
-│  ├─ ItemConfigSet.Mutations.cs   配置表集合增删改：按图片名匹配、分类落表与模板映射
-│  ├─ ItemConfigSet.Index.cs       配置表集合索引：图片名/模板名归一与跨表归属重建
-│  ├─ TableTextFormat.cs       配置表统一文本口径：紧凑数值与 CSV 单元格转义
-│  ├─ ChapterRepository.cs     章节表 / 主关卡表 → 章节 · 关卡目录（Excel 缺失回退 Lua 表）
-│  ├─ AssetLibrary.cs          资源根目录索引、按资源名找图、未配置 PNG 扫描
-│  ├─ ObjectHitRules.cs        统一命中规则：选中 / 路径加点模式、透明像素过滤、路径落点判定
-│  ├─ TrafficMarkService.cs    交通区域/横道/灯的纯数据增删、反向绑定与物件变化同步
-│  ├─ PsdLayerRules.cs         PSD 图层名归一、层级分类、显示尺寸、切片安全名与整幅层判定
-│  ├─ SpriteAlphaProbe.cs      单像素 alpha 采样，不生成整图掩码
-│  ├─ TemplateCatalog.cs       内置模板库 + 空默认地图（CreateEmptyMap）
-│  ├─ TemplateStore.cs         模板仓库入口：公开 CRUD、ID 生成与持久化编排
-│  ├─ TemplateStore.Json.cs    模板 JSON 读取、兼容载荷映射与布局常量
-│  ├─ TemplateStore.Csv.cs     Unity 口径 CSV 列定义、表头识别与单元格解析
-│  ├─ EditorSettingsStore.cs   地图配置落盘（EditorSettings.json，替代 EditorPrefs）
-│  └─ TemplateSyncService.cs   模板 → 场景实例字段同步
-└─ Controls/
-   ├─ MapCanvas.cs             自绘画布：常量、字段、构造、公开 API 与坐标换算
-   ├─ MapCanvas.Properties.cs  画布状态属性：视口、选中、摆放、图层显隐与动画预览
-   ├─ MapCanvas.Rendering.cs   绘制总入口：性能采样、底图、边界、图层顺序与整图绘制
-   ├─ MapCanvas.TrafficRender.cs 交通绘制：人行道/道路轮廓、横道、红绿灯、雾效与笔刷
-   ├─ MapCanvas.AnimationRender.cs 预览与动画：路径演示包围盒、序列帧缓存、Spine 播放
-   ├─ MapCanvas.ObjectRender.cs 物件绘制：精灵、九宫格、平铺、标签与对象层
-   ├─ MapCanvas.SelectionRender.cs 选中与编辑：选中框、占格、区域框、当前格与路径编辑
-   ├─ MapCanvas.Interaction.cs 画布交互：缩放、平移、拖动、右键与键盘
-   ├─ MapCanvas.Placement.cs   摆放与拾取：点击落位、命中检测、路径加点与选中
-   ├─ MapCanvas.FogBrush.cs    迷雾笔刷：采样、落笔、擦除与区域提交
-   ├─ AnimationPreviewWindow.cs 场景动画预览窗：常量、字段、构造与关闭生命周期
-   ├─ AnimationPreviewWindow.Layout.cs 预览布局骨架：根网格、顶栏、主体与底栏
-   ├─ AnimationPreviewWindow.Panes.cs 预览三栏：物体列表、中心画布与右侧信息区
-   ├─ AnimationPreviewWindow.List.cs 预览列表：筛选、排序、行构建、选中高亮与右侧信息
-   ├─ AnimationPreviewWindow.Playback.cs 预览播放：播放控制、逐帧推进、Spine 导入与解析辅助
-   ├─ CollectibleWizardWindow.cs 收集物向导窗口：字段、构造与结果属性
-   ├─ CollectibleWizardWindow.Shell.cs 向导外壳：窗口骨架、步骤切换与底栏按钮
-   ├─ CollectibleWizardWindow.Quantity.cs 向导第一步：目标数量、层级与地图预览
-   ├─ CollectibleWizardWindow.Material.cs 向导第二步：已选槽位、候选素材网格与缩略图
-   ├─ ItemElementPanel.cs      物品元件面板：常量、状态、构造与公开入口
-   ├─ ItemElementPanel.Toolbar.cs 元件工具条：标题、状态、保存/添加/导入/导出与按钮工厂
-   ├─ ItemElementPanel.Layout.cs 元件布局骨架：左侧列表、右侧属性表单与整体分栏
-   ├─ ItemElementPanel.List.cs 元件列表：分页切换、行构建、缩略图加载与选中同步
-   ├─ ItemElementPanel.Events.cs 元件事件参数：模板可见性变化
-   ├─ ItemElementPanel.Form.cs 元件表单骨架：折叠分组、字段行与九宫格编辑区
-   ├─ ItemElementPanel.Binding.cs 元件字段绑定与回填：控件事件、字段写回、选中刷新
-   ├─ ItemElementPanel.Persistence.cs 元件增删与持久化：模板 CRUD、JSON/CSV、保存
-   ├─ ConfirmWindow.cs         通用确认弹窗（二选一 / 可选“不保存”三选一，切换关卡前保存提醒）
-   ├─ MapConfigWindow.cs       地图配置弹窗：六路径 + 基线步长
-   ├─ FogEditPanel.cs          迷雾编辑面板：状态、绑定与公开接口
-   ├─ FogEditPanel.Layout.cs   迷雾布局：顶栏、笔刷设置、区域列表与内嵌画布
-   ├─ FogEditPanel.Regions.cs  迷雾区域：新增、清空、刷新、行构建、撤销与重命名
-   ├─ FogEditPanel.Drawing.cs  迷雾绘制：开始/停止绘制、同步设置与提交回调
-   ├─ ResourceOrganizePanel.cs 资源整理面板：常量、绑定、构造与分类过滤
-   ├─ ResourceOrganizePanel.Layout.cs 资源面板布局：扫描预览、字段表与配置表骨架
-   ├─ ResourceOrganizePanel.Unconfigured.cs 未配置资源：扫描、过滤、预览、补字段与加入配置表
-   ├─ ResourceOrganizePanel.Table.cs 已配置资源表：列定义、当前表解析与模板移除
-   ├─ ResourceOrganizePanel.Table.Rows.cs 已配置资源表：行渲染、行内编辑、删除与撤销
-   ├─ ResourceOrganizePanel.Table.Grid.cs 已配置资源表：四行表头、单元格工厂与整体网格刷新
-   └─ ResourceOrganizePanel.Persistence.cs 资源持久化：配置表保存、打开与路径选择
+├─ MapData/                    运行期地图数据（Map / MapCsv / MapJson）
+├─ PSD/                        本地 PSD 验证素材（ONE.psb）
+├─ Assets/
+│  ├─ App/
+│  │  ├─ app.manifest            Windows 兼容性与 DPI 清单
+│  │  ├─ Program.cs              入口，含 --psd / --export-config / --import-config 无界面模式
+│  │  ├─ App.axaml               主题（TexturePacker 浅色皮肤）
+│  │  └─ App.axaml.cs            Avalonia 应用入口与主窗口装配
+│  ├─ Views/
+│  │  └─ MainWindow/
+│  │     ├─ MainWindow.axaml  窗口壳与整体布局
+│  │     ├─ MainWindow.axaml.cs  字段、构造与辅助
+│  │     ├─ MainWindow.Properties.cs  对象字段、图层、路径列表、场景字段与地图配置同步
+│  │     ├─ Events/
+│  │     │  ├─ MainWindow.CollectibleEvents.cs  收集物向导接线、计划同步、随机生成、清空与添加收集
+│  │     │  ├─ MainWindow.EventWiring.cs  模式、雾效、资源、物品元件与公共 Tab 事件装配
+│  │     │  ├─ MainWindow.ObjectEvents.cs  物件字段、动画导入、预览与路径绘制事件
+│  │     │  ├─ MainWindow.PropertyEvents.cs  属性输入、区域与变换、层级排序事件
+│  │     │  ├─ MainWindow.SceneEvents.cs  工具条、画布、图层开关与场景字段事件
+│  │     │  └─ MainWindow.TrafficEvents.cs  交通四标记、停止线与绑定灯列表事件
+│  │     ├─ Panels/
+│  │     │  ├─ MainWindow.CollectibleLayout.cs  收集物浮窗显示/停靠/拖动与边界约束
+│  │     │  ├─ MainWindow.CollectiblePanel.cs  收集物统计格、素材行与数量刷新
+│  │     │  └─ MainWindow.LeftPanel.cs  左侧章节、分类 Tab、资源列表与类型切换
+│  │     └─ ImportExport/
+│  │        ├─ MainWindow.PsdImport.cs  PSD 源探测、重导入、切片落盘、失败回滚与导入日志
+│  │        └─ MainWindow.SaveImport.cs  保存、重载、发布、保存目录、迷雾载入与切片导出
+│  ├─ Honor/
+│  │  └─ Runtime/
+│  │     ├─ Models/
+│  │     │  ├─ Core/
+│  │     │  │  ├─ EditorModels.cs  基础常量、默认值、枚举、八层定义表与键/目录/显示名派生
+│  │     │  │  ├─ EditorSettings.cs  地图配置弹窗的编辑级设置 + 路径口径（Assets/… 与 ../…）解析
+│  │     │  │  ├─ IdGenerator.cs  短 ID 生成：地图实例、交通对象与临时文件统一 8 位规则
+│  │     │  │  ├─ ResourceCategories.cs  资源分类目录：分类键、表名候选、资源前缀与图层显示名
+│  │     │  │  ├─ ResourceNames.cs  资源文件名归一：去路径/扩展名/尾下划线并统一比较
+│  │     │  │  └─ ResourceRowData.cs  共享资源行视图：配置行与模板行统一读取口径
+│  │     │  ├─ Map/
+│  │     │  │  ├─ DiamondLattice.cs  菱形格（45° TileMap）几何换算
+│  │     │  │  ├─ EditorMapModels.cs  地图数据模型：章节、关卡、区域、交通、迷雾与地图配置
+│  │     │  │  ├─ PlacedObject.cs  地图实例模型：位姿、碰撞、阴影、路径与模板引用
+│  │     │  │  └─ TrafficModels.cs  交通（红绿灯/斑马线）与迷雾（区域/格子）模型
+│  │     │  └─ Template/
+│  │     │     ├─ AnimationModels.cs  动画模型：动画来源常量与序列帧片段
+│  │     │     ├─ EditorTemplateModels.cs  物体模板模型：公共属性、交互与层级字段
+│  │     │     ├─ NineSliceModels.cs  九宫格模型：边距、中心模式与显示名/代码互转
+│  │     │     └─ TemplateDisplay.cs  枚举显示名 ⇄ 编码，共用反查、层下拉派生与交互码双口径归一
+│  │     ├─ Services/
+│  │     │  ├─ Infrastructure/
+│  │     │  │  ├─ EditorLogs.cs  诊断日志入口：固定 output\Logs、UTF-8 追加/覆盖与失败静默
+│  │     │  │  ├─ EditorPaths.cs  编辑器输出目录：output 根、Config、Logs 与工程根缺失回退目录
+│  │     │  │  ├─ EditorSettingsStore.cs  地图配置落盘（EditorSettings.json，替代 EditorPrefs）
+│  │     │  │  ├─ FileDialogService.cs  统一文件/目录选择：取消、起始目录与本地路径转换
+│  │     │  │  ├─ FilePickerCatalog.cs  文件选择器清单：Spine / PSD / 配置表 / CSV 过滤器与标题
+│  │     │  │  ├─ FileSystemIo.cs  文件系统入口：路径解析、目录保证、失败清理与无 BOM UTF-8 文本读写
+│  │     │  │  ├─ ImageFileTypes.cs  动画与贴图共用图片扩展名清单及格式判定
+│  │     │  │  ├─ JsonFileOptions.cs  JSON 落盘选项：缩进、中文直出与空值忽略三个统一档位
+│  │     │  │  ├─ PathMath.cs  路径几何统一入口：可播放判定、长度、按里程取点与行走模式
+│  │     │  │  ├─ PngWriter.cs  零依赖 RGBA PNG 编码（ZLibStream + CRC32）
+│  │     │  │  └─ TableTextFormat.cs  配置表统一文本口径：紧凑数值、CSV 拆分与单元格转义
+│  │     │  ├─ Map/
+│  │     │  │  ├─ LayerBands.cs  遮挡分层：地表 / 立体 / 叠加，判定图层键与图层名
+│  │     │  │  ├─ LayerOrder.cs  八层 SortOrder 坐标系：基线步长 10、层内 10 档
+│  │     │  │  ├─ MapFileNames.cs  地图文件名：关卡 / 场景 / 迷雾 sidecar / 发布清单与目录探测模式
+│  │     │  │  ├─ MapJsonLoader.cs  地图 JSON 反序列化（--open-map 打开存档用）
+│  │     │  │  ├─ MapJsonService.cs  Unity 口径 JSON 导出入口、物件/角色组装与共享字段填充
+│  │     │  │  ├─ MapJsonService.GridTraffic.cs  占据格、区域、格子、红绿灯与横道载荷组装
+│  │     │  │  ├─ MapJsonService.Payloads.cs  运行时 JSON 载荷 DTO（配置、物件、角色、交通与收集物）
+│  │     │  │  ├─ MapTextureResolver.cs  地图贴图三级目录命名查找
+│  │     │  │  ├─ ObjectHitRules.cs  统一命中规则：选中 / 路径加点模式、透明像素过滤、路径落点判定
+│  │     │  │  ├─ OcclusionAdjustmentStrategy.cs  遮挡调整唯一入口：导入、刷新画面、刷新层级共用规则
+│  │     │  │  ├─ SceneDisplayAudit.cs  刷新画面巡检与窄口自动修复：贴图、尺寸、旋转、分带、接缝
+│  │     │  │  └─ TrafficMarkService.cs  交通区域/横道/灯的纯数据增删、反向绑定、最近搜索与物件变化同步
+│  │     │  ├─ Publish/
+│  │     │  │  ├─ MapPublishService.cs  发布目标/选项、预检、发布入口与 Unity JSON 出口
+│  │     │  │  ├─ MapPublishService.Cocos.cs  Cocos Lua 发布入口、主表分段、共享输出辅助
+│  │     │  │  ├─ MapPublishService.Cocos.Entities.cs  角色/建筑/物件子表骨架与公共字段
+│  │     │  │  ├─ MapPublishService.Cocos.Index.cs  章节索引创建、合并与关卡行
+│  │     │  │  ├─ MapPublishService.Cocos.Traffic.cs  路径、红绿灯、横道、区域与格子
+│  │     │  │  ├─ MapPublishService.Files.cs  发布文件写入：清单、源哈希与原子写文件
+│  │     │  │  ├─ MapPublishService.Lua.cs  Lua 格式辅助：文件头、转义、数值/布尔与数组字面量
+│  │     │  │  └─ MapPublishSettings.cs  发布设置持久化：默认输出目录与 PublishSettings.json 读写
+│  │     │  ├─ Templates/
+│  │     │  │  ├─ Store/
+│  │     │  │  │  ├─ TemplateCatalog.cs  内置模板库 + 空默认地图（CreateEmptyMap）
+│  │     │  │  │  ├─ TemplateIdAllocator.cs  模板与配置表共用的 ID 分段分配规则
+│  │     │  │  │  ├─ TemplateStore.cs  模板仓库入口：公开 CRUD、ID 生成与持久化编排
+│  │     │  │  │  ├─ TemplateStore.Csv.cs  Unity 口径 CSV 列定义、表头识别与单元格解析
+│  │     │  │  │  ├─ TemplateStore.Json.cs  模板 JSON 读取、兼容载荷映射与布局常量
+│  │     │  │  │  └─ TemplateSyncService.cs  模板 → 场景实例字段同步
+│  │     │  │  └─ ItemConfig/
+│  │     │  │     ├─ ItemConfigSet.cs  配置表文件夹入口：常量、字段、构造与公开属性
+│  │     │  │     ├─ ItemConfigSet.Index.cs  配置表集合索引：图片名/模板名归一与跨表归属重建
+│  │     │  │     ├─ ItemConfigSet.Mutations.cs  配置表集合增删改：按图片名匹配、分类落表与表行/模板双向映射
+│  │     │  │     ├─ ItemConfigSet.Persistence.cs  配置表集合持久化：夹内读取、按格式写回与保存编排
+│  │     │  │     ├─ ItemConfigTableIO.cs  配置表 IO 统一入口：按格式分派 CSV / xlsm 实现
+│  │     │  │     ├─ ItemCsvTableIO.cs  CSV 实现：读取、空表创建与写回
+│  │     │  │     ├─ ItemElementTable.cs  物品元件行模型：字段、模板双向映射与描述
+│  │     │  │     ├─ ItemFieldNames.cs  物件配置字段键、列名别名、数值列与表头识别词
+│  │     │  │     ├─ ItemRowMapper.cs  配置表行映射：列索引、单元格取值与行模型绑定
+│  │     │  │     ├─ ItemTableFile.cs  单张 CSV / xlsm 表：列索引、行号分配与字段写回
+│  │     │  │     ├─ ItemXlsmTableIO.cs  xlsm 实现：OOXML 读取、列映射、单元格写回与数值判定
+│  │     │  │     └─ XlsmTableReader.cs  零依赖 OOXML 表格读取（ZipArchive + 工作表/共享串解析）
+│  │     │  ├─ Psd/
+│  │     │  │  ├─ PsdLayerRules.cs  PSD 图层名归一、层级分类、显示尺寸、切片安全名与整幅层判定
+│  │     │  │  ├─ PsdManifest.cs  读取 Unity 侧 PSD 导入清单 psd.json
+│  │     │  │  ├─ PsdReader.cs  零依赖 PSD/PSB 解析：图层结构 + 通道元信息 + RAW/RLE 像素解码
+│  │     │  │  ├─ PsdSliceBaker.cs  公开烘焙流程：导入预览、导出切片、整幅底图合成
+│  │     │  │  ├─ PsdSliceBaker.Composite.cs  底图合成与像素处理：source-over、透明边裁剪、旋转与安全命名
+│  │     │  │  ├─ PsdSliceBaker.Dedupe.cs  切片去重：尺寸索引、0° 指纹与 90° 旋转匹配
+│  │     │  │  ├─ PsdSliceBaker.Manifest.cs  切片清单：PSD 源文件戳与 slices.json 读写
+│  │     │  │  └─ PsdSliceModels.cs  PSD 切片模型：切片记录、切片集合与清单缓存 DTO
+│  │     │  ├─ Animation/
+│  │     │  │  ├─ SpineAnimationAsset.cs  已导入 Spine 资产：解析结果与纹理页缓存
+│  │     │  │  ├─ SpineAnimationCatalog.cs  已导入 Spine 资产的内存目录
+│  │     │  │  ├─ SpineAnimationLoader.cs  Atlas / Skeleton JSON / Skel 解析与纹理裁切
+│  │     │  │  ├─ SpineAnimationStore.cs  Spine 动画库导入、落盘与重新加载
+│  │     │  │  ├─ SpinePlayer.cs  单个 Spine 实例的骨骼播放状态
+│  │     │  │  ├─ SpineRenderer.cs  Spine region / mesh 附件绘制到 Avalonia 画布
+│  │     │  │  ├─ SpriteAlphaProbe.cs  单像素 alpha 采样，不生成整图掩码
+│  │     │  │  ├─ SpriteAnimationCatalog.cs  序列帧动画目录：按 anim 名称索引并统一帧索引换算
+│  │     │  │  ├─ SpriteAnimationStore.cs  序列帧动画配置持久化（AnimationClips.json）
+│  │     │  │  └─ SpriteLayout.cs  精灵绘制布局：等比适应、旋转宽高互换与中心变换
+│  │     │  └─ Resources/
+│  │     │     ├─ ArtSilhouetteInspector.cs  切片轮廓/色彩识别，区分立体植被与背景
+│  │     │     ├─ AssetLibrary.cs  资源根目录索引、按资源名找图、未配置 PNG 扫描
+│  │     │     ├─ ChapterRepository.cs  章节表 / 主关卡表 → 章节 · 关卡目录（Excel 缺失回退 Lua 表）
+│  │     │     └─ NineSliceCatalog.cs  九宫格配置目录：按素材名提供 NineSliceSettings
+│  │     └─ Controls/
+│  │     │  ├─ Canvas/
+│  │     │  │  ├─ AnimationPreviewCanvas.cs  动画预览画布：序列帧播放与角色路径移动演示
+│  │     │  │  ├─ MapCanvas.cs  自绘画布：常量、字段、构造、公开 API 与坐标换算
+│  │     │  │  ├─ MapCanvas.AnimationRender.cs  预览与动画：路径演示包围盒、序列帧缓存、Spine 播放
+│  │     │  │  ├─ MapCanvas.FogBrush.cs  迷雾笔刷：采样、落笔、擦除与区域提交
+│  │     │  │  ├─ MapCanvas.Interaction.cs  画布交互：缩放、平移、拖动、右键与键盘
+│  │     │  │  ├─ MapCanvas.ObjectRender.cs  物件绘制：精灵、九宫格、平铺、标签与对象层
+│  │     │  │  ├─ MapCanvas.Placement.cs  摆放与拾取：点击落位、命中检测、路径加点与选中
+│  │     │  │  ├─ MapCanvas.Properties.cs  画布状态属性：视口、选中、摆放、图层显隐与动画预览
+│  │     │  │  ├─ MapCanvas.Rendering.cs  绘制总入口：性能采样、底图、边界、图层顺序与整图绘制
+│  │     │  │  ├─ MapCanvas.SelectionRender.cs  选中与编辑：选中框、占格、区域框、当前格与路径编辑
+│  │     │  │  ├─ MapCanvas.TrafficRender.cs  交通绘制：人行道/道路轮廓、横道、红绿灯、雾效与笔刷
+│  │     │  │  ├─ MapEmptyStateOverlay.cs  空地图占位层：MT 等距立方体、蓝色渐变网格与操作引导
+│  │     │  │  ├─ MapGridRenderer.cs  网格渲染：正交/菱形摆放网格与路径网格
+│  │     │  │  └─ NineSlicePreview.cs  九宫格预览：素材、切片线与四边距拖动
+│  │     │  ├─ Panels/
+│  │     │  │  ├─ FogEditPanel.cs  迷雾编辑面板：状态、绑定与公开接口
+│  │     │  │  ├─ FogEditPanel.Drawing.cs  迷雾绘制：开始/停止绘制、同步设置与提交回调
+│  │     │  │  ├─ FogEditPanel.Layout.cs  迷雾布局：顶栏、笔刷设置、区域列表与内嵌画布
+│  │     │  │  ├─ FogEditPanel.Regions.cs  迷雾区域：新增、清空、刷新、行构建、撤销与重命名
+│  │     │  │  ├─ ItemElementPanel.cs  物品元件面板：常量、状态、构造、公开入口与模板素材解析
+│  │     │  │  ├─ ItemElementPanel.Binding.cs  元件字段绑定与回填：控件事件、字段写回、选中刷新
+│  │     │  │  ├─ ItemElementPanel.Events.cs  元件事件参数：模板可见性变化
+│  │     │  │  ├─ ItemElementPanel.Form.cs  元件表单骨架：折叠分组、字段行与九宫格编辑区
+│  │     │  │  ├─ ItemElementPanel.Layout.cs  元件布局骨架：左侧列表、右侧属性表单与整体分栏
+│  │     │  │  ├─ ItemElementPanel.List.cs  元件列表：分页切换、行构建、缩略图加载与选中同步
+│  │     │  │  ├─ ItemElementPanel.Persistence.cs  元件增删与持久化：模板 CRUD、JSON/CSV、保存
+│  │     │  │  ├─ ItemElementPanel.Toolbar.cs  元件工具条：标题、状态、保存/添加/导入/导出与按钮工厂
+│  │     │  │  ├─ ResourceOrganizePanel.cs  资源整理面板：常量、绑定、构造与分类过滤
+│  │     │  │  ├─ ResourceOrganizePanel.Layout.cs  资源面板布局：扫描预览、字段表与配置表骨架
+│  │     │  │  ├─ ResourceOrganizePanel.Persistence.cs  资源持久化：配置表保存、打开与路径选择
+│  │     │  │  ├─ ResourceOrganizePanel.Table.cs  已配置资源表：列定义、当前表解析与模板移除
+│  │     │  │  ├─ ResourceOrganizePanel.Table.Grid.cs  已配置资源表：四行表头、单元格工厂与整体网格刷新
+│  │     │  │  ├─ ResourceOrganizePanel.Table.Rows.cs  已配置资源表：行渲染、行内编辑、删除与撤销
+│  │     │  │  └─ ResourceOrganizePanel.Unconfigured.cs  未配置资源：扫描、过滤、预览、补字段与加入配置表
+│  │     │  ├─ Windows/
+│  │     │  │  ├─ AnimationPreviewWindow.cs  场景动画预览窗：常量、字段、构造、速度文案与关闭生命周期
+│  │     │  │  ├─ AnimationPreviewWindow.Layout.cs  预览布局骨架：根网格、顶栏、主体与底栏
+│  │     │  │  ├─ AnimationPreviewWindow.List.cs  预览列表：筛选、排序、行构建、选中高亮、右侧信息与路径指标
+│  │     │  │  ├─ AnimationPreviewWindow.Panes.cs  预览三栏：物体列表、中心画布与右侧信息区
+│  │     │  │  ├─ AnimationPreviewWindow.Playback.cs  预览播放：播放控制、逐帧推进、Spine 导入与解析辅助
+│  │     │  │  ├─ CollectibleWizardWindow.cs  收集物向导窗口：字段、构造与结果属性
+│  │     │  │  ├─ CollectibleWizardWindow.Material.cs  向导第二步：已选槽位、候选素材网格与缩略图
+│  │     │  │  ├─ CollectibleWizardWindow.Quantity.cs  向导第一步：目标数量、层级与地图预览
+│  │     │  │  ├─ CollectibleWizardWindow.Shell.cs  向导外壳：窗口骨架、步骤切换与底栏按钮
+│  │     │  │  ├─ ConfirmWindow.cs  通用确认弹窗（二选一 / 可选“不保存”三选一，切换关卡前保存提醒）
+│  │     │  │  ├─ MapConfigWindow.cs  地图配置弹窗：六路径 + 基线步长
+│  │     │  │  ├─ MapPreviewWindow.cs  全图只读预览窗：全图动画与角色路径移动
+│  │     │  │  └─ PublishMapWindow.cs  发布地图窗：Unity / Cocos 目标选择与预检
+│  │     │  ├─ Common/
+│  │     │  │  ├─ ClassicScrollBar.cs  经典竖向滚动条：箭头按钮与可拖拽滑块
+│  │     │  │  ├─ ScrollRail.cs  左侧列表自绘竖向滚动条
+│  │     │  │  ├─ PlaybackSpeedSlider.cs  预览窗自绘速度滑动条
+│  │     │  │  ├─ PreviewImageLoader.cs  列表与预览共用的安全图片加载入口
+│  │     │  │  ├─ ListRowCard.cs  列表卡片行：统一描边、圆角、选中与悬停
+│  │     │  │  ├─ UiFactory.cs  预览窗工具栏控件工厂：按钮尺寸、圆角与主次样式
+│  │     │  │  ├─ EditorNumberText.cs  数值显示：紧凑小数与整数值回退统一格式
+│  │     │  │  └─ MapLayerPalette.cs  图层代表色：画布占位色、列表缩略图与属性色条共用
+│  │     │  └─ Theme/
+│  │     │     └─ UiTheme.cs  编辑器统一视觉主题：语义色、滚动条、滑块与字体
+│  └─ ThirdParty/
+│     └─ SpineRuntime/            独立 csproj：Spine C# 运行时、附件与加载器
 ```
+
+目录职责、新增文件落位与拆分规则见 `docs/工程目录规范.md`。
 
 运行时目录（都在工程根下，跟着仓库走）：
 
@@ -1113,7 +1199,7 @@ size=4096x4096 depth=8 channels=3 mode=3
 - `lsct` = 1/2 开组、= 3 组结束；组结束记录不入图层列表
 - 可见性取 flags bit1（`0x02` 为隐藏），不透明度 0～255 换算成 0～1
 
-**导入地图时优先读 Unity 侧清单** `Assets/Res/Textures/Map/psd.json`（`Services/PsdManifest.cs`）：
+**导入地图时优先读 Unity 侧清单** `Assets/Res/Textures/Map/psd.json`（`Assets/Honor/Runtime/Services/Psd/PsdManifest.cs`）：
 清单里每层都有 `layerType`、`box`、`sortOrder` 与 `pngPath`，用它做层级与贴图就与 Unity 完全一致；
 找不到清单才退回「层名关键词 → 包围盒形状启发」自己猜。
 切片文件名是规范化过的（`图层 101 拷贝 2` → `图层_101_copy_2.png`），所以贴图查找链是
@@ -1136,10 +1222,10 @@ Unity 侧 `psd_import.py` 的 `find_existing_resource` 先试「名 + 框尺寸�
 白虚线因此整条消失；`prop_shrub_1` 21 层、`bg_grass_2` 20 层、`prop_shrub_3` 9 层同样中招）。
 本工程改为自己解码 PSD 像素、**按每层自己的框裁切**，彻底绕开清单的复用决策：
 
-- `Services/PsdReader.cs` → `ReadLayerPixels`：采集通道 id/长度/偏移（偏移在图层记录段结束后按顺序回填），
+- `Assets/Honor/Runtime/Services/Psd/PsdReader.cs` → `ReadLayerPixels`：采集通道 id/长度/偏移（偏移在图层记录段结束后按顺序回填），
   支持 RAW(0) 与 PackBits RLE(1)，按 `-1/0/1/2` 合成 RGBA；
-- `Services/PngWriter.cs`：零依赖 RGBA PNG 编码（`ZLibStream` + 自建 CRC32）；
-- `Services/PsdSliceBaker.cs`：按 Unity 八层目录落盘（见下节），`slices.json` 清单记 layer / band / 裁剪矩形；
+- `Assets/Honor/Runtime/Services/Infrastructure/PngWriter.cs`：零依赖 RGBA PNG 编码（`ZLibStream` + 自建 CRC32）；
+- `Assets/Honor/Runtime/Services/Psd/PsdSliceBaker.cs`：按 Unity 八层目录落盘（见下节），`slices.json` 清单记 layer / band / 裁剪矩形；
   缓存按「PSD 路径 + 文件大小 + 最后修改时间 + 清单版本」校验，命中后不再解码（578 张 / 21 MB，首次约 25 秒）；
 - 取图优先级：**自裁切片 → 清单 `pngPath` → 同目录同名 PNG → 资源库索引**；
 - **变换归零**：PSD 存盘时旋转/镜像已经烘进图层像素（90° 的 `bg_road_7` 层自身像素就是 124×930 竖图、
@@ -1391,7 +1477,7 @@ Unity 里改「显示层」等于换号段，`SortOrder` 必须重算；本工�
 3. **烘焙只写 `Chapter{章节}\Level{关卡}` 一层**：Unity 还有 `Map\Shared` 与 `Chapter{n}\Shared`
    两级复用目录（跨关卡同一张图只留一份）。**读**已经按 Unity 顺序查这两级（`MapTextureResolver`），
    **写**仍按「一关一套图」落盘，跨关重复尚未上提到 Shared。
-4. **UI 尺寸固定 1955×1164 起播**（`MainWindow.axaml` 的 `Width/Height`，`MinWidth/MinHeight` 仍是 1280×720），未做小屏自适应。
+4. **UI 尺寸固定 1955×1164 起播**（`Assets/Views/MainWindow/MainWindow.axaml` 的 `Width/Height`，`MinWidth/MinHeight` 仍是 1280×720），未做小屏自适应。
 5. **没有 Undo/Redo**：原工具也没有，改动请先「保存」。
 6. **元件列表只有三个 Tab**：猫猫类型可以在表单的类型下拉里选，但列表不单独分组（Unity 侧 Cat 也不在主入口）。
 7. **模板配置表未做 Unity 内联调**：33 列 CSV 是按列名读的（前 29 列沿用 Unity 原顺序），

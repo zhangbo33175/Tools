@@ -1,14 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <DefaultItemExcludes>$(DefaultItemExcludes);Assets\SpineRuntime\**</DefaultItemExcludes>
+    <ApplicationManifest>Assets\App\app.manifest</ApplicationManifest>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Assets\ThirdParty\SpineRuntime\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="Assets\SpineRuntime\SpineRuntime.csproj" />
+    <ProjectReference Include="Assets\ThirdParty\SpineRuntime\SpineRuntime.csproj" />
   </ItemGroup>
 
   <ItemGroup>
