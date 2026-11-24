@@ -31,6 +31,7 @@ PSD/
 *.psd
 
 # ---- 发布 / 探测产物 ----
+dist/
 PublishProbe/
 publish_probe*/
 legacy-bake/
