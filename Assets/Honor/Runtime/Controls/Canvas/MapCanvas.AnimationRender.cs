@@ -105,30 +105,14 @@ public sealed partial class MapCanvas : Control
     }
 
     /// <summary>
-    /// 画面排序脚底：预览中带路径的实例按当前插值位置取脚底 Y，其余用摆放包围盒底边。
-    /// <para>角色走到树 / 建筑后面时，遮挡关系会和它当前所在位置一致，而不是停在摆放坐标上。</para>
+    /// 画面排序脚底：直接取当前渲染包围盒的下沿。
+    /// <para>预览中的路径角色会随路径插值移动，因此排序基准也跟着移动；
+    /// 严格按 2D 规则参与树木 / 建筑 / 道具的脚底 Y 遮挡，不做角色置顶。</para>
     /// </summary>
     /// <param name="item">地图实例。</param>
     /// <returns>排序用脚底世界 Y。</returns>
-    private double VisualSortBaseline(PlacedObject item)
-    {
-        var foot = PreviewMode && PreviewShowPaths && HasPreviewPath(item)
-            ? PreviewFootPoint(item)?.Y ?? item.Bounds.Bottom
-            : item.Bounds.Bottom;
-
-        // ---TODO 遮挡：预览中的路径角色必须完整可见，直接排在立体带最上层，避免被树冠 / 平台吞掉；
-        // 只影响预览画面排序，不写回 JSON，也不改变编辑器的静态摆放排序。
-        if (PreviewMode && PreviewShowPaths && HasPreviewPath(item)
-            && LayerOrder.EffectiveLayer(item) == MapLayerKeys.Character)
-        {
-            return PreviewCharacterTopBaseline + foot;
-        }
-
-        return foot;
-    }
-
-    /// <summary>---TODO 遮挡：预览路径角色的排序基线整体抬到立体带最上层，仍低于叠加带。</summary>
-    private const double PreviewCharacterTopBaseline = 1_000_000d;
+    // ---TODO 遮挡：排序与绘制共用同一包围盒底边，路径角色移动时不会因为基准不一致而穿帮或永远置顶。
+    private double VisualSortBaseline(PlacedObject item) => PreviewRenderBounds(item).Bottom;
 
     /// <summary>
     /// 预览行走时的实际水平镜像：按路径当前八方向决定朝左还是朝右，再叠加实例自身的「水平翻转」。

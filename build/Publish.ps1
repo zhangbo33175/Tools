@@ -1,5 +1,5 @@
 ﻿param(
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.0.1",
     [string]$Runtime = "win-x64",
     [bool]$BundleProjectAssets = $true,
     [string]$UnityProjectRoot = "E:\Game\CatGame\CatGameCodeOptimizationBuild"
@@ -103,11 +103,12 @@ if ($BundleProjectAssets) {
     }
     Write-Host "  + Docs\...\LevelConfigs / Item"
 
-    # 改成安装目录相对路径：project=. 表示以 exe 所在目录为工程根，
-    # 资源在 <安装目录>\Assets\Res，表格在 <安装目录>\Docs\...
+    # 改成安装目录相对路径：project=. 表示以 exe 所在目录为工程根；
+    # 另需保留两个资源搜索根，否则 image 只写「Greenery/bg_grass.png」这类关卡内相对路径时，
+    # 只能落到 output\Res 默认目录，安装包会出现大量底图 / 绿地色块占位。
     $targetConfig = Join-Path $PublishDir "output\Config"
     New-Item -ItemType Directory -Path $targetConfig -Force | Out-Null
-    $roots = "# 安装目录相对资源根`r`nproject=.`r`n"
+    $roots = "# 安装目录相对资源根`r`nproject=.`r`nAssets/Res`r`nAssets/Res/Textures/Map`r`n"
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText((Join-Path $targetConfig "resRoots.txt"), $roots, $utf8NoBom)
 
