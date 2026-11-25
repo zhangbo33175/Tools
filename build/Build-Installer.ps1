@@ -1,5 +1,5 @@
 ﻿param(
-    [string]$Version = "1.0.1",
+    [string]$Version = "1.0.2",
     [string]$Runtime = "win-x64",
     [bool]$BundleProjectAssets = $true,
     [string]$UnityProjectRoot = "E:\Game\CatGame\CatGameCodeOptimizationBuild"
