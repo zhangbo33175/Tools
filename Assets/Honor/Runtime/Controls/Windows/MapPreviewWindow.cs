@@ -14,6 +14,7 @@ using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -55,6 +56,17 @@ public sealed class MapPreviewWindow : Window
     private readonly TextBlock _speedText = new();
     private readonly CheckBox _showAnimationsBox = new();
     private readonly CheckBox _showPathsBox = new();
+    private readonly CheckBox _trafficBox = new();
+    private readonly TextBlock _trafficText = new();
+    private readonly StackPanel _trafficChips = new()
+    {
+        Orientation = Orientation.Horizontal,
+        Spacing = 10,
+        VerticalAlignment = VerticalAlignment.Center,
+    };
+    private readonly List<TextBlock> _trafficChipTexts = new();
+    private readonly List<Ellipse> _trafficChipDots = new();
+    private int _trafficChipLightCount = -1;
     private readonly DispatcherTimer _statusTimer;
 
     #endregion
@@ -91,9 +103,10 @@ public sealed class MapPreviewWindow : Window
         Content = BuildLayout();
         ConfigureCanvas();
 
-        _statusTimer = new DispatcherTimer(DispatcherPriority.Background)
+        _statusTimer = new DispatcherTimer(DispatcherPriority.Normal)
         {
-            Interval = TimeSpan.FromMilliseconds(200),
+            // 100ms：底栏倒计时和画布灯头最多差 0.1s，逐帧比对视频时不会出现两处秒数对不上
+            Interval = TimeSpan.FromMilliseconds(100),
         };
         _statusTimer.Tick += (_, _) => RefreshStatus();
         _statusTimer.Start();
@@ -116,9 +129,9 @@ public sealed class MapPreviewWindow : Window
 
     #region 布局
 
-    /// <summary>搭建顶栏 / 整图预览画布 / 底部状态栏。</summary>
+    /// <summary>搭建顶栏 / 整图预览画布 / 相位状态行 / 底部状态栏。</summary>
     private Control BuildLayout() =>
-        PreviewWindowChrome.BuildShell(BuildHeader(), BuildBody(), BuildFooter());
+        PreviewWindowChrome.BuildShell(BuildHeader(), BuildBody(), BuildFooterBlock());
 
     /// <summary>顶栏：标题、播放控制、显示开关、速度与适应窗口。</summary>
     private Control BuildHeader()
@@ -169,6 +182,17 @@ public sealed class MapPreviewWindow : Window
             RefreshStatus();
         };
 
+        _trafficBox.Content = "交通仿真";
+        _trafficBox.FontSize = 12;
+        _trafficBox.IsChecked = true;
+        _trafficBox.VerticalAlignment = VerticalAlignment.Center;
+        _trafficBox.IsCheckedChanged += (_, _) =>
+        {
+            _canvas.TrafficPreviewEnabled = _trafficBox.IsChecked == true;
+            _canvas.RefreshAnimations();
+            RefreshStatus();
+        };
+
         _speedSlider.Minimum = 0.25;
         _speedSlider.Maximum = 4.0;
         _speedSlider.Value = 1.0;
@@ -213,6 +237,7 @@ public sealed class MapPreviewWindow : Window
                 fit,
                 _showAnimationsBox,
                 _showPathsBox,
+                _trafficBox,
                 new TextBlock { Text = "速度", FontSize = 11, Foreground = UiTheme.PreviewHint, VerticalAlignment = VerticalAlignment.Center },
                 _speedSlider,
                 _speedText,
@@ -250,6 +275,50 @@ public sealed class MapPreviewWindow : Window
             _countText,
             "预览只读：滚轮缩放，右键拖动平移；不会修改地图数据。");
 
+    /// <summary>底栏区块：相位状态行 + 原有状态栏。相位行只在交通仿真开启时刷新文案。</summary>
+    private Control BuildFooterBlock()
+    {
+        _trafficText.Text = "交通仿真准备中…";
+        _trafficText.FontSize = 12;
+        _trafficText.Foreground = UiTheme.InfoText;
+        _trafficText.TextTrimming = TextTrimming.CharacterEllipsis;
+        _trafficText.VerticalAlignment = VerticalAlignment.Center;
+
+        var label = new TextBlock
+        {
+            Text = "交通仿真",
+            FontSize = 11,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = UiTheme.InfoText,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 12,
+            Children = { label, _trafficChips, _trafficText },
+        };
+
+        var trafficBar = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0xFF, 0xF6, 0xFB, 0xFD)),
+            BorderBrush = UiTheme.Divider,
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(16, 6),
+            Child = row,
+        };
+
+        return new StackPanel
+        {
+            Children =
+            {
+                trafficBar,
+                BuildFooter(),
+            },
+        };
+    }
+
     #endregion
 
     #region 画布配置
@@ -269,6 +338,7 @@ public sealed class MapPreviewWindow : Window
         _canvas.FogDrawing = false;
         _canvas.PreviewShowAnimations = true;
         _canvas.PreviewShowPaths = true;
+        _canvas.TrafficPreviewEnabled = true;
 
         _canvas.Assets = _assets;
         _canvas.Animations = _spriteCatalog;
@@ -310,6 +380,122 @@ public sealed class MapPreviewWindow : Window
         {
             _statusText.Text = $"正在预览 {paths} 个路径物件：虚线为路径，黄点为当前脚底位置；滚轮缩放，右键拖动平移。";
         }
+
+        RefreshTrafficLine(paths);
+    }
+
+    /// <summary>刷新相位状态行：有交通数据时显示各灯相位与等待数量，没有时给出替代入口。</summary>
+    /// <param name="paths">当前地图的路径物件数量。</param>
+    private void RefreshTrafficLine(int paths)
+    {
+        if (_trafficBox.IsChecked != true)
+        {
+            ClearTrafficChips();
+            _trafficText.Text = "交通仿真已关闭：角色按匀速沿路径移动。";
+            _trafficText.Foreground = UiTheme.InfoText;
+            return;
+        }
+
+        var sim = _canvas.TrafficSim;
+        var summary = _canvas.TrafficSimulationStatus;
+        if (sim is null || !sim.HasTrafficData)
+        {
+            ClearTrafficChips();
+            _trafficText.Text = paths == 0
+                ? "本关没有灯 / 横道 / 路径数据，暂无规则可看；可用工具栏「交通规则演示」查看示例路口。"
+                : "本关没有红绿灯或横道数据，角色按匀速移动；可用工具栏「交通规则演示」查看示例路口。";
+            _trafficText.Foreground = UiTheme.InfoText;
+            return;
+        }
+
+        UpdateTrafficChips(sim);
+        _trafficText.Text = $"等待 车 {sim.WaitingVehicleCount} · 人 {sim.WaitingPedestrianCount}";
+        _trafficText.Foreground = UiTheme.PreviewText;
+    }
+
+    /// <summary>按灯列表一次性建出相位胶囊，之后每次刷新只改灯色与倒计时文本，避免状态条抖动。</summary>
+    private void UpdateTrafficChips(TrafficSimulation sim)
+    {
+        if (_trafficChipLightCount != sim.Lights.Count)
+        {
+            _trafficChipLightCount = sim.Lights.Count;
+            _trafficChips.Children.Clear();
+            _trafficChipTexts.Clear();
+            _trafficChipDots.Clear();
+
+            foreach (var light in sim.Lights)
+            {
+                var dot = new Ellipse
+                {
+                    Width = 9,
+                    Height = 9,
+                    Margin = new Thickness(0, 0, 5, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                var name = new TextBlock
+                {
+                    Text = string.IsNullOrWhiteSpace(light.Name) ? light.Id : light.Name,
+                    FontSize = 11,
+                    Foreground = UiTheme.PreviewText,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                var phase = new TextBlock
+                {
+                    FontSize = 11,
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(6, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+
+                _trafficChipDots.Add(dot);
+                _trafficChipTexts.Add(phase);
+
+                var chip = new Border
+                {
+                    Background = Brushes.White,
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0xDD, 0xEB, 0xF2)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(12),
+                    Padding = new Thickness(9, 3),
+                    Child = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Children = { dot, name, phase },
+                    },
+                };
+                _trafficChips.Children.Add(chip);
+            }
+        }
+
+        for (var i = 0; i < sim.Lights.Count && i < _trafficChipTexts.Count; i++)
+        {
+            var light = sim.Lights[i];
+            var phase = sim.PhaseOf(light.Id);
+            var color = phase switch
+            {
+                TrafficPhase.Red => Color.FromArgb(0xFF, 0xE5, 0x48, 0x4D),
+                TrafficPhase.Yellow => Color.FromArgb(0xFF, 0xC5, 0x8A, 0x00),
+                _ => Color.FromArgb(0xFF, 0x2E, 0x7D, 0x32),
+            };
+            _trafficChipDots[i].Fill = new SolidColorBrush(color);
+            _trafficChipTexts[i].Text =
+                $"{TrafficSimulation.PhaseText(phase)} {sim.PhaseRemaining(light.Id):0.0}s";
+            _trafficChipTexts[i].Foreground = new SolidColorBrush(color);
+        }
+    }
+
+    /// <summary>清空相位胶囊并复位缓存，切换到无交通数据的地图时不会残留上一张图的灯。</summary>
+    private void ClearTrafficChips()
+    {
+        if (_trafficChipLightCount < 0 && _trafficChips.Children.Count == 0)
+        {
+            return;
+        }
+
+        _trafficChipLightCount = -1;
+        _trafficChips.Children.Clear();
+        _trafficChipTexts.Clear();
+        _trafficChipDots.Clear();
     }
 
     /// <summary>统计当前地图真正能播放的动画实例：命中序列帧或 Spine 资产才计入。</summary>

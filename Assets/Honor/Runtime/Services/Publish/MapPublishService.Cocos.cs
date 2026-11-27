@@ -207,7 +207,9 @@ public static partial class MapPublishService
         string chapter,
         string level,
         MapConfigData config,
-        string mapName)
+        string mapName,
+        string? bgNameOverride = null,
+        bool compact = false)
     {
         var sb = new StringBuilder();
         AppendLuaHeader(sb, baseName, $"章节{chapter}关卡{level}地图数据（自动生成·拆分优化版）", "关卡地图数据表（主入口）",
@@ -216,7 +218,11 @@ public static partial class MapPublishService
         var tableName = StripTablePrefix(baseName);
         sb.AppendLine("---@type Tables.LevelData_Item");
         sb.AppendLine($"Tables.{tableName} = {{");
-        AppendCocosMetaSection(sb, chapter, level, config, mapName);
+        if (compact)
+        {
+            sb.AppendLine("    Format        = \"compact-v2\",");
+        }
+        AppendCocosMetaSection(sb, chapter, level, config, mapName, bgNameOverride);
         sb.AppendLine();
         AppendCocosDefaultsSection(sb);
         sb.AppendLine();
@@ -238,7 +244,8 @@ public static partial class MapPublishService
         string chapter,
         string level,
         MapConfigData config,
-        string mapName)
+        string mapName,
+        string? bgNameOverride = null)
     {
         AppendLuaSectionBanner(sb, "1. 关卡元数据");
         sb.AppendLine("    Meta = {");
@@ -247,7 +254,7 @@ public static partial class MapPublishService
         sb.AppendLine($"        LevelId       = \"{Escape(level)}\",");
         sb.AppendLine($"        LevelIndex    = {ParseInt(level)},");
         sb.AppendLine($"        MapName       = \"{Escape(mapName)}\",");
-        sb.AppendLine($"        BgName        = \"{Escape(config.BgName)}\",");
+        sb.AppendLine($"        BgName        = \"{Escape(bgNameOverride ?? config.BgName)}\",");
         sb.AppendLine($"        SavePath      = \"Assets/GameData/MapDatas/Map_{Escape(chapter)}m{Escape(level)}.json\",");
         sb.AppendLine($"        Time          = \"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\",");
         sb.AppendLine($"        Width         = {config.Width},");

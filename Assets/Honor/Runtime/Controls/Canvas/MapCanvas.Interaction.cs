@@ -239,6 +239,7 @@ public sealed partial class MapCanvas : Control
             SetSelectedCell(null);
             Select(hit);
             _dragged = hit;
+            _dragOrigin = new Point(hit.X, hit.Y);
             _dragGrab = new Vector(world.X - hit.X, world.Y - hit.Y);
             Cursor = GrabCursor;
             e.Pointer.Capture(this);
@@ -360,9 +361,19 @@ public sealed partial class MapCanvas : Control
 
         if (_dragged is not null)
         {
+            var moved = _dragged;
+            var movedTo = new Point(moved.X, moved.Y);
+            var movedFrom = _dragOrigin;
             _dragged = null;
             Cursor = ArrowCursor;
             e.Pointer.Capture(null);
+
+            // 原地点击（没挪动）不算一次编辑，不进撤销栈；终点坐标由画布刷新与文档广播一并处理
+            if (Math.Abs(movedTo.X - movedFrom.X) > 1e-6 || Math.Abs(movedTo.Y - movedFrom.Y) > 1e-6)
+            {
+                ObjectMoveCompleted?.Invoke(this, new ObjectMoveEventArgs(moved, movedFrom, movedTo));
+            }
+
             return;
         }
 

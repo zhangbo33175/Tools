@@ -49,13 +49,7 @@ public sealed partial class ItemElementPanel : UserControl
 
     private Control BuildListPanel()
     {
-        var header = new TextBlock
-        {
-            Text = "元件列表",
-            Foreground = UiTheme.AccentDark,
-            FontWeight = FontWeight.Bold,
-            Margin = ListHeaderMargin,
-        };
+        var header = UiFactory.SectionHead("元件列表", margin: ListHeaderMargin);
 
         var tabs = new Grid
         {
@@ -117,7 +111,15 @@ public sealed partial class ItemElementPanel : UserControl
     {
         _formHost.Spacing = FormHostSpacing;
         _formHost.Margin = FormHostMargin;
-        _groupsHost.Spacing = FormGroupsSpacing;
+        _groupColumnLeft.Spacing = FormGroupsSpacing;
+        _groupColumnRight.Spacing = FormGroupsSpacing;
+        if (_groupsHost.Children.Count == 0)
+        {
+            _groupsHost.ColumnDefinitions = new ColumnDefinitions("*,14,*");
+            _groupsHost.Children.Add(_groupColumnLeft);
+            Grid.SetColumn(_groupColumnRight, 2);
+            _groupsHost.Children.Add(_groupColumnRight);
+        }
 
         _emptyHint.Text = "请在左侧元件列表中选择一个元件，右侧将显示它的动画、交互、层级碰撞、交通、收集、YSort、移动循环与传送门配置。";
         _emptyHint.Foreground = UiTheme.TextSecondary;
@@ -140,18 +142,18 @@ public sealed partial class ItemElementPanel : UserControl
     }
 
     /// <summary>
-    /// 创建左右两栏共用的面板卡片外观：同色底、同色描边、同线宽。
+    /// 创建左右两栏共用的面板卡片外观：白底、细描边、8 圆角。
     /// </summary>
     /// <param name="child">卡片内容。</param>
     /// <param name="clipToBounds">是否裁剪超出圆角的内容，列表卡片需要。</param>
-    /// <param name="cornerRadius">圆角半径，默认 0 保持属性区直角。</param>
+    /// <param name="cornerRadius">圆角半径，默认 8 与全局卡片语言一致。</param>
     /// <returns>面板卡片边框。</returns>
-    private static Border CreatePanelCard(Control child, bool clipToBounds = false, double cornerRadius = 0)
+    private static Border CreatePanelCard(Control child, bool clipToBounds = false, double cornerRadius = 8)
     {
         return new Border
         {
-            Background = UiTheme.PanelSurface,
-            BorderBrush = UiTheme.PanelBorder,
+            Background = UiTheme.Card,
+            BorderBrush = UiTheme.Divider,
             BorderThickness = new Thickness(PanelBorderThickness),
             Child = child,
             ClipToBounds = clipToBounds,

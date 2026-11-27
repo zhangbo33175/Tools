@@ -60,6 +60,12 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
     private static readonly IBrush PanelBorderBrush = UiTheme.PanelBorder;
 
+    /// <summary>页面里外层卡片的圆角，与全局卡片语言一致（卡片 8）。</summary>
+    private const double PanelCornerRadius = 8.0;
+
+    /// <summary>分类筛选按钮各自的圆角，与全局按钮语言一致（按钮 5）。</summary>
+    private const double FilterButtonCornerRadius = 5.0;
+
     private static readonly string[] FilterNames = ResourceCategories.FilterNames;
 
     #endregion
@@ -76,7 +82,15 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private readonly Grid _previewHost = new();
 
     /// <summary>左侧资源列表滚动容器；切分类时回到顶部，避免沿用上一张长表的偏移。</summary>
-    private ScrollViewer? _resourceListScroll;    private readonly TextBox _search = new();
+    private ScrollViewer? _resourceListScroll;
+
+    /// <summary>已配置表当前行号 → 该行全部单元格，供整行悬停高亮使用。</summary>
+    private readonly Dictionary<int, List<Border>> _rowHoverCells = new();
+
+    /// <summary>当前鼠标悬停的配置表行号；-1 表示没有。</summary>
+    private int _hoveredRow = -1;
+
+    private readonly TextBox _search = new();
     private readonly TextBlock _countText = new();
     private readonly Dictionary<string, Button> _filterButtons = new();
     private readonly TextBox _fieldId = new();
@@ -93,6 +107,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private MapConfigData? _config;
     private Dictionary<string, string> _unconfigured = new();
     private string _filter = ResourceCategories.AllDisplayName;
+
+    /// <summary>上一次扫描在「地图保存目录」里枚举到的 PNG 总数（用于空态区分「没图」与「都已配置」）。</summary>
+    private int _lastScanTotal;
     private string? _selectedName;
 
     /// <summary>当前选中资源的磁盘路径；分类判断与默认收集物标记都以它为准。</summary>
@@ -206,6 +223,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
         _mapImageIndex = null;
         ScanUnconfigured(silent: true);
     }
+
+    /// <summary>当前接入的配置表集合；未接入为 null。</summary>
+    public ItemConfigSet? ItemTable => _itemTable;
 
     /// <summary>接入地图物件配置表文件夹（多张表按图片名 bind，选中即回填、编辑可回写）。</summary>
     /// <param name="table">已加载的表集合；null 表示未配置或读不到。</param>

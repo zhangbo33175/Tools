@@ -304,6 +304,7 @@ public partial class MainWindow : Window
     /// </summary>
     private async Task SwitchLevelAsync(ChapterRow chapter, string levelId)
     {
+        TraceStartup($"SwitchLevelAsync enter: chapter={chapter.Id}, level={levelId}, current={_selectedChapterId}/{_selectedLevelId}, objects={_config.Objects.Count}");
         if (_selectedChapterId == chapter.Id && _selectedLevelId == levelId)
         {
             SetMessage($"当前已在 {chapter.Title}-关卡{levelId}");
@@ -640,6 +641,36 @@ public partial class MainWindow : Window
     /// <param name="active">是否处于选中态。</param>
     private static void ApplyTabVisual(Button button, bool active)
     {
+        if (button.Classes.Contains("toolToggle"))
+        {
+            // 场景工具条里的浮窗开关：打开=实心青，关闭=浅青幽灵，和旁边同级按钮同一套尺码
+            button.Background = active ? UiTheme.Accent : UiTheme.PreviewAccentSoft;
+            button.Foreground = active ? UiTheme.White : UiTheme.AccentDark;
+            button.BorderBrush = active ? UiTheme.Accent : UiTheme.PanelBorder;
+            button.FontWeight = active ? FontWeight.SemiBold : FontWeight.Normal;
+            return;
+        }
+
+        if (button.Classes.Contains("segTab"))
+        {
+            // 卡片内的分段页签：选中=浅青胶囊 + 主色描边 + 深青加粗，未选中=透明只留灰字
+            button.Background = active ? UiTheme.Form.ActiveTabSurface : UiTheme.Transparent;
+            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
+            button.BorderBrush = active ? UiTheme.Accent : UiTheme.Transparent;
+            button.FontWeight = active ? FontWeight.SemiBold : FontWeight.Normal;
+            return;
+        }
+
+        if (button.Classes.Contains("navTab"))
+        {
+            // 顶部导航：胶囊页签。未选中只留文字，选中铺浅青 + 青描边 + 加粗，不再用大块实心蓝压住标题栏
+            button.Background = active ? UiTheme.PreviewAccentSoft : UiTheme.Transparent;
+            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
+            button.BorderBrush = active ? UiTheme.Accent : UiTheme.Transparent;
+            button.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
+            return;
+        }
+
         button.Background = active ? UiTheme.Accent : UiTheme.Form.IdleTab;
         button.Foreground = active ? UiTheme.White : UiTheme.TextPrimary;
     }

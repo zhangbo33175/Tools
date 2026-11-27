@@ -57,7 +57,12 @@ public static class XlsmTableReader
 
         try
         {
-            using var archive = ZipFile.OpenRead(filePath);
+            // ---TODO [表格读取] Excel/WPS 打开表格时以 FILE_SHARE_READ|WRITE 持有句柄；
+            // 直接用 ZipFile.OpenRead（只请求 FileShare.Read）会因共享冲突抛 IOException，
+            // 导致章节表 / 主关卡表被误判为不可用并回退 Lua 表（表里改了名字但编辑器看不到）。
+            // 这里改为只读流 + FileShare.ReadWrite，允许读取"正在被 Excel/WPS 打开"的表格。
+            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
 
             var workbook = LoadXml(archive, "xl/workbook.xml");
             if (workbook?.Root is null)
@@ -96,6 +101,11 @@ public static class XlsmTableReader
             var sheet = new TableSheet { Name = sheetName };
             FillRows(sheet, sheetXml.Root, sharedStrings);
             return sheet;
+        }
+        catch (IOException exception)
+        {
+            error = $"表格读取失败（{filePath} 可能正被 Excel/WPS 打开占用，请保存并关闭该表后重试）：{exception.Message}";
+            return null;
         }
         catch (Exception exception)
         {

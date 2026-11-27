@@ -61,6 +61,10 @@ public sealed partial class ResourceOrganizePanel : UserControl
             RowDefinitions = BuildBodyRowDefinitions(rows.Count),
         };
 
+        // 重建前清空上一张表的行→单元格索引，避免悬停高亮打到已移除的旧单元格
+        _rowHoverCells.Clear();
+        _hoveredRow = -1;
+
         for (var row = 0; row < rows.Count; row++)
         {
             var item = rows[row];
@@ -113,6 +117,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
 
         _configuredHost.Children.Add(bodyGrid);
+        AttachRowHover(bodyGrid, rows.Count);
     }
 
     /// <summary>绑定一个共享行字段：写回后统一触发附加动作（如标脏、刷新索引）。</summary>

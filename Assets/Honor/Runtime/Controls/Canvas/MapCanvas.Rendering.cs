@@ -163,8 +163,16 @@ public sealed partial class MapCanvas : Control
                 DrawPreviewPaths(context, config);
             }
 
+            // 交通仿真开启时叠一层相位灯头与「等灯」标记，让规则状态一眼可见
+            if (PreviewMode && _trafficPreviewEnabled)
+            {
+                DrawTrafficSimOverlay(context, config);
+            }
+
             if (!PreviewMode)
             {
+                // 未登记配置表的资源先框出来：盖在美术之上、选中框之下，一眼能扫到缺口
+                DrawUnregisteredMarks(context, config);
                 DrawEditingPath(context);
                 DrawFog(context, config);
                 DrawFogBrush(context);
@@ -216,6 +224,11 @@ public sealed partial class MapCanvas : Control
         if (!PreviewMode)
         {
             DrawTrafficGround(context, config);
+        }
+        else if (_trafficPreviewEnabled)
+        {
+            // 预览交通时把斑马线画出来：否则看不出车停在停止线前还是压进横道
+            DrawPreviewCrosswalks(context, config);
         }
 
         foreach (var item in upperItems)

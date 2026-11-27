@@ -15,32 +15,33 @@
 
     <!-- 左侧资源面板：整列收进一张分区卡里，和右侧各区块的描边形成层级 -->
     <Border Grid.Column="0" Classes="frame" Background="{StaticResource Theme.Panel}" Margin="5">
-      <Grid RowDefinitions="Auto,205,Auto,*" Margin="4">
+      <Grid RowDefinitions="237,Auto,*" Margin="4">
 
-        <Border Grid.Row="0" Background="{StaticResource Theme.TitleBackground}"
-                BorderBrush="{StaticResource Theme.TitleBorder}" BorderThickness="0,0,0,1"
-                CornerRadius="5,5,0,0" Padding="4" Margin="0,0,0,4">
-          <Grid ColumnDefinitions="*,*">
-            <Button Grid.Column="0" x:Name="BtnConfig" Content="配置" Classes="titleAction"
-                    HorizontalAlignment="Stretch" Margin="0,0,3,0"/>
-            <Button Grid.Column="1" x:Name="BtnDelete" Content="删除" Classes="titleAction"
-                    HorizontalAlignment="Stretch" Margin="3,0,0,0"/>
+        <!-- 章节树卡：标题条（配置 / 删除）+ 章节 → 关卡列表，标题条改成白底细线，与各页页面头同款 -->
+        <Border Grid.Row="0" Classes="card" ClipToBounds="True">
+          <Grid RowDefinitions="Auto,*">
+            <Border Background="{StaticResource Theme.Card}" BorderBrush="{StaticResource Theme.Divider}"
+                    BorderThickness="0,0,0,1" Padding="6,3">
+              <Grid ColumnDefinitions="*,*">
+                <Button Grid.Column="0" x:Name="BtnConfig" Content="配置" Classes="titleAction"
+                        HorizontalAlignment="Stretch" Height="24" Margin="0,0,3,0"/>
+                <Button Grid.Column="1" x:Name="BtnDelete" Content="删除" Classes="titleAction"
+                        HorizontalAlignment="Stretch" Height="24" Margin="3,0,0,0"/>
+              </Grid>
+            </Border>
+
+            <Grid Grid.Row="1" ColumnDefinitions="*,14">
+              <ScrollViewer Grid.Column="0" x:Name="ChapterScroll" VerticalScrollBarVisibility="Hidden">
+                <StackPanel x:Name="ChapterList" Margin="4"/>
+              </ScrollViewer>
+              <controls:ClassicScrollBar Grid.Column="1" Target="{Binding #ChapterScroll}"/>
+            </Grid>
           </Grid>
         </Border>
 
-        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="{StaticResource Theme.Border}" BorderThickness="1" CornerRadius="2">
-          <Grid ColumnDefinitions="*,14">
-            <ScrollViewer Grid.Column="0" x:Name="ChapterScroll" VerticalScrollBarVisibility="Hidden">
-              <StackPanel x:Name="ChapterList" Margin="4"/>
-            </ScrollViewer>
-            <controls:ClassicScrollBar Grid.Column="1" Target="{Binding #ChapterScroll}"/>
-          </Grid>
-        </Border>
-
-        <!-- 资源类型：一个白色分段条，收集物已拆到画布上的独立面板 -->
-        <Border Grid.Row="2" x:Name="ResourceTypeBar" Background="#FFFFFF"
-                BorderBrush="{StaticResource Theme.Border}" BorderThickness="1" CornerRadius="5"
-                Padding="2" Height="32" Margin="0,6,0,4" ClipToBounds="True">
+        <!-- 资源类型：白卡里的分段条，圆角与卡片一致 -->
+        <Border Grid.Row="1" x:Name="ResourceTypeBar" Classes="card"
+                Padding="2" Height="32" Margin="0,6,0,6" ClipToBounds="True">
           <Grid x:Name="ResourceTypeRow" ColumnDefinitions="*,*,*,Auto">
             <Button Grid.Column="0" x:Name="TabBuilding" Content="建筑" Classes="sideTab"
                     VerticalAlignment="Center"/>
@@ -52,20 +53,19 @@
                     Width="42" Height="26" Padding="0" Margin="4,0,0,0"
                     VerticalAlignment="Center" HorizontalContentAlignment="Center"
                     Background="{StaticResource Theme.ButtonSurface}" BorderBrush="{StaticResource Theme.ButtonBorder}" BorderThickness="1"
-                    CornerRadius="2" Foreground="{StaticResource Theme.Text}" ToolTip.Tip="刷新资源列表"/>
+                    CornerRadius="5" Foreground="{StaticResource Theme.Text}" ToolTip.Tip="刷新资源列表"/>
           </Grid>
         </Border>
 
-        <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="{StaticResource Theme.Border}" BorderThickness="1"
-                CornerRadius="5" Margin="0,0,0,0" ClipToBounds="True">
+        <Border Grid.Row="2" Classes="card" ClipToBounds="True">
           <Grid RowDefinitions="Auto,*">
-            <Border Grid.Row="0" Background="{StaticResource Theme.TitleBackground}" BorderBrush="{StaticResource Theme.TitleBorder}"
+            <Border Grid.Row="0" Background="{StaticResource Theme.Card}" BorderBrush="{StaticResource Theme.Divider}"
                     BorderThickness="0,0,0,1" Padding="8,4">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" x:Name="ResourceListTitle" Text="资源列表"
                            FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Theme.TitleText}"
                            VerticalAlignment="Center"/>
-                <Border Grid.Column="1" Background="{StaticResource Theme.TitleChip}" CornerRadius="8"
+                <Border Grid.Column="1" Background="{StaticResource Theme.PrimarySoft}" CornerRadius="8"
                         Padding="6,1" VerticalAlignment="Center">
                   <TextBlock x:Name="ResourceCountText" Text="0" FontSize="10"
                              FontWeight="SemiBold" Foreground="{StaticResource Theme.TitleText}"/>
@@ -90,11 +90,13 @@
 
       <!-- 顶部 Tab：加一条下边线，把页面切换条和下方工作区分开 -->
       <Border Grid.Row="0" Background="{StaticResource Theme.PanelAlt}" BorderBrush="{StaticResource Theme.Border}" BorderThickness="0,0,0,1">
-        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*">
-          <Button Grid.Column="0" x:Name="TabScene" Content="场景编辑" Width="90" Height="28" Margin="3,1"/>
-          <Button Grid.Column="1" x:Name="TabItemElement" Content="物品元件编辑" Width="90" Height="28" Margin="3,1"/>
-          <Button Grid.Column="2" x:Name="TabFog" Content="迷雾编辑" Width="90" Height="28" Margin="3,1"/>
-          <Button Grid.Column="3" x:Name="TabResource" Content="资源整理" Width="90" Height="28" Margin="3,1"/>
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+          <Button Grid.Column="0" x:Name="TabScene" Content="场景编辑" Classes="navTab" Width="92" Height="26" Margin="3,2"/>
+          <Button Grid.Column="1" x:Name="TabItemElement" Content="物品元件编辑" Classes="navTab" Width="92" Height="26" Margin="3,2"/>
+          <Button Grid.Column="2" x:Name="TabFog" Content="迷雾编辑" Classes="navTab" Width="92" Height="26" Margin="3,2"/>
+          <Button Grid.Column="3" x:Name="TabResource" Content="资源整理" Classes="navTab" Width="92" Height="26" Margin="3,2"/>
+          <Button Grid.Column="4" x:Name="TabStory" Content="剧情编辑" Classes="navTab" Width="92" Height="26" Margin="3,2"
+                  ToolTip.Tip="剧情编辑：按节点写对白与分支，剧情文件跟着地图同名存成 .story.json"/>
         </Grid>
       </Border>
 
@@ -107,14 +109,17 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
               <Button x:Name="BtnExportSettings" Content="导出设置" Padding="10,4"/>
               <Button x:Name="BtnSave" Content="保存" Padding="10,4"/>
-              <Button x:Name="BtnPublishTop" Content="发布" Padding="10,4" Background="{StaticResource Theme.Teal}" Foreground="White" BorderBrush="{StaticResource Theme.TealDark}"/>
-              <Button x:Name="BtnClearObjects" Content="清空摆放物" Padding="10,4" Background="{StaticResource Theme.Danger}" Foreground="White"/>
+              <Button x:Name="BtnPublishTop" Content="发布" Padding="10,4" Background="{StaticResource Theme.Primary}" Foreground="White" BorderBrush="{StaticResource Theme.PrimaryDark}"/>
+              <Button x:Name="BtnClearObjects" Content="清空摆放物" Padding="10,4" Background="Transparent" Foreground="{StaticResource Theme.DangerDark}" BorderBrush="#E0B4B1" BorderThickness="1"/>
               <Button x:Name="BtnClearGridData" Content="清空格子数据" Padding="10,4"/>
-              <Button x:Name="BtnMapPreview" AutomationProperties.AutomationId="BtnMapPreview" Content="地图预览" Padding="10,4" Background="{StaticResource Theme.Primary}" Foreground="White" BorderBrush="{StaticResource Theme.PrimaryDark}"
+              <Button x:Name="BtnMapPreview" AutomationProperties.AutomationId="BtnMapPreview" Content="地图预览" Padding="10,4" Background="{StaticResource Theme.PrimarySoft}" Foreground="{StaticResource Theme.PrimaryDark}" BorderBrush="{StaticResource Theme.ButtonBorder}" BorderThickness="1"
                       ToolTip.Tip="打开只读地图预览窗：播放全图序列帧 / Spine 动画，任意带路径物件沿路径移动；不影响当前编辑数据"/>
-              <Button x:Name="BtnImportPsd" Content="导入PSD" Padding="10,4" Background="{StaticResource Theme.Primary}" Foreground="White"/>
-              <Button x:Name="BtnAddCollectible" Content="添加收集" Padding="10,4" Background="{StaticResource Theme.Teal}" Foreground="White" BorderBrush="{StaticResource Theme.TealDark}"
+              <Button x:Name="BtnImportPsd" Content="导入PSD" Padding="10,4" Background="{StaticResource Theme.PrimarySoft}" Foreground="{StaticResource Theme.PrimaryDark}" BorderBrush="{StaticResource Theme.ButtonBorder}" BorderThickness="1"/>
+              <Button x:Name="BtnAddCollectible" Content="添加收集" Padding="10,4" Background="{StaticResource Theme.PrimarySoft}" Foreground="{StaticResource Theme.PrimaryDark}" BorderBrush="{StaticResource Theme.ButtonBorder}" BorderThickness="1"
                       ToolTip.Tip="两步向导：选择目标数量与收集物素材；完成后在画布右侧打开可拖动的收集物面板"/>
+              <!-- 交通规则和「添加收集」一样是画布浮窗入口，排在收集后面，跟同一类操作放在一起 -->
+              <Button x:Name="TabTraffic" Content="交通规则" Classes="toolToggle" Padding="10,4"
+                      ToolTip.Tip="打开画布上的交通规则浮窗：灯 / 横道 / 车与行人的通行参数；可拖动停靠到画布边缘"/>
             </StackPanel>
 
             <TextBlock Grid.Column="1" x:Name="SaveHint" Margin="14,0" VerticalAlignment="Center"
@@ -201,6 +206,65 @@
               </Grid>
             </Border>
           </Canvas>
+
+          <!-- 交通规则悬浮窗：默认浮在画布右侧，标题栏可拖动；拖到画布左/右边缘或点「停靠」贴边。
+               面板不占工作区，地图始终可见，规则改动即时反映到画布与地图预览。 -->
+          <Canvas x:Name="TrafficRuleOverlay" Background="{x:Null}" ClipToBounds="True" IsVisible="False">
+            <Border x:Name="TrafficRuleDockHint" IsVisible="False" Width="4"
+                    Background="{StaticResource Theme.Primary}" Opacity="0.9" IsHitTestVisible="False"/>
+            <Border x:Name="TrafficRulePanelHost" IsVisible="False"
+                    Width="640" Height="600"
+                    Background="#F2F9FC" BorderBrush="{StaticResource Theme.BorderStrong}"
+                    BorderThickness="1" CornerRadius="8"
+                    BoxShadow="0 14 36 0 #66000000">
+              <Grid RowDefinitions="38,*">
+                <Border Grid.Row="0" x:Name="TrafficRuleTitleBar"
+                        Background="#E6F6FB"
+                        BorderBrush="{StaticResource Theme.Border}" BorderThickness="0,0,0,1"
+                        Padding="10,0,6,0">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                    <Border Grid.Column="0" Grid.ColumnSpan="2" x:Name="TrafficRuleDragArea"
+                            Background="Transparent" Cursor="SizeAll"/>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8"
+                                VerticalAlignment="Center" IsHitTestVisible="False">
+                      <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                        <Ellipse Width="7" Height="7" Fill="#F1736F"/>
+                        <Ellipse Width="7" Height="7" Fill="#F3C75F"/>
+                        <Ellipse Width="7" Height="7" Fill="#56C88A"/>
+                      </StackPanel>
+                      <TextBlock Text="交通规则"
+                                 FontSize="13" FontWeight="SemiBold"
+                                 Foreground="{StaticResource Theme.Text}"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" x:Name="TrafficRuleHint"
+                               Text="拖标题栏移动 · 拖到左右边缘停靠"
+                               FontSize="9.5" Foreground="{StaticResource Theme.TextMuted}"
+                               VerticalAlignment="Center" Margin="10,0,4,0"
+                               TextTrimming="CharacterEllipsis" IsHitTestVisible="False"/>
+                    <Button Grid.Column="2" x:Name="BtnTrafficDock" Content="停靠"
+                            Classes="mini" FontSize="10" Height="24" Width="42" Padding="0"
+                            Margin="0,0,4,0" VerticalAlignment="Center"
+                            ToolTip.Tip="在浮动 / 贴边停靠之间切换"/>
+                    <Button Grid.Column="3" x:Name="BtnTrafficClose" Content="×"
+                            Classes="mini" FontSize="13" Height="24" Width="26" Padding="0"
+                            VerticalAlignment="Center" ToolTip.Tip="关闭交通规则面板，规则数据保留"/>
+                  </Grid>
+                </Border>
+
+                <Border Grid.Row="1" x:Name="TrafficRuleContent"
+                        Background="#F2F9FC"
+                        CornerRadius="0,0,8,8"
+                        BorderBrush="{StaticResource Theme.Border}" BorderThickness="0"/>
+
+                <!-- 停靠后出现在靠画布一侧，按住可调整面板宽度 -->
+                <Border x:Name="TrafficRuleResizeHandle" Grid.RowSpan="2"
+                        Width="10" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                        Background="Transparent" Cursor="SizeWestEast" IsVisible="False"
+                        ZIndex="10"
+                        ToolTip.Tip="拖动调整交通规则面板宽度"/>
+              </Grid>
+            </Border>
+          </Canvas>
         </Grid>
 
         <!-- 状态栏：所有文本块统一 VerticalAlignment=Center，整条内容在栏内上下居中 -->
@@ -244,7 +308,7 @@
         <!-- 底部属性区：三张等高卡片，中间 6px 列放 GridSplitter。
              左 / 右列默认 420 / 900，拖分隔条可改左-中、右-中宽度；
              三列都带 Min/Max，拖到底也不会把卡片压没，窗口变宽时中间列继续吃余量。 -->
-        <Grid Grid.Row="3" Margin="6,4,6,6" Height="336">
+        <Grid Grid.Row="3" Margin="6,4,6,6" Height="356">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="420" MinWidth="320" MaxWidth="640"/>
             <ColumnDefinition Width="6"/>
@@ -256,67 +320,88 @@
           <!-- 场景属性 -->
           <Border Grid.Column="0" Classes="card" Padding="10,9"
                   AutomationProperties.AutomationId="BottomCardScene">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" RowSpacing="7">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto" RowSpacing="6">
               <Border Grid.Row="0" Classes="titleBar" Margin="-10,-9,-10,0">
                 <TextBlock Text="场景属性" Classes="cardTitle"/>
               </Border>
-              <Grid Grid.Row="1" ColumnDefinitions="78,54,*,10,28,66">
-                <Button Grid.Column="0" x:Name="BtnUpdateMap" AutomationProperties.AutomationId="BtnUpdateMap" Content="更新地图" Classes="mini" HorizontalAlignment="Stretch"
+
+              <!-- 地图动作：四颗同宽按钮，动作入口先于字段出现 -->
+              <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                <Button Grid.Column="0" x:Name="BtnUpdateMap" AutomationProperties.AutomationId="BtnUpdateMap" Content="更新地图" Classes="mini"
+                        HorizontalAlignment="Stretch"
                         ToolTip.Tip="PSD 源文件长度/修改时间变了：重读 PSD 并重建摆放物（会先确认）；未变化时退回从磁盘 JSON 重载。重载后保持当前缩放/平移"/>
-                <TextBlock Grid.Column="1" Text="场景名:" Classes="lbl"/>
-                <TextBox Grid.Column="2" x:Name="SceneNameField" Text="ChapterN" Classes="field" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="4" Text="宽:" Classes="lbl" Margin="0,0,4,0"/>
-                <TextBox Grid.Column="5" x:Name="MapWidthField" Text="4096" Classes="field" VerticalAlignment="Center"/>
-              </Grid>
-
-              <Grid Grid.Row="2" ColumnDefinitions="78,54,*,10,28,66">
-                <Button Grid.Column="0" x:Name="BtnExportSlice" AutomationProperties.AutomationId="BtnExportSlice" Content="导出切片" Classes="mini" HorizontalAlignment="Stretch"/>
-                <TextBlock Grid.Column="1" Text="场景ID:" Classes="lbl"/>
-                <TextBox Grid.Column="2" x:Name="SceneIdField" Text="1" Classes="field" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="4" Text="高:" Classes="lbl" Margin="0,0,4,0"/>
-                <TextBox Grid.Column="5" x:Name="MapHeightField" Text="4096" Classes="field" VerticalAlignment="Center"/>
-              </Grid>
-
-              <Grid Grid.Row="3" ColumnDefinitions="78,88,*">
-                <Button Grid.Column="0" x:Name="BtnPreviewMap" AutomationProperties.AutomationId="BtnPreviewMap" Content="刷新画面" Classes="mini" HorizontalAlignment="Stretch"
+                <Button Grid.Column="1" x:Name="BtnExportSlice" AutomationProperties.AutomationId="BtnExportSlice" Content="导出切片" Classes="mini"
+                        HorizontalAlignment="Stretch"/>
+                <Button Grid.Column="2" x:Name="BtnPreviewMap" AutomationProperties.AutomationId="BtnPreviewMap" Content="刷新画面" Classes="mini"
+                        HorizontalAlignment="Stretch"
                         ToolTip.Tip="重绘并自动修遮挡：按三带遮挡 + 脚底 Y 出图，背景组立体美术提层、池塘/地毯接缝贴合；核对贴图能否解析，PSD 改过会提示先点「更新地图」"/>
-                <Button Grid.Column="1" x:Name="BtnRefreshLayer" AutomationProperties.AutomationId="BtnRefreshLayer" Content="刷新层级" Classes="mini" HorizontalAlignment="Stretch" Margin="4,0,0,0"
+                <Button Grid.Column="3" x:Name="BtnRefreshLayer" AutomationProperties.AutomationId="BtnRefreshLayer" Content="刷新层级" Classes="mini"
+                        HorizontalAlignment="Stretch"
                         ToolTip.Tip="综合刷新：重新分析三带遮挡（背景组立体美术提层、平面件窄缝贴合、像素尺寸补全），再按画面重排立体带层号并刷新显示；不改手动摆好的坐标与美术"/>
-                <TextBlock Grid.Column="2" x:Name="SceneHint" Text="—" Classes="tip" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
               </Grid>
 
-              <StackPanel Grid.Row="4" Spacing="5">
-                <Grid ColumnDefinitions="96,*">
-                  <CheckBox Grid.Column="0" x:Name="PlacementToggle" Content="摆放模式:" FontSize="11" IsChecked="True"/>
+              <!-- 场景名 / 场景ID -->
+              <Grid Grid.Row="2" ColumnDefinitions="46,*,8,46,86" ColumnSpacing="4">
+                <TextBlock Grid.Column="0" Text="场景名" Classes="lbl"/>
+                <TextBox Grid.Column="1" x:Name="SceneNameField" Text="ChapterN" Classes="field" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="场景ID" Classes="lbl"/>
+                <TextBox Grid.Column="4" x:Name="SceneIdField" Text="1" Classes="field" VerticalAlignment="Center"/>
+              </Grid>
+
+              <!-- 宽 / 高：两个字段均分剩余宽度，右侧不再留空 -->
+              <Grid Grid.Row="3" ColumnDefinitions="46,*,8,46,*" ColumnSpacing="4">
+                <TextBlock Grid.Column="0" Text="宽" Classes="lbl"/>
+                <TextBox Grid.Column="1" x:Name="MapWidthField" Text="4096" Classes="field" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="高" Classes="lbl"/>
+                <TextBox Grid.Column="4" x:Name="MapHeightField" Text="4096" Classes="field" VerticalAlignment="Center"/>
+              </Grid>
+
+              <!-- 操作结果单独一行，不再和按钮抢同一格宽度 -->
+              <TextBlock Grid.Row="4" x:Name="SceneHint" Text="—" Classes="tip" TextTrimming="CharacterEllipsis"
+                         Margin="1,0,0,0"/>
+
+              <StackPanel Grid.Row="5" Spacing="3">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1,0,2">
+                  <Border Width="3" Height="11" CornerRadius="2" Background="{StaticResource Theme.Primary}" VerticalAlignment="Center"/>
+                  <TextBlock Text="绘制" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Theme.PrimaryDark}" VerticalAlignment="Center"/>
+                  <TextBlock Text="摆放模式与区域开关" Classes="tip" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="84,*" ColumnSpacing="6">
+                  <CheckBox Grid.Column="0" x:Name="PlacementToggle" Content="摆放模式" FontSize="11" IsChecked="True"/>
                   <ComboBox Grid.Column="1" x:Name="DrawShapeField" SelectedIndex="0" Classes="field" HorizontalAlignment="Stretch">
                     <ComboBoxItem Content="矩形绘制模式"/>
                     <ComboBoxItem Content="菱形绘制模式"/>
                   </ComboBox>
                 </Grid>
-                <Grid ColumnDefinitions="96,*">
-                  <CheckBox Grid.Column="0" x:Name="DrawClearToggle" Content="DrawClear:" FontSize="11" IsChecked="True"/>
+                <Grid ColumnDefinitions="84,*" ColumnSpacing="6">
+                  <CheckBox Grid.Column="0" x:Name="DrawClearToggle" Content="DrawClear" FontSize="11" IsChecked="True"/>
                   <ComboBox Grid.Column="1" x:Name="RegionTypeField" SelectedIndex="0" Classes="field" HorizontalAlignment="Stretch">
                     <ComboBoxItem Content="摆放区"/>
                     <ComboBoxItem Content="禁区"/>
                     <ComboBoxItem Content="通用区"/>
                   </ComboBox>
                 </Grid>
-                <Grid ColumnDefinitions="96,*">
-                  <CheckBox Grid.Column="0" x:Name="DrawBorderToggle" Content="DrawBorder:" FontSize="11" IsChecked="True"/>
-                  <TextBlock Grid.Column="1" Text="图片外框 + 占格描边" Classes="tip" VerticalAlignment="Center" Margin="0,0,0,0"/>
+                <Grid ColumnDefinitions="84,*" ColumnSpacing="6">
+                  <CheckBox Grid.Column="0" x:Name="DrawBorderToggle" Content="DrawBorder" FontSize="11" IsChecked="True"/>
+                  <TextBlock Grid.Column="1" Text="图片外框 + 占格描边" Classes="tip" VerticalAlignment="Center"/>
                 </Grid>
-                <Grid ColumnDefinitions="96,*">
-                  <CheckBox Grid.Column="0" x:Name="ClipOutsideMapToggle" Content="裁剪越界:" FontSize="11" IsChecked="True"
+                <Grid ColumnDefinitions="84,*" ColumnSpacing="6">
+                  <CheckBox Grid.Column="0" x:Name="ClipOutsideMapToggle" Content="裁剪越界" FontSize="11" IsChecked="True"
                             ToolTip.Tip="勾选=按地图包围盒裁掉越界美术（推荐）；取消=完整显示越界图片，便于检查边缘出血与选中框"/>
-                  <TextBlock Grid.Column="1" Text="地图包围盒外图片" Classes="tip" VerticalAlignment="Center" Margin="0,0,0,0"/>
+                  <TextBlock Grid.Column="1" Text="地图包围盒外图片" Classes="tip" VerticalAlignment="Center"/>
                 </Grid>
               </StackPanel>
 
-              <Border Grid.Row="6" Classes="inset" Padding="8,6" VerticalAlignment="Bottom">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Ctrl：按住=绘制矩形区域　松开=绘制菱形区域" Classes="tip"/>
-                  <TextBlock Text="Alt：按住=擦除格子模式　Shift：按住曲线绘制区域" Classes="tip"/>
-                  <TextBlock Text="滚轮=缩放　右键拖动 / 中键 / 空格+左键=平移画布" Classes="tip"/>
+              <Border Grid.Row="7" Classes="inset" Padding="9,7" VerticalAlignment="Bottom"
+                      Background="{StaticResource Theme.PanelAlt}" CornerRadius="6"
+                      ToolTip.Tip="Ctrl：按住=绘制矩形区域，松开=绘制菱形区域；Alt：按住=擦除格子；Shift：按住=曲线绘制；滚轮=缩放；右键拖动 / 中键 / 空格+左键=平移画布；Ctrl+Z=撤销拖动，Ctrl+Y=重做（焦点在输入框时撤销文字）">
+                <StackPanel Spacing="3" TextOptions.TextRenderingMode="Antialias">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Border Width="3" Height="11" CornerRadius="2" Background="{StaticResource Theme.BorderStrong}" VerticalAlignment="Center"/>
+                    <TextBlock Text="Ctrl 矩形 · 松开菱形 · Alt 擦除 · Shift 曲线" Classes="tip" FontSize="9.5" LineHeight="14"/>
+                  </StackPanel>
+                  <TextBlock Text="滚轮 缩放 · 右键/中键 平移 · Ctrl+Z 撤销 · Ctrl+Y 重做" Classes="tip" FontSize="9.5" LineHeight="14" Margin="9,0,0,0"/>
                 </StackPanel>
               </Border>
             </Grid>
@@ -339,36 +424,56 @@
                 <TextBlock x:Name="ObjEditTitle" Text="对象编辑：未选择" Classes="cardTitle"/>
               </Border>
 
-              <Grid Grid.Row="1" ColumnDefinitions="*,*,160" RowDefinitions="Auto,Auto"
-                    ColumnSpacing="6" RowSpacing="4" Margin="0,0,0,5">
-                <Button Grid.Row="0" Grid.Column="0" x:Name="TabEditPath" Content="路径信息" Classes="mini" HorizontalAlignment="Stretch"/>
-                <Button Grid.Row="0" Grid.Column="1" x:Name="TabEditAnim" Content="动画信息" Classes="mini" HorizontalAlignment="Stretch"/>
-                <Button Grid.Row="0" Grid.Column="2" x:Name="BtnClearTarget" Content="取消选中" Classes="mini" HorizontalAlignment="Stretch"
-                        Background="{StaticResource Theme.Danger}" Foreground="White" BorderBrush="{StaticResource Theme.Danger}"/>
-                <Button Grid.Row="1" Grid.Column="0" x:Name="BtnPathDraw" Content="开始绘制路径" Classes="mini" HorizontalAlignment="Stretch" IsEnabled="False"/>
-                <Button Grid.Row="1" Grid.Column="1" x:Name="BtnPathUndo" Content="撤销最后点" Classes="mini" HorizontalAlignment="Stretch" IsEnabled="False"/>
-                <Button Grid.Row="1" Grid.Column="2" x:Name="BtnPathClear" Content="清空路径" Classes="mini" HorizontalAlignment="Stretch" IsEnabled="False"/>
-              </Grid>
+              <!-- 分段页签 + 取消选中；下面一排是路径绘制动作 -->
+              <StackPanel Grid.Row="1" Spacing="6" Margin="0,0,0,6">
+                <Grid ColumnDefinitions="*,10,120">
+                  <Border Grid.Column="0" Background="{StaticResource Theme.PanelAlt}"
+                          BorderBrush="{StaticResource Theme.Divider}" BorderThickness="1"
+                          CornerRadius="8" Padding="3">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="2">
+                      <Button Grid.Column="0" x:Name="TabEditPath" Content="路径信息" Classes="mini segTab"/>
+                      <Button Grid.Column="1" x:Name="TabEditAnim" Content="动画信息" Classes="mini segTab"/>
+                    </Grid>
+                  </Border>
+                  <!-- 取消选中是「反向操作」：白底红字描边，别用实心红和主按钮抢视觉 -->
+                  <Button Grid.Column="2" x:Name="BtnClearTarget" Content="取消选中" Classes="mini" HorizontalAlignment="Stretch"
+                          Background="Transparent" Foreground="{StaticResource Theme.DangerDark}" BorderBrush="#E0B4B1" BorderThickness="1"/>
+                </Grid>
 
-              <TextBlock Grid.Row="2" Text="点「开始绘制路径」后：左键点地面加点 / 点到其他物件会忽略，不切换选中 / Ctrl+右键撤点（吸附 32px 网格）" Classes="tip" Margin="1,0,0,6"/>
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                  <Button Grid.Column="0" x:Name="BtnPathDraw" Content="开始绘制路径" Classes="mini" HorizontalAlignment="Stretch" IsEnabled="False"/>
+                  <Button Grid.Column="1" x:Name="BtnPathUndo" Content="撤销最后点" Classes="mini" HorizontalAlignment="Stretch" IsEnabled="False"/>
+                  <Button Grid.Column="2" x:Name="BtnPathClear" Content="清空路径" Classes="mini" HorizontalAlignment="Stretch" IsEnabled="False"/>
+                </Grid>
+              </StackPanel>
 
-              <Border Grid.Row="3" Classes="inset" Padding="6,5">
+              <TextBlock Grid.Row="2" Text="「开始绘制路径」后：左键点地面加点，Ctrl+右键撤点" Classes="tip" FontSize="9.5" Margin="1,0,0,6"
+                         ToolTip.Tip="点到其他物件会忽略，不会切换选中；吸附 32px 网格；动画页签下拉动进度条可实时预览移动"/>
+
+              <Border Grid.Row="3" Background="{StaticResource Theme.PanelAlt}"
+                      BorderBrush="{StaticResource Theme.Divider}" BorderThickness="1" CornerRadius="6" Padding="8,6">
                 <Grid>
                   <ScrollViewer x:Name="PathScroll">
                     <StackPanel x:Name="PathPointList" Spacing="2"/>
                   </ScrollViewer>
 
+                  <!-- 路径为空时的居中空态，避免整片空白框只剩一行贴顶小字 -->
+                  <TextBlock x:Name="PathEmptyHint" IsVisible="False"
+                             Text="暂无路径点" FontSize="11" Foreground="{StaticResource Theme.TextMuted}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                             MaxWidth="320" TextWrapping="Wrap"/>
+
                   <Grid x:Name="AnimPanel" IsVisible="False" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
                     <Grid Grid.Row="0" ColumnDefinitions="64,*,10,36,66">
-                      <TextBlock Grid.Column="0" Text="动画名称：" Classes="lbl"/>
+                      <TextBlock Grid.Column="0" Text="动画名称" Classes="lbl"/>
                       <ComboBox Grid.Column="1" x:Name="AnimNameField" Classes="field" IsEditable="True" HorizontalAlignment="Stretch"
                                 PlaceholderText="输入或选择已导入动画"/>
-                      <TextBlock Grid.Column="3" Text="速度：" Classes="lbl"/>
+                      <TextBlock Grid.Column="3" Text="速度" Classes="lbl"/>
                       <TextBox Grid.Column="4" x:Name="AnimSpeedField" Classes="field"/>
                     </Grid>
 
                     <Grid Grid.Row="1" ColumnDefinitions="64,*,Auto">
-                      <TextBlock Grid.Column="0" Text="动画来源：" Classes="lbl"/>
+                      <TextBlock Grid.Column="0" Text="动画来源" Classes="lbl"/>
                       <ComboBox Grid.Column="1" x:Name="AnimKindField" Classes="field" SelectedIndex="0" HorizontalAlignment="Stretch">
                         <ComboBoxItem Content="序列帧"/>
                         <ComboBoxItem Content="Spine"/>
@@ -377,14 +482,14 @@
                     </Grid>
 
                     <Grid Grid.Row="2" ColumnDefinitions="64,*,10,42,110">
-                      <TextBlock Grid.Column="0" Text="Spine资产：" Classes="lbl"/>
+                      <TextBlock Grid.Column="0" Text="Spine资产" Classes="lbl"/>
                       <ComboBox Grid.Column="1" x:Name="SpineAssetField" Classes="field" PlaceholderText="未导入" HorizontalAlignment="Stretch"/>
-                      <TextBlock Grid.Column="3" Text="待机：" Classes="lbl"/>
+                      <TextBlock Grid.Column="3" Text="待机" Classes="lbl"/>
                       <ComboBox Grid.Column="4" x:Name="SpineAnimationField" Classes="field" PlaceholderText="骨架内待机动画"/>
                     </Grid>
 
                     <Grid Grid.Row="3" ColumnDefinitions="64,*,10,42,110">
-                      <TextBlock Grid.Column="0" Text="行走动画：" Classes="lbl" ToolTip.Tip="角色沿路径移动时自动切换到该动作；骨架内含 walk_up / walk_down_right 等方向动作时按八方向自动切换，没有方向动作时回落到该动作并按左右方向镜像"/>
+                      <TextBlock Grid.Column="0" Text="行走动画" Classes="lbl" ToolTip.Tip="角色沿路径移动时自动切换到该动作；骨架内含 walk_up / walk_down_right 等方向动作时按八方向自动切换，没有方向动作时回落到该动作并按左右方向镜像"/>
                       <ComboBox Grid.Column="1" Grid.ColumnSpan="4" x:Name="SpineWalkAnimationField" Classes="field" PlaceholderText="骨架内行走动画"/>
                     </Grid>
 
@@ -408,6 +513,8 @@
                         ToolTip.Tip="拖动调整「对象编辑」和「属性 + 物体编辑」的宽度"/>
 
           <!-- 属性详情 -->
+          <!-- TODO [属性卡分组] 这张卡仍是一条长表单，后续可在「遮挡带 / 图层 / 交互」前加小节标题（基础 / 遮挡与层级 / 交互），
+               把 10 个字段切成三组；需要改动 Grid 行号，单独一轮再做。 -->
           <Border Grid.Column="4" Classes="card" Padding="10,9"
                   AutomationProperties.AutomationId="BottomCardProperty">
             <Grid RowDefinitions="Auto,*,Auto">
@@ -430,19 +537,24 @@
                     <Grid ColumnDefinitions="56,*,12,44,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                           RowSpacing="6" HorizontalAlignment="Stretch">
 
-                      <TextBlock Grid.Row="0" Grid.Column="0" Text="ID:" Classes="lbl"
-                                 ToolTip.Tip="配置表数字 ID；未配置时回退到 PSD 切片序号"/>
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="ID" Classes="lbl"
+                                 ToolTip.Tip="物件自己的 8 位数字 ID，全图唯一，可对外引用；右侧是配置表数字 ID"/>
                       <Grid Grid.Row="0" Grid.Column="1">
-                        <TextBox x:Name="PropTemplateId" Classes="field" HorizontalAlignment="Stretch" Padding="6,0,34,0"
+                        <TextBox x:Name="PropTemplateId" Classes="field" HorizontalAlignment="Stretch" Padding="6,0,74,0"
                                  IsReadOnly="True" Background="{StaticResource Theme.PanelAlt}" Foreground="{StaticResource Theme.Text}" FontFamily="Consolas"
-                                 ToolTip.Tip="数字 ID 只读，用于和配置表 / PSD 切片对号"/>
-                        <Border x:Name="PropIdSourceBadge" Background="{StaticResource Theme.PrimarySoft}" BorderBrush="{StaticResource Theme.Border}" IsHitTestVisible="False"
-                                BorderThickness="1" CornerRadius="2" Padding="4,1" Margin="0,0,6,0"
-                                HorizontalAlignment="Right" VerticalAlignment="Center">
-                          <TextBlock x:Name="PropIdSourceText" Text="配置" FontSize="8" Foreground="{StaticResource Theme.PrimaryDark}"/>
-                        </Border>
+                                 ToolTip.Tip="8 位数字物件 ID：每个物件独有，导出与剧情都按它引用"/>
+                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                          <Border x:Name="PropSceneIndexBadge" Background="{StaticResource Theme.PanelAlt}" BorderBrush="{StaticResource Theme.Border}" IsHitTestVisible="False"
+                                  BorderThickness="1" CornerRadius="2" Padding="4,1">
+                            <TextBlock x:Name="PropSceneIndexText" Text="" FontSize="8" Foreground="{StaticResource Theme.TextMuted}"/>
+                          </Border>
+                          <Border x:Name="PropIdSourceBadge" Background="{StaticResource Theme.PrimarySoft}" BorderBrush="{StaticResource Theme.Border}" IsHitTestVisible="False"
+                                  BorderThickness="1" CornerRadius="2" Padding="4,1">
+                            <TextBlock x:Name="PropIdSourceText" Text="配置" FontSize="8" Foreground="{StaticResource Theme.PrimaryDark}"/>
+                          </Border>
+                        </StackPanel>
                       </Grid>
-                      <TextBlock Grid.Row="0" Grid.Column="3" Text="Tag:" Classes="lbl"
+                      <TextBlock Grid.Row="0" Grid.Column="3" Text="Tag" Classes="lbl"
                                  ToolTip.Tip="分层标识键：building / prop / road …"/>
                       <Grid Grid.Row="0" Grid.Column="4">
                         <TextBox x:Name="PropTag" Classes="field" HorizontalAlignment="Stretch" Padding="16,0,6,0"
@@ -453,7 +565,7 @@
                                 HorizontalAlignment="Left" VerticalAlignment="Center"/>
                       </Grid>
 
-                      <TextBlock Grid.Row="1" Grid.Column="0" Text="格子坐标:" Classes="lbl"/>
+                      <TextBlock Grid.Row="1" Grid.Column="0" Text="格子坐标" Classes="lbl"/>
                       <Grid Grid.Row="1" Grid.Column="1">
                         <TextBox x:Name="PropCellX" Classes="field" HorizontalAlignment="Stretch" Padding="18,0,6,0" FontFamily="Consolas"
                                  ToolTip.Tip="格子坐标 X（可编辑，按 32px 一格换算世界坐标）"/>
@@ -467,7 +579,7 @@
                                    HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False"/>
                       </Grid>
 
-                      <TextBlock Grid.Row="2" Grid.Column="0" Text="格子数:" Classes="lbl"/>
+                      <TextBlock Grid.Row="2" Grid.Column="0" Text="格子数" Classes="lbl"/>
                       <Grid Grid.Row="2" Grid.Column="1">
                         <TextBox x:Name="PropCellW" Classes="field" HorizontalAlignment="Stretch" Padding="18,0,6,0"
                                  IsReadOnly="True" Background="{StaticResource Theme.PanelAlt}" Foreground="{StaticResource Theme.Text}" FontFamily="Consolas"
@@ -483,7 +595,7 @@
                                    HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False"/>
                       </Grid>
 
-                      <TextBlock Grid.Row="3" Grid.Column="0" Text="层级:" Classes="lbl"/>
+                      <TextBlock Grid.Row="3" Grid.Column="0" Text="层级" Classes="lbl"/>
                       <Grid Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="4" ColumnDefinitions="120,24,*" ColumnSpacing="0">
                         <TextBox Grid.Column="0" x:Name="PropSortOrder" Classes="field" HorizontalAlignment="Stretch" FontFamily="Consolas"
                                  BorderThickness="1,1,0,1" CornerRadius="3,0,0,3"
@@ -506,7 +618,7 @@
                       </Grid>
 
                       <!-- 遮挡带：选中贴图的层级信息，改这里就把这张图换到另一层 -->
-                      <TextBlock Grid.Row="4" Grid.Column="0" Text="遮挡带:" Classes="lbl"/>
+                      <TextBlock Grid.Row="4" Grid.Column="0" Text="遮挡带" Classes="lbl"/>
                       <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4" x:Name="PropBand" Classes="field"
                                 HorizontalAlignment="Stretch"
                                 ToolTip.Tip="自动 = 按图层类型 / 名字判定；地表在最底、立体跨图层按脚底 Y、叠加永远最上">
@@ -518,15 +630,27 @@
 
                       <Border Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="4" x:Name="PropBandInfoBox"
                               IsVisible="False" Background="{StaticResource Theme.PanelAlt}"
-                              BorderBrush="{StaticResource Theme.Divider}" BorderThickness="1" CornerRadius="3" Padding="6,4">
-                        <TextBlock x:Name="PropBandInfo" Classes="tip" FontSize="10" TextWrapping="Wrap"/>
+                              BorderBrush="{StaticResource Theme.Divider}" BorderThickness="1"
+                              CornerRadius="6" Padding="8,6">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="7"
+                              TextOptions.TextRenderingMode="Antialias">
+                          <Border Grid.Column="0" Width="3" CornerRadius="2" Background="{StaticResource Theme.Cyan}" VerticalAlignment="Stretch"/>
+                          <StackPanel Grid.Column="1" Spacing="1">
+                            <TextBlock x:Name="PropBandInfo" FontSize="10" FontWeight="Normal" LineHeight="14"
+                                       Foreground="{StaticResource Theme.Text}" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="PropBandOrderInfo" FontSize="10" LineHeight="14"
+                                       Foreground="{StaticResource Theme.TextMuted}" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="PropBandLayerInfo" FontSize="10" LineHeight="14"
+                                       Foreground="{StaticResource Theme.TextMuted}" TextWrapping="Wrap"/>
+                          </StackPanel>
+                        </Grid>
                       </Border>
 
-                      <TextBlock Grid.Row="6" Grid.Column="0" Text="图层:" Classes="lbl"/>
+                      <TextBlock Grid.Row="6" Grid.Column="0" Text="图层" Classes="lbl"/>
                       <ComboBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="4" x:Name="PropDisplayLayer"
                                 Classes="field" HorizontalAlignment="Stretch"/>
 
-                      <TextBlock Grid.Row="7" Grid.Column="0" Text="交互:" Classes="lbl"/>
+                      <TextBlock Grid.Row="7" Grid.Column="0" Text="交互" Classes="lbl"/>
                       <ComboBox Grid.Row="7" Grid.Column="1" x:Name="PropInteractType" Classes="field"
                                 HorizontalAlignment="Stretch">
                         <ComboBoxItem Content="无"/>
@@ -535,7 +659,7 @@
                         <ComboBoxItem Content="进入"/>
                         <ComboBoxItem Content="收集"/>
                       </ComboBox>
-                      <TextBlock Grid.Row="7" Grid.Column="3" Text="朝向:" Classes="lbl"/>
+                      <TextBlock Grid.Row="7" Grid.Column="3" Text="朝向" Classes="lbl"/>
                       <ComboBox Grid.Row="7" Grid.Column="4" x:Name="PropFacing" Classes="field"
                                 HorizontalAlignment="Stretch">
                         <ComboBoxItem Content="上"/>
@@ -549,18 +673,14 @@
                           <CheckBox x:Name="PropCollision" Content="碰撞" FontSize="10" VerticalAlignment="Center"/>
                           <CheckBox x:Name="PropShadow" Content="阴影" FontSize="10" VerticalAlignment="Center"/>
                           <CheckBox x:Name="PropCollectible" Content="收集" FontSize="10" VerticalAlignment="Center"/>
-                          <CheckBox x:Name="PropTraffic" Content="交通" FontSize="10" VerticalAlignment="Center" IsChecked="True"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
                           <CheckBox x:Name="PropShowObjectEdit" Content="编辑" FontSize="10" VerticalAlignment="Center" IsChecked="True"
                                     ToolTip.Tip="勾选显示右侧「物体编辑」分组（旋转 / 大小 / 是否缩放）"/>
-                          <TextBlock Text="显示物体编辑" Classes="tip" VerticalAlignment="Center"/>
                         </StackPanel>
                       </StackPanel>
 
-                      <TextBlock Grid.Row="9" Grid.Column="0" Text="气泡:" Classes="lbl"/>
+                      <TextBlock Grid.Row="9" Grid.Column="0" Text="气泡" Classes="lbl"/>
                       <TextBox Grid.Row="9" Grid.Column="1" x:Name="PropDialogBubble" Classes="field" HorizontalAlignment="Stretch"/>
-                      <TextBlock Grid.Row="9" Grid.Column="3" Text="气泡ID:" Classes="lbl" FontSize="10"/>
+                      <TextBlock Grid.Row="9" Grid.Column="3" Text="气泡ID" Classes="lbl" FontSize="10"/>
                       <TextBox Grid.Row="9" Grid.Column="4" x:Name="PropBubble" Classes="field" HorizontalAlignment="Stretch"/>
 
                       <TextBlock Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="5" x:Name="PropSummary"
@@ -642,51 +762,87 @@
                                 ToolTip.Tip="把 sortOrder 恢复成 PSD 原始层序；画面前后仍按「遮挡带 + 脚底 Y」，不会回到旧遮挡"/>
                       </Grid>
                     </StackPanel>
-                    <!-- 交通分组常显：标记动作属于地图级操作，不随选中实例的「交通」勾选隐藏 -->
-                    <StackPanel x:Name="TrafficDrawGroup" Spacing="7">
+                    <!-- 交通分组：启动时整体搬进「交通规则 → 物件标记」页（见 MainWindow.TrafficEvents.MoveTrafficControlsToRulePanel），
+                         右栏只保留物件本身的编辑项。卡片与 markTool 样式在主页与面板里通用。 -->
+                    <StackPanel x:Name="TrafficDrawGroup" Spacing="10">
 
-                    <!-- 交通标记：选中地图物件后点按钮打/取消标记，四个快捷键各配一句提示 -->
-                    <TextBlock Text="交通标记" Classes="section" FontSize="11"/>
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="5">
-                      <Button Grid.Row="0" Grid.Column="0" x:Name="BtnToolSidewalk" Content="标记人行道" Classes="mini"
-                              HorizontalAlignment="Stretch" ToolTip.Tip="把选中物件标记为人行道（F1）"/>
-                      <Button Grid.Row="0" Grid.Column="1" x:Name="BtnToolRoad" Content="标记道路" Classes="mini"
-                              HorizontalAlignment="Stretch" ToolTip.Tip="把选中物件标记为道路（F2）"/>
-                      <Button Grid.Row="1" Grid.Column="0" x:Name="BtnToolCrosswalk" Content="标记横道" Classes="mini"
-                              HorizontalAlignment="Stretch" ToolTip.Tip="把选中物件标记为横道（F3）"/>
-                      <Button Grid.Row="1" Grid.Column="1" x:Name="BtnToolLight" Content="标记红绿灯" Classes="mini"
-                              HorizontalAlignment="Stretch" ToolTip.Tip="把选中物件标记为红绿灯（F4）"/>
-                    </Grid>
+                    <!-- ① 标记：选中地图物件后点按钮打 / 取消标记，快捷键写在标题右侧 -->
+                    <Border Background="{StaticResource Theme.Card}" BorderBrush="{StaticResource Theme.Divider}"
+                            BorderThickness="1" CornerRadius="8" Padding="12,10,12,12">
+                      <StackPanel Spacing="9">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Width="3" Height="12" CornerRadius="2" Background="{StaticResource Theme.Primary}"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="交通标记" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource Theme.PrimaryDark}" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <TextBlock Grid.Column="1" Text="F1 · F2 · F3 · F4" Classes="tip" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Border Height="1" Background="{StaticResource Theme.Divider}"/>
 
-                    <Border Height="1" Background="{StaticResource Theme.Divider}" Margin="0,2"/>
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                          <Button Grid.Row="0" Grid.Column="0" x:Name="BtnToolSidewalk" Content="标记人行道" Classes="markTool"
+                                  ToolTip.Tip="把选中物件标记为人行道（F1）；再点一次即取消"/>
+                          <Button Grid.Row="0" Grid.Column="1" x:Name="BtnToolRoad" Content="标记道路" Classes="markTool"
+                                  ToolTip.Tip="把选中物件标记为道路（F2）；再点一次即取消"/>
+                          <Button Grid.Row="1" Grid.Column="0" x:Name="BtnToolCrosswalk" Content="标记横道" Classes="markTool"
+                                  ToolTip.Tip="把选中物件标记为横道（F3）；再点一次即取消"/>
+                          <Button Grid.Row="1" Grid.Column="1" x:Name="BtnToolLight" Content="标记红绿灯" Classes="markTool"
+                                  ToolTip.Tip="把选中物件标记为红绿灯（F4）；再点一次即取消"/>
+                        </Grid>
 
-                    <!-- 实例侧字段 -->
-                    <TextBlock Text="实例属性" Classes="section" FontSize="11"/>
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                      <CheckBox x:Name="PropVehicle" Content="是否载具" FontSize="10"/>
-                      <CheckBox x:Name="PropYellowAsRed" Content="黄灯按红灯" FontSize="10" IsChecked="True"
-                                ToolTip.Tip="黄灯按红灯处理（仅车辆）"/>
-                    </StackPanel>
+                        <TextBlock Classes="tip" TextWrapping="Wrap"
+                                   Text="同类型再点一次即取消；一个物件只保留一种交通标记，换标记会自动清掉旧的。"/>
+                      </StackPanel>
+                    </Border>
 
-                    <Grid ColumnDefinitions="74,*" ColumnSpacing="6">
-                      <TextBlock Grid.Column="0" Text="交通角色" Classes="lbl"/>
-                      <ComboBox Grid.Column="1" x:Name="PropTrafficRole" Classes="field" HorizontalAlignment="Stretch"/>
-                    </Grid>
+                    <!-- ② 实例属性：载具 / 角色 / 停止线 / 绑定灯，仅作用于当前选中物件 -->
+                    <Border Background="{StaticResource Theme.Card}" BorderBrush="{StaticResource Theme.Divider}"
+                            BorderThickness="1" CornerRadius="8" Padding="12,10,12,12">
+                      <StackPanel Spacing="9">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Width="3" Height="12" CornerRadius="2" Background="{StaticResource Theme.Teal}"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="实例属性" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource Theme.TealDark}" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <TextBlock Grid.Column="1" Text="仅作用于当前选中物件" Classes="tip" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Border Height="1" Background="{StaticResource Theme.Divider}"/>
 
-                    <Grid ColumnDefinitions="74,*" ColumnSpacing="6">
-                      <TextBlock Grid.Column="0" Text="停止线(X,Y)" Classes="lbl"/>
-                      <TextBox Grid.Column="1" x:Name="PropStopLine" Text="0, 0" Classes="field"/>
-                    </Grid>
+                        <WrapPanel Orientation="Horizontal">
+                          <CheckBox x:Name="PropTraffic" Content="可交互" FontSize="11" VerticalAlignment="Center" Margin="0,0,14,0"
+                                    IsChecked="True" ToolTip.Tip="写入 interactable：物件能否被玩家或剧情交互"/>
+                          <CheckBox x:Name="PropVehicle" Content="是否载具" FontSize="11" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                          <CheckBox x:Name="PropYellowAsRed" Content="黄灯按红灯" FontSize="11" VerticalAlignment="Center" IsChecked="True"
+                                    ToolTip.Tip="黄灯按红灯处理（仅车辆）"/>
+                        </WrapPanel>
 
-                    <Grid ColumnDefinitions="74,*,Auto" ColumnSpacing="6">
-                      <TextBlock Grid.Column="0" Text="绑定红绿灯" Classes="lbl"/>
-                      <CheckBox Grid.Column="1" x:Name="PropLightSelectAll" Content="全选" FontSize="10" VerticalAlignment="Center"/>
-                      <TextBlock Grid.Column="2" Text="勾选即绑定" Classes="tip" VerticalAlignment="Center"/>
-                    </Grid>
+                        <Grid ColumnDefinitions="74,*" ColumnSpacing="8">
+                          <TextBlock Grid.Column="0" Text="交通角色" Classes="lbl"/>
+                          <ComboBox Grid.Column="1" x:Name="PropTrafficRole" Classes="field" HorizontalAlignment="Stretch"/>
+                        </Grid>
 
-                    <Border BorderBrush="{StaticResource Theme.Border}" BorderThickness="1" Background="#FFFFFF"
-                            CornerRadius="2" MinHeight="60" Margin="0,0,0,2">
-                      <StackPanel x:Name="PropLightList" Margin="6,5" Spacing="1" VerticalAlignment="Center"/>
+                        <Grid ColumnDefinitions="74,*" ColumnSpacing="8">
+                          <TextBlock Grid.Column="0" Text="停止线(X,Y)" Classes="lbl"/>
+                          <TextBox Grid.Column="1" x:Name="PropStopLine" Text="0, 0" Classes="field"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="74,*,Auto" ColumnSpacing="8">
+                          <TextBlock Grid.Column="0" Text="绑定红绿灯" Classes="lbl"/>
+                          <CheckBox Grid.Column="1" x:Name="PropLightSelectAll" Content="全选" FontSize="10" VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="2" Text="勾选即绑定" Classes="tip" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Border BorderBrush="{StaticResource Theme.Divider}" BorderThickness="1"
+                                Background="{StaticResource Theme.PanelAlt}" CornerRadius="6" MinHeight="40" MaxHeight="126">
+                          <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="PropLightList" Margin="8,6" Spacing="2"/>
+                          </ScrollViewer>
+                        </Border>
+                      </StackPanel>
                     </Border>
 
                     </StackPanel>
@@ -798,10 +954,10 @@
                 </Border>
               </Grid>
 
-              <Grid Grid.Row="2" ColumnDefinitions="*,76,76" ColumnSpacing="8" Margin="0,8,0,0">
+              <!-- 脚部只留「删除」：发布是整图动作，入口统一收在顶部工具条，避免选中物件时误点重复发布 -->
+              <Grid Grid.Row="2" ColumnDefinitions="*,76" ColumnSpacing="8" Margin="0,8,0,0">
                 <TextBlock Grid.Column="0" x:Name="PropHint" Text="" Classes="tip" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                <Button Grid.Column="1" x:Name="BtnDeleteObject" Content="删除" Height="26" Width="76" HorizontalAlignment="Right" HorizontalContentAlignment="Center" FontSize="12" Background="{StaticResource Theme.Danger}" Foreground="White" BorderBrush="{StaticResource Theme.DangerDark}"/>
-                <Button Grid.Column="2" x:Name="BtnPublish" Content="发布" Height="26" Width="76" HorizontalAlignment="Right" HorizontalContentAlignment="Center" FontSize="12" Background="{StaticResource Theme.Teal}" Foreground="White" BorderBrush="{StaticResource Theme.TealDark}"/>
+                <Button Grid.Column="1" x:Name="BtnDeleteObject" Content="删除" Height="26" Width="76" HorizontalAlignment="Right" HorizontalContentAlignment="Center" FontSize="12" Background="Transparent" Foreground="{StaticResource Theme.DangerDark}" BorderBrush="#E0B4B1" BorderThickness="1"/>
               </Grid>
             </Grid>
           </Border>
@@ -816,6 +972,9 @@
 
       <!-- 资源整理：面板由 ResourceOrganizePanel 在代码中挂载 -->
       <Border Grid.Row="1" x:Name="ResourcePanelHost" IsVisible="False" Background="{StaticResource Theme.Window}"/>
+
+      <!-- 剧情编辑：面板由 StoryEditorPanel 在代码中挂载 -->
+      <Border Grid.Row="1" x:Name="StoryPanelHost" IsVisible="False" Background="{StaticResource Theme.Window}"/>
     </Grid>
   </Grid>
 </Window>

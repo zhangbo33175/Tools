@@ -49,11 +49,11 @@ public sealed partial class ResourceOrganizePanel : UserControl
     {
         new("TemplateId", "int", "序号", "84", true),
         new("ImagePath", "string", "图片名称", "92", false),
-        new("ResName", "string", "资源ResDef名", "80", false),
-        new("TemplateName", "string", "建筑名称", "104", false),
+        new("ResName", "string", "资源ResDef名", "108", false),
+        new("TemplateName", "string", "建筑名称", "124", false),
         new("AnimName", "string", "默认动画名", "88", false),
         new("Loop", "bool", "循环", "44", true),
-        new("Speed", "float", "播放速度", "50", true),
+        new("Speed", "float", "播放速度", "58", true),
         new("SortOrder", "int", "渲染层级排序", "76", true),
         new("DialogBubble", "string", "对话气泡内容", "*", false),
         new("ShadowEnabled", "bool", "是否显示阴影", "100", true),
@@ -68,20 +68,20 @@ public sealed partial class ResourceOrganizePanel : UserControl
     /// <summary>表头四行的高度：分组标题 / 字段名 / 字段类型 / 中文注释。</summary>
     private const string TableHeaderRows = "28,26,22,24";
 
-    /// <summary>数据行高度，表行与模板行共用。</summary>
-    private const double TableRowHeight = 26.0;
+    /// <summary>数据行高度，表行与模板行共用（抬高到 30，227 行的长表也不至于糊成一片）。</summary>
+    private const double TableRowHeight = 30.0;
 
     /// <summary>表格单元格的统一内边距。</summary>
-    private static readonly Thickness TableCellPadding = new(3, 0);
+    private static readonly Thickness TableCellPadding = new(6, 0);
 
     /// <summary>数据格右侧与底部 1px 格线。</summary>
     private static readonly Thickness TableCellBorderThickness = new(0, 0, 1, 1);
 
     /// <summary>行内编辑框统一高度。</summary>
-    private const double TableEditorHeight = 22.0;
+    private const double TableEditorHeight = 26.0;
 
     /// <summary>行内编辑框统一字号。</summary>
-    private const double TableEditorFontSize = 11.0;
+    private const double TableEditorFontSize = 11.5;
 
     /// <summary>行内编辑框内边距。</summary>
     private static readonly Thickness TableEditorPadding = new(2, 0);
@@ -144,16 +144,16 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private static readonly Thickness ActionCellPadding = new(3);
 
     /// <summary>行内按钮内边距。</summary>
-    private static readonly Thickness ActionButtonPadding = new(3, 0);
+    private static readonly Thickness ActionButtonPadding = new(7, 0);
 
     /// <summary>行内按钮统一高度。</summary>
     private const double ActionButtonHeight = 20.0;
 
     /// <summary>行内按钮描边线宽。</summary>
-    private const double ActionButtonBorderThickness = 1.0;
+    private const double ActionButtonBorderThickness = 0.0;
 
     /// <summary>行内按钮圆角。</summary>
-    private const double ActionButtonCornerRadius = 2.0;
+    private const double ActionButtonCornerRadius = 5.0;
 
     /// <summary>行内按钮字号。</summary>
     private const double ActionButtonFontSize = 11.0;
@@ -171,16 +171,16 @@ public sealed partial class ResourceOrganizePanel : UserControl
     {
         var editButton = CreateActionButton(
             EditActionText,
-            UiTheme.ResourceTable.EditSurface,
-            UiTheme.ResourceTable.EditBorder,
+            UiTheme.Transparent,
+            UiTheme.Transparent,
             UiTheme.ResourceTable.EditText,
             HorizontalAlignment.Stretch,
             edit);
 
         var removeButton = CreateActionButton(
             DeleteActionText,
-            UiTheme.ResourceTable.DeleteSurface,
-            UiTheme.ResourceTable.DeleteBorder,
+            UiTheme.Transparent,
+            UiTheme.Transparent,
             UiTheme.ResourceTable.DeleteText,
             HorizontalAlignment.Center,
             remove);
@@ -225,6 +225,8 @@ public sealed partial class ResourceOrganizePanel : UserControl
             FontSize = ActionButtonFontSize,
             HorizontalAlignment = alignment,
         };
+        // 扁平文字按钮：常态只有彩色文字，悬停才浮出浅底（样式见 App.axaml 的 Button.rowAction）
+        button.Classes.Add("rowAction");
         button.Click += (_, _) => action();
         return button;
     }

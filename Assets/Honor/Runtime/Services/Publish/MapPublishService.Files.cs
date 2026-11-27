@@ -54,7 +54,12 @@ public static partial class MapPublishService
         var manifest = new
         {
             format = "honor.map.publish.v1",
-            target = target == MapPublishTarget.UnityJson ? "unity-json" : "cocos-lua",
+            target = target switch
+            {
+                MapPublishTarget.UnityJson => "unity-json",
+                MapPublishTarget.UnityLua => "unity-lua",
+                _ => "cocos-lua",
+            },
             chapterId = chapter,
             levelId = level,
             mapName,

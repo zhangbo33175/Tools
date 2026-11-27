@@ -34,8 +34,9 @@ public partial class MainWindow : Window
     private void WireToolbar()
     {
         BtnSave.Click += (_, _) => SaveMap();
+
+        // 发布只保留顶部工具条一个入口（物体卡脚部那个重复入口已删掉）
         BtnPublishTop.Click += async (_, _) => await PublishMapAsync();
-        BtnPublish.Click += async (_, _) => await PublishMapAsync();
 
         BtnExportSettings.Click += (_, _) => SetMessage("导出设置：选择地图 JSON 的输出目录（默认 docs\\MapJson），切片粒度按 32px 格子");
         BtnExportSlice.Click += (_, _) => ExportSlices();

@@ -28,8 +28,13 @@ public sealed partial class FogEditPanel : UserControl
     {
         _drawing = !_drawing;
         _drawButton.Content = _drawing ? StopDrawingText : StartDrawingText;
-        _drawButton.Background = _drawing ? UiTheme.Accent : UiTheme.RowBack;
-        _drawButton.Foreground = _drawing ? UiTheme.White : UiTheme.TextPrimary;
+        // 主行动按钮常驻实心强调色：绘制中用深一档的青，停止后仍在视觉焦点上
+        _drawButton.Background = _drawing ? UiTheme.AccentDark : UiTheme.Accent;
+        _drawButton.BorderBrush = _drawing ? UiTheme.AccentDark : UiTheme.Accent;
+        _drawButton.Foreground = UiTheme.White;
+        _drawButton.FontWeight = FontWeight.SemiBold;
+        _drawButton.CornerRadius = new CornerRadius(DrawButtonCornerRadius);
+        _drawButton.Height = DrawButtonHeight;
         SyncCanvasSettings();
         DrawingChanged?.Invoke(this, EventArgs.Empty);
         _notify(_drawing ? "迷雾绘制中：左键涂抹 / 右键擦除" : "已停止迷雾绘制");

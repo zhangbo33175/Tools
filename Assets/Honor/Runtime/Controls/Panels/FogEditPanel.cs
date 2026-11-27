@@ -154,19 +154,61 @@ public sealed partial class FogEditPanel : UserControl
     private static readonly Thickness SettingsMargin = new(6);
 
     /// <summary>设置区行间距。</summary>
-    private const double SettingsSpacing = 6.0;
+    private const double SettingsSpacing = 8.0;
 
-    /// <summary>滑块行标签列宽。</summary>
-    private const double SettingLabelWidth = 80.0;
+    /// <summary>笔刷卡片 / 快捷键卡片的圆角。</summary>
+    private const double SettingsCardCornerRadius = 8.0;
 
-    /// <summary>滑块行数值列宽。</summary>
-    private const double SettingValueWidth = 44.0;
+    /// <summary>笔刷卡片 / 快捷键卡片的内边距。</summary>
+    private static readonly Thickness SettingsCardPadding = new(14, 12, 14, 14);
 
-    /// <summary>滑块与左侧标签的间距。</summary>
-    private static readonly Thickness SettingLabelGap = new(0, 0, 6, 0);
+    /// <summary>两个设置项之间的间距。</summary>
+    private const double SettingBlockSpacing = 14.0;
+
+    /// <summary>设置项标签字号。</summary>
+    private const double SettingLabelFontSize = 11.5;
+
+    /// <summary>设置项数值标签字号。</summary>
+    private const double SettingValueFontSize = 11.5;
+
+    /// <summary>数值胶囊圆角。</summary>
+    private static readonly CornerRadius SettingValueCornerRadius = new(4);
+
+    /// <summary>数值胶囊内边距。</summary>
+    private static readonly Thickness SettingValuePadding = new(7, 2);
+
+    /// <summary>滑块上边距：紧贴标签行，两端轻微负边距抵消模板留白。</summary>
+    private static readonly Thickness SettingSliderMargin = new(-3, 6, -3, 0);
 
     /// <summary>绘制按钮内边距。</summary>
-    private static readonly Thickness DrawButtonPadding = new(8, 5);
+    private static readonly Thickness DrawButtonPadding = new(8, 6);
+
+    /// <summary>绘制按钮圆角：与全局按钮圆角 5 对齐。</summary>
+    private const double DrawButtonCornerRadius = 5.0;
+
+    /// <summary>绘制按钮高度：比普通工具栏按钮高一档，作为左栏的主行动。</summary>
+    private const double DrawButtonHeight = 32.0;
+
+    /// <summary>设置区、区域列表两张卡片的圆角，与全局卡片圆角 8 对齐。</summary>
+    private const double PanelCardCornerRadius = 8.0;
+
+    /// <summary>快捷键卡片标题。</summary>
+    private const string ShortcutTitleText = "快捷键";
+
+    /// <summary>按键胶囊圆角：与输入框 6 那档错开，取按钮 5。</summary>
+    private const double ShortcutChipCornerRadius = 5.0;
+
+    /// <summary>按键胶囊内边距。</summary>
+    private static readonly Thickness ShortcutChipPadding = new(6, 1);
+
+    /// <summary>按键胶囊与说明文字之间的间距。</summary>
+    private const double HintKeyGap = 8.0;
+
+    /// <summary>快捷键卡片标题的下边距。</summary>
+    private static readonly Thickness HintTitleMargin = new(0, 0, 0, 6);
+
+    /// <summary>快捷键标题下方细分隔线的边距。</summary>
+    private static readonly Thickness HintDividerMargin = new(0, 0, 0, 7);
 
     /// <summary>快捷说明卡片圆角。</summary>
     private static readonly CornerRadius HintCornerRadius = new(3);
@@ -180,14 +222,11 @@ public sealed partial class FogEditPanel : UserControl
     /// <summary>快捷说明与区域统计文字的字号。</summary>
     private const double HintFontSize = 11.0;
 
-    /// <summary>区域空状态提示的内边距。</summary>
-    private static readonly Thickness RegionHintMargin = new(4);
+    /// <summary>区域列表表体与卡片边缘的留白。</summary>
+    private static readonly Thickness RegionBodyMargin = new(8);
 
     /// <summary>区域标题的下边距。</summary>
     private static readonly Thickness RegionTitleMargin = new(0, 0, 0, 4);
-
-    /// <summary>区域卡片内容区边距。</summary>
-    private static readonly Thickness RegionBodyMargin = new(8);
 
     /// <summary>区域标题与列表之间的行间距。</summary>
     private const double RegionBodyRowSpacing = 4.0;

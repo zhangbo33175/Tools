@@ -295,9 +295,23 @@ public sealed class AssetLibrary
         IReadOnlyCollection<string> configuredNames,
         string? scanRoot = null)
     {
+        return ScanUnconfigured(configuredNames, scanRoot, out _);
+    }
+
+    /// <summary>扫描并返回「未被占用」的资源名；同时回带枚举到的 PNG 总数。</summary>
+    /// <param name="configuredNames">已被配置表占用的资源名集合（不含扩展名，忽略大小写）。</param>
+    /// <param name="scanRoot">只扫这一棵目录（递归）；为空时扫所有资源根。</param>
+    /// <param name="scannedCount">本次枚举到的 PNG 文件数（不受占用排除影响，用于空态文案）。</param>
+    /// <returns>资源名 → 绝对路径。</returns>
+    public IReadOnlyDictionary<string, string> ScanUnconfigured(
+        IReadOnlyCollection<string> configuredNames,
+        string? scanRoot,
+        out int scannedCount)
+    {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var configured = new HashSet<string>(configuredNames, StringComparer.OrdinalIgnoreCase);
         var roots = string.IsNullOrWhiteSpace(scanRoot) ? Roots : new[] { scanRoot };
+        scannedCount = 0;
 
         foreach (var root in roots)
         {
@@ -308,6 +322,7 @@ public sealed class AssetLibrary
 
             foreach (var file in Directory.EnumerateFiles(root, "*.png", SearchOption.AllDirectories))
             {
+                scannedCount++;
                 var name = Path.GetFileNameWithoutExtension(file);
                 if (configured.Contains(name) || result.ContainsKey(name))
                 {

@@ -33,7 +33,8 @@ public sealed partial class ResourceOrganizePanel : UserControl
         var root = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions($"{LeftWidth},8,*"),
-            Background = UiTheme.Form.SubtleSurface,
+            // 与其它页面统一的浅青底，替代原来的中性灰
+            Background = UiTheme.PanelSurface,
             Margin = new Thickness(4),
         };
 
@@ -62,12 +63,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
             RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,*"),
         };
 
-        var title = new TextBlock
-        {
-            Text = "资源列表",
-            Foreground = UiTheme.AccentDark,
-            FontWeight = FontWeight.Bold,
-        };
+        var title = SectionHead("资源列表");
         Grid.SetRow(title, 0);
         stack.Children.Add(title);
 
@@ -75,9 +71,13 @@ public sealed partial class ResourceOrganizePanel : UserControl
         {
             Content = "扫描",
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(8, 5),
+            Padding = new Thickness(8, 6),
+            Height = 30,
             Background = UiTheme.Accent,
+            BorderBrush = UiTheme.Accent,
             Foreground = UiTheme.White,
+            FontWeight = FontWeight.SemiBold,
+            CornerRadius = new CornerRadius(FilterButtonCornerRadius),
         };
         ToolTip.SetTip(scan, "扫描「地图配置 → 地图保存目录」里的 PNG（烘焙切片 / 分区底图）");
         scan.Click += (_, _) => ScanUnconfigured(silent: false);
@@ -99,8 +99,10 @@ public sealed partial class ResourceOrganizePanel : UserControl
                 Content = name,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
-                Padding = new Thickness(4, 3),
-                Margin = new Thickness(0, 0, 0, 3),
+                Padding = new Thickness(4, 4),
+                Margin = new Thickness(0, 0, 3, 4),
+                CornerRadius = new CornerRadius(FilterButtonCornerRadius),
+                FontSize = 11.5,
             };
             button.Click += (_, _) => ApplyFilter(name);
             _filterButtons[name] = button;
@@ -111,6 +113,8 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         Grid.SetRow(filters, 2);
         stack.Children.Add(filters);
+        // 建完立刻套一次选中态：首帧只有当前分类是高亮浅青，其余保持白底细描边
+        RefreshFilterButtons();
 
         _search.PlaceholderText = "按资源名 / 目录过滤";
         _search.Padding = new Thickness(6, 3);
@@ -139,6 +143,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
             ClipToBounds = true,
         };
         _previewHost.Margin = new Thickness(4);
+        ShowPreviewPlaceholder();
         Grid.SetRow(previewBorder, 5);
         stack.Children.Add(previewBorder);
 
@@ -159,16 +164,42 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         return new Border
         {
-            Background = UiTheme.PanelSurface,
-            BorderBrush = PanelBorderBrush,
+            // 左栏与右侧卡片统一成白底 + 8 圆角，不再是一块直角的浅蓝底板
+            Background = UiTheme.Card,
+            BorderBrush = UiTheme.Divider,
             BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(PanelCornerRadius),
+            ClipToBounds = true,
             Child = stack,
         };
     }
 
+    /// <summary>「选中项」卡片圆角。</summary>
+    private const double DetailCardCornerRadius = 8.0;
+
+    /// <summary>「选中项」卡片内边距。</summary>
+    private static readonly Thickness DetailCardPadding = new(14, 12, 14, 12);
+
+    /// <summary>「选中项」字段行距。</summary>
+    private const double DetailRowSpacing = 8.0;
+
+    /// <summary>「选中项」字段框高度。</summary>
+    private const double DetailFieldHeight = 30.0;
+
+    /// <summary>「选中项」字段框外边距。</summary>
+    private static readonly Thickness DetailFieldMargin = new(0, 0, 10, 0);
+
+    /// <summary>标题下细分隔线 / 说明文字的下边距。</summary>
+    private const double DetailDividerMarginBottom = 10.0;
+
     private Control BuildDetailCard()
     {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("76,*,76,*"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto") };
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("84,*,84,*"),
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto"),
+            RowSpacing = DetailRowSpacing,
+        };
 
         AddFieldRow(grid, 0, "ID", _fieldId, "ImagePath", _fieldImagePath);
         AddFieldRow(grid, 1, "Name", _fieldName, "Anim", _fieldAnim);
@@ -185,8 +216,16 @@ public sealed partial class ResourceOrganizePanel : UserControl
         grid.Children.Add(_fieldCollectible);
 
         var addButton = UiFactory.CompactButton(AddToTableButtonText);
+        // 这张卡上唯一的写操作，给实心强调色，比白底小按钮更容易被找到
+        addButton.Background = UiTheme.Accent;
+        addButton.BorderBrush = UiTheme.Accent;
+        addButton.Foreground = UiTheme.White;
+        addButton.FontWeight = FontWeight.SemiBold;
+        addButton.Height = DetailFieldHeight;
+        addButton.Padding = new Thickness(14, 0);
+        addButton.CornerRadius = new CornerRadius(FilterButtonCornerRadius);
         addButton.HorizontalAlignment = HorizontalAlignment.Right;
-        addButton.VerticalAlignment = VerticalAlignment.Center;
+        addButton.VerticalAlignment = VerticalAlignment.Bottom;
         addButton.Click += (_, _) => AddToConfigTable();
         _addButton = addButton;
         Grid.SetRow(addButton, 4);
@@ -196,33 +235,36 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         foreach (var box in new[] { _fieldId, _fieldImagePath, _fieldName, _fieldAnim, _fieldLoop, _fieldSpeed, _fieldOrder, _fieldShadow, _fieldCollectible })
         {
-            box.Margin = new Thickness(0, 2, 6, 2);
+            box.Margin = DetailFieldMargin;
+            box.Height = DetailFieldHeight;
+            box.HorizontalAlignment = HorizontalAlignment.Stretch;
         }
 
         return new Border
         {
-            Background = UiTheme.PanelSurface,
+            Background = UiTheme.Card,
             BorderBrush = PanelBorderBrush,
             BorderThickness = new Thickness(1),
-            Padding = new Thickness(8, 6),
+            CornerRadius = new CornerRadius(DetailCardCornerRadius),
+            Padding = DetailCardPadding,
             Child = new StackPanel
             {
-                Spacing = 2,
+                Spacing = 0,
                 Children =
                 {
-                    new TextBlock
-                    {
-                        Text = "选中项",
-                        Foreground = UiTheme.AccentDark,
-                        FontWeight = FontWeight.Bold,
-                        Margin = new Thickness(0, 0, 0, 2),
-                    },
+                    SectionHead("选中项", new Thickness(0, 0, 0, 6)),
                     new TextBlock
                     {
                         Text = $"左侧点选图片后可编辑字段；Ctrl 点击多选、Shift 连选，再点「{AddToTableButtonText}」批量入表。",
                         Foreground = UiTheme.TextSecondary,
                         FontSize = 11,
-                        Margin = new Thickness(0, 0, 0, 4),
+                        Margin = new Thickness(0, 0, 0, DetailDividerMarginBottom),
+                    },
+                    new Border
+                    {
+                        Height = 1,
+                        Background = UiTheme.Divider,
+                        Margin = new Thickness(0, 0, 0, DetailDividerMarginBottom),
                     },
                     grid,
                     _csvInfoText,
@@ -254,22 +296,17 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
     private static TextBlock Label(string text) => new()
     {
-        Text = text + ":",
-        Foreground = UiTheme.ResourcePanel.FieldLabel,
+        // 与底部属性栏保持同一口径：标签不带尾冒号，靠留白分隔
+        Text = text,
+        Foreground = UiTheme.TextSecondary,
+        FontSize = 11,
         VerticalAlignment = VerticalAlignment.Center,
         TextAlignment = TextAlignment.Right,
-        Margin = new Thickness(0, 0, 4, 0),
+        Margin = new Thickness(0, 0, 8, 0),
     };
 
     private Control BuildConfiguredCard()
     {
-        var header = new TextBlock
-        {
-            Text = "已配置资源",
-            Foreground = UiTheme.AccentDark,
-            FontWeight = FontWeight.Bold,
-        };
-
         // 表头（分组标题/列名/类型/注释四行）固定在顶部，只有数据行滚动：
         // 外层 Grid 的第二列留给 14px 箭头条，因此表头与数据区拿到的可用宽度完全一致，
         // 冻结表头的列不会和数据行错位，右侧也不会出现一条空白的缝。
@@ -277,7 +314,10 @@ public sealed partial class ResourceOrganizePanel : UserControl
         // 让滚动条从表格顶部一直贯通到底部，右上角不会空出一小块白块。
         var headerBorder = new Border
         {
-            Background = UiTheme.White,
+            // 表头铺一层极浅青，和下面的数据行拉开层次；底部补一条分隔线收口
+            Background = UiTheme.Form.GroupHeader,
+            BorderBrush = UiTheme.Divider,
+            BorderThickness = new Thickness(0, 0, 0, 1),
             Child = _configuredHeaderHost,
         };
         Grid.SetColumn(headerBorder, 0);
@@ -314,14 +354,15 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         var tableFrame = new Border
         {
-            BorderBrush = UiTheme.ResourceTable.Line,
+            BorderBrush = UiTheme.PanelBorder,
             BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
             Background = UiTheme.Card,
             ClipToBounds = true,
             Child = inner,
         };
-        tableFrame.Margin = new Thickness(0, 4, 0, 0);
-        Grid.SetRow(tableFrame, 1);
+        tableFrame.Margin = new Thickness(0);
+        Grid.SetRow(tableFrame, 0);
 
         var buttons = new StackPanel
         {
@@ -337,6 +378,12 @@ public sealed partial class ResourceOrganizePanel : UserControl
         _createTableButton = createTable;
         buttons.Children.Add(createTable);
 
+        // 地图上已摆放但配置表里没有的资源，一键补齐成配置行并分配数字 ID（实例模板 ID 同步改写）
+        var bindMap = UiFactory.CompactButton("补齐地图资源 ID");
+        ToolTip.SetTip(bindMap, "把地图上用到的资源登记进配置表：缺行的按分类新建并分配数字 ID，实例的模板 ID 同步改成数字 ID；写表前自动备份");
+        bindMap.Click += (_, _) => BindMapResourcesToTable();
+        buttons.Children.Add(bindMap);
+
         var openTable = UiFactory.CompactButton("打开配置表");
         openTable.Click += (_, _) => OpenConfigTable();
         buttons.Children.Add(openTable);
@@ -346,6 +393,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
         buttons.Children.Add(openFolder);
 
         var save = UiFactory.CompactButton("保存修改", UiTheme.Accent, UiTheme.White);
+        save.BorderBrush = UiTheme.Accent;
+        save.FontWeight = FontWeight.SemiBold;
+        save.CornerRadius = new CornerRadius(FilterButtonCornerRadius);
         save.Click += (_, _) => SaveChanges();
         buttons.Children.Add(save);
 
@@ -359,23 +409,32 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         var layout = new Grid
         {
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
+            RowDefinitions = new RowDefinitions("*,Auto"),
             Margin = new Thickness(8),
         };
-        layout.Children.Add(header);
-        Grid.SetRow(tableFrame, 1);
+        Grid.SetRow(tableFrame, 0);
         layout.Children.Add(tableFrame);
-        Grid.SetRow(bottom, 2);
+        Grid.SetRow(bottom, 1);
         layout.Children.Add(bottom);
 
         return new Border
         {
-            Background = UiTheme.PanelSurface,
-            BorderBrush = PanelBorderBrush,
+            // 与「选中项」卡一致：白底 + 8 圆角 + 细描边
+            Background = UiTheme.Card,
+            BorderBrush = UiTheme.Divider,
             BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(PanelCornerRadius),
+            ClipToBounds = true,
             Child = layout,
         };
     }
+
+    /// <summary>栏标题：复用 <see cref="UiFactory.SectionHead"/>，各页标题语汇保持一致。</summary>
+    /// <param name="text">标题文案。</param>
+    /// <param name="margin">可选外边距。</param>
+    /// <returns>可直接塞进面板的标题行。</returns>
+    private static Control SectionHead(string text, Thickness? margin = null) =>
+        UiFactory.SectionHead(text, margin: margin);
 
     #endregion
 }

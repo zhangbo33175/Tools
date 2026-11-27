@@ -148,7 +148,7 @@ public static class ChapterRepository
             {
                 catalog.Chapters.AddRange(luaChapters);
                 catalog.Source = "Lua 回退";
-                messages.Add("章节表 Excel 不可用，已回退运行时 Lua 章节表");
+                messages.Add($"章节表 Excel 不可用，已回退运行时 Lua 章节表（Excel：{catalog.ChaptersPath}）");
             }
         }
 

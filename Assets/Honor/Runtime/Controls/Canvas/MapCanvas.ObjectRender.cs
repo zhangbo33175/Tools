@@ -204,7 +204,8 @@ public sealed partial class MapCanvas : Control
             }
         }
 
-        if (_zoom >= 0.45)
+        // 物件名是编辑态辅助：预览窗口里再画一遍会盖在角色/载具上，反而挡住美术本来的朝向
+        if (_zoom >= 0.45 && !PreviewMode)
         {
             DrawLabel(context, item.Name, bounds);
         }

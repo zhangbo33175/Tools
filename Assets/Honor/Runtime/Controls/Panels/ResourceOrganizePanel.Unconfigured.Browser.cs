@@ -30,13 +30,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
     {
         _filter = filter;
         ResetSelection();
-        // ---TODO 重构：筛选按钮底色统一走主题语义色，禁止再写死 RGB。
-        foreach (var (name, button) in _filterButtons)
-        {
-            var active = name == filter;
-            button.Background = active ? UiTheme.Accent : UiTheme.Form.FilterIdle;
-            button.Foreground = active ? UiTheme.White : UiTheme.TextPrimary;
-        }
+        RefreshFilterButtons();
 
         RefreshUnconfiguredList();
         _resourceListScroll?.SetCurrentValue(ScrollViewer.OffsetProperty, new Vector(0, 0));
@@ -47,24 +41,29 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
     }
 
+    /// <summary>
+    /// 按当前分类刷新筛选按钮的选中语汇：浅青底 + 青字加粗 + 青描边，其余白底细描边。
+    /// 构建期也要调一次，否则首帧八个按钮全是默认灰蓝底，看不出哪个是当前分类。
+    /// </summary>
+    private void RefreshFilterButtons()
+    {
+        foreach (var (name, button) in _filterButtons)
+        {
+            var active = name == _filter;
+            button.Background = active ? UiTheme.PreviewAccentSoft : UiTheme.Card;
+            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
+            button.BorderBrush = active ? UiTheme.Accent : UiTheme.PanelBorder;
+            button.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
+        }
+    }
+
     private void ScanUnconfigured(bool silent)
     {
         _mapImageIndex = null;
+
+        // ---TODO 资源列表：扫描只按「配置表行」排除，模板库登记不等于已落表。
+        // 否则收集物这类还没建独立表的分类，图片明明躺在 MapData\Map 里也会一条都扫不出来。
         var configured = new List<string>();
-        foreach (var template in _templates)
-        {
-            if (template.ResName.Length > 0)
-            {
-                configured.Add(Path.GetFileNameWithoutExtension(template.ResName));
-            }
-
-            if (template.ImagePath.Length > 0)
-            {
-                configured.Add(Path.GetFileNameWithoutExtension(template.ImagePath));
-            }
-        }
-
-        // ---TODO 资源列表：配置表行即使没有对应模板，也要从「未配置」扫描中排除，避免左侧出现重复卡片。
         if (_itemTable is not null)
         {
             foreach (var row in _itemTable.Rows)
@@ -78,7 +77,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         var scanRoot = _mapDirectory;
         _unconfigured = _assets
-            .ScanUnconfigured(configured, scanRoot)
+            .ScanUnconfigured(configured, scanRoot, out _lastScanTotal)
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
 
         ApplyFilter(_filter);
@@ -90,8 +89,8 @@ public sealed partial class ResourceOrganizePanel : UserControl
             var tableRows = _itemTable?.RowCount ?? 0;
             var configuredHint = tableRows > 0 ? $"，配置表 {tableRows} 行已显示在资源列表" : string.Empty;
             _notify(_unconfigured.Count == 0
-                ? $"扫描完成：{where} 下没有未配置的 PNG{configuredHint}"
-                : $"扫描完成：{where} 下发现 {_unconfigured.Count} 个未配置资源{configuredHint}");
+                ? $"扫描完成：{where} 下共 {_lastScanTotal} 个 PNG，没有未配置资源{configuredHint}"
+                : $"扫描完成：{where} 下发现 {_unconfigured.Count} 个未配置资源（共 {_lastScanTotal} 个 PNG）{configuredHint}");
         }
     }
 
@@ -311,9 +310,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         {
             _unconfiguredHost.Children.Add(new TextBlock
             {
-                Text = string.IsNullOrWhiteSpace(_mapDirectory)
-                    ? "（暂无资源；先在地图配置里设置「地图保存目录」，再点「扫描」）"
-                    : $"（{_mapDirectory} 下暂无资源，点「扫描」重新读取）",
+                Text = BuildEmptyHint(),
                 Foreground = UiTheme.TextSecondary,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(2, 4),
@@ -325,6 +322,31 @@ public sealed partial class ResourceOrganizePanel : UserControl
         {
             _unconfiguredHost.Children.Add(BuildResourceRow(entry));
         }
+    }
+
+    /// <summary>
+    /// 空态文案：区分「没设目录 / 目录不存在 / 目录里真没图 / 图都在配置表里」，
+    /// 避免目录里明明有几百张 PNG 却只说一句「暂无资源」。
+    /// </summary>
+    private string BuildEmptyHint()
+    {
+        if (string.IsNullOrWhiteSpace(_mapDirectory))
+        {
+            return "（暂无资源；先在地图配置里设置「地图保存目录」，再点「扫描」）";
+        }
+
+        if (!Directory.Exists(_mapDirectory))
+        {
+            return $"（目录不存在：{_mapDirectory}，请检查「地图配置」里的地图保存目录）";
+        }
+
+        if (_lastScanTotal == 0)
+        {
+            return $"（{_mapDirectory} 下没有 PNG 图片，点「扫描」重新读取）";
+        }
+
+        return $"（{_mapDirectory} 下共 {_lastScanTotal} 个 PNG，已全部登记到配置表；"
+            + $"「{_filter}」分类没有未配置项，切到「全部」可查看已配置资源）";
     }
 
     private Control BuildResourceRow(ResourceListEntry entry)
@@ -523,7 +545,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
     {
         _selectedName = null;
         _selectedPath = null;
-        _previewHost.Children.Clear();
+        ShowPreviewPlaceholder();
         foreach (var box in new[]
                  {
                      _fieldId, _fieldImagePath, _fieldName, _fieldAnim, _fieldLoop,
@@ -688,6 +710,23 @@ public sealed partial class ResourceOrganizePanel : UserControl
         {
             Text = "（无预览）",
             Foreground = UiTheme.TextSecondary,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+    }
+
+    /// <summary>
+    /// 预览框的默认空态：未选中任何资源时给一句居中的浅色提示，
+    /// 否则顶部会留一块灰底空框，看起来像加载失败。
+    /// </summary>
+    private void ShowPreviewPlaceholder()
+    {
+        _previewHost.Children.Clear();
+        _previewHost.Children.Add(new TextBlock
+        {
+            Text = "选中左侧资源后在此预览",
+            Foreground = UiTheme.PreviewMuted,
+            FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         });

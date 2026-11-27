@@ -39,11 +39,15 @@ public sealed class PublishMapWindow : Window
     private TextBox _mapNameBox;
     private CheckBox _fogBox;
     private CheckBox _indexBox;
+    private CheckBox _backupBox;
+    private CheckBox _syncAssetsBox;
     private TextBlock _previewText;
     private TextBlock _statusText;
-    private StackPanel _mapNameRow;
-    private StackPanel _fogRow;
-    private StackPanel _indexRow;
+    private Grid _mapNameRow;
+    private Grid _fogRow;
+    private Grid _indexRow;
+    private Grid _backupRow;
+    private Grid _syncAssetsRow;
     private MapPublishTarget _target;
 
     #endregion
@@ -62,7 +66,7 @@ public sealed class PublishMapWindow : Window
 
         Title = "发布地图";
         Width = 760;
-        Height = 600;
+        Height = 560;
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = UiTheme.PublishWindow.Background;
@@ -72,7 +76,9 @@ public sealed class PublishMapWindow : Window
             Padding = new Thickness(22, 18, 22, 16),
             Background = UiTheme.PublishWindow.Background,
             Child = BuildContent(out _targetBox, out _outputBox, out _mapNameBox, out _fogBox, out _indexBox,
-                out _previewText, out _statusText, out _mapNameRow, out _fogRow, out _indexRow),
+                out _backupBox, out _syncAssetsBox,
+                out _previewText, out _statusText, out _mapNameRow, out _fogRow, out _indexRow,
+                out _backupRow, out _syncAssetsRow),
         };
         Content = root;
 
@@ -81,6 +87,8 @@ public sealed class PublishMapWindow : Window
         _mapNameBox.Text = string.IsNullOrWhiteSpace(_settings.MapName) ? "GameMainMap" : _settings.MapName;
         _fogBox.IsChecked = _settings.IncludeFog;
         _indexBox.IsChecked = _settings.UpdateCocosIndex;
+        _backupBox.IsChecked = _settings.BackupBeforeOverwrite;
+        _syncAssetsBox.IsChecked = _settings.SyncMissingAssets;
 
         _targetBox.SelectionChanged += (_, _) => OnTargetChanged();
         UpdateVisibility();
@@ -99,24 +107,28 @@ public sealed class PublishMapWindow : Window
         out TextBox mapNameBox,
         out CheckBox fogBox,
         out CheckBox indexBox,
+        out CheckBox backupBox,
+        out CheckBox syncAssetsBox,
         out TextBlock previewText,
         out TextBlock statusText,
-        out StackPanel mapNameRow,
-        out StackPanel fogRow,
-        out StackPanel indexRow)
+        out Grid mapNameRow,
+        out Grid fogRow,
+        out Grid indexRow,
+        out Grid backupRow,
+        out Grid syncAssetsRow)
     {
         var stack = new StackPanel { Spacing = 10 };
 
         var title = new TextBlock
         {
-            Text = "发布地图",
-            FontSize = 22,
+            Text = "发布设置",
+            FontSize = 20,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.White,
         };
         var subtitle = new TextBlock
         {
-            Text = $"{_config.SceneName} · 章节 {ChapterText()} · 关卡 {LevelText()} · " +
+            Text = $"章节 {ChapterText()} · 关卡 {LevelText()} · " +
                    $"{_config.Objects.Count} 个物件（建筑 {Count(MapObjectType.Building)} / 物件 {Count(MapObjectType.Prop)} / 角色 {Count(MapObjectType.Character)}）",
             FontSize = 12,
             Foreground = UiTheme.PublishWindow.SubtitleText,
@@ -131,9 +143,17 @@ public sealed class PublishMapWindow : Window
             {
                 "Unity 数据（MapConfigData JSON）",
                 "Cocos 数据（Levels Lua 表）",
+                "Unity 直载（Levels Lua + 桥接表）",
             },
             SelectedIndex = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch,
+            MinHeight = 32,
+            FontSize = 12,
+            Padding = new Thickness(8, 4),
+            Background = UiTheme.PublishWindow.PreviewSurface,
+            Foreground = UiTheme.PublishWindow.PreviewText,
+            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
+            BorderThickness = new Thickness(1),
         };
         stack.Children.Add(LabeledRow("发布目标", targetBox));
 
@@ -141,16 +161,35 @@ public sealed class PublishMapWindow : Window
         {
             PlaceholderText = "目标工程的接入目录",
             HorizontalAlignment = HorizontalAlignment.Stretch,
+            TextWrapping = TextWrapping.NoWrap,
+            MinHeight = 32,
+            FontSize = 12,
+            Padding = new Thickness(8, 4),
+            CornerRadius = new CornerRadius(4),
+            Background = UiTheme.PublishWindow.PreviewSurface,
+            Foreground = UiTheme.PublishWindow.PreviewText,
+            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
+            BorderThickness = new Thickness(1),
+            VerticalContentAlignment = VerticalAlignment.Center,
         };
         var browseButton = new Button
         {
             Content = "浏览…",
             Margin = new Thickness(8, 0, 0, 0),
-            Padding = new Thickness(12, 4, 12, 4),
+            MinWidth = 72,
+            MinHeight = 32,
+            Padding = new Thickness(10, 4, 10, 4),
+            FontSize = 12,
+            Background = UiTheme.PublishWindow.PreviewSurface,
+            Foreground = UiTheme.PublishWindow.PreviewText,
+            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
         };
         var outputGrid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         Grid.SetColumn(outputTextBox, 0);
         Grid.SetColumn(browseButton, 1);
@@ -163,6 +202,15 @@ public sealed class PublishMapWindow : Window
         mapNameBox = new TextBox
         {
             PlaceholderText = "对应 Cocos 地图预制体名，默认 GameMainMap",
+            MinHeight = 32,
+            FontSize = 12,
+            Padding = new Thickness(8, 4),
+            CornerRadius = new CornerRadius(4),
+            Background = UiTheme.PublishWindow.PreviewSurface,
+            Foreground = UiTheme.PublishWindow.PreviewText,
+            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
+            BorderThickness = new Thickness(1),
+            VerticalContentAlignment = VerticalAlignment.Center,
         };
         mapNameRow = LabeledRow("地图名（Cocos）", mapNameBox);
         stack.Children.Add(mapNameRow);
@@ -172,6 +220,8 @@ public sealed class PublishMapWindow : Window
             Content = "同时发布迷雾 sidecar（Map_*.fog.json）",
             IsChecked = true,
             Margin = new Thickness(0, 0, 0, 0),
+            FontSize = 12,
+            Foreground = UiTheme.PublishWindow.LabelText,
         };
         fogRow = LabeledRow("附加输出", fogBox);
         stack.Children.Add(fogRow);
@@ -181,9 +231,33 @@ public sealed class PublishMapWindow : Window
             Content = "同步更新 TableLevelData.lua.txt 章节索引",
             IsChecked = true,
             Margin = new Thickness(0, 0, 0, 0),
+            FontSize = 12,
+            Foreground = UiTheme.PublishWindow.LabelText,
         };
-        indexRow = LabeledRow("Cocos 索引", indexBox);
+        indexRow = LabeledRow("章节索引", indexBox);
         stack.Children.Add(indexRow);
+
+        backupBox = new CheckBox
+        {
+            Content = "覆盖前备份同名关卡表与索引",
+            IsChecked = true,
+            Margin = new Thickness(0, 0, 0, 0),
+            FontSize = 12,
+            Foreground = UiTheme.PublishWindow.LabelText,
+        };
+        backupRow = LabeledRow("安全备份", backupBox);
+        stack.Children.Add(backupRow);
+
+        syncAssetsBox = new CheckBox
+        {
+            Content = "同步 Unity 缺失的地图贴图（不覆盖已有文件）",
+            IsChecked = true,
+            Margin = new Thickness(0, 0, 0, 0),
+            FontSize = 12,
+            Foreground = UiTheme.PublishWindow.LabelText,
+        };
+        syncAssetsRow = LabeledRow("资源同步", syncAssetsBox);
+        stack.Children.Add(syncAssetsRow);
 
         var previewBorder = new Border
         {
@@ -225,6 +299,13 @@ public sealed class PublishMapWindow : Window
             Content = "取消",
             Padding = new Thickness(20, 6, 20, 6),
             Margin = new Thickness(0, 0, 8, 0),
+            MinHeight = 32,
+            FontSize = 12,
+            Background = UiTheme.PublishWindow.PreviewSurface,
+            Foreground = UiTheme.PublishWindow.PreviewText,
+            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
         };
         cancel.Click += (_, _) => Close(null);
 
@@ -233,6 +314,13 @@ public sealed class PublishMapWindow : Window
             Content = "打开输出目录",
             Padding = new Thickness(16, 6, 16, 6),
             Margin = new Thickness(0, 0, 8, 0),
+            MinHeight = 32,
+            FontSize = 12,
+            Background = UiTheme.PublishWindow.PreviewSurface,
+            Foreground = UiTheme.PublishWindow.PreviewText,
+            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
         };
         open.Click += (_, _) => OpenDirectory(outputTextBox.Text);
 
@@ -241,6 +329,14 @@ public sealed class PublishMapWindow : Window
             Content = "发布",
             Padding = new Thickness(26, 6, 26, 6),
             IsDefault = true,
+            MinHeight = 32,
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            Background = UiTheme.Accent,
+            Foreground = UiTheme.White,
+            BorderBrush = UiTheme.Accent,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
         };
         publish.Click += async (_, _) => await PublishAsync();
 
@@ -259,25 +355,26 @@ public sealed class PublishMapWindow : Window
         return stack;
     }
 
-    private static StackPanel LabeledRow(string label, Control control)
+    private static Grid LabeledRow(string label, Control control)
     {
         var text = new TextBlock
         {
             Text = label,
             FontSize = 12,
-            Width = 110,
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = UiTheme.PublishWindow.LabelText,
+            Margin = new Thickness(0, 0, 8, 0),
         };
-        var panel = new StackPanel
+        var grid = new Grid
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
+            ColumnDefinitions = new ColumnDefinitions("110,*"),
         };
-        panel.Children.Add(text);
+        Grid.SetColumn(text, 0);
+        Grid.SetColumn(control, 1);
         control.HorizontalAlignment = HorizontalAlignment.Stretch;
-        panel.Children.Add(control);
-        return panel;
+        grid.Children.Add(text);
+        grid.Children.Add(control);
+        return grid;
     }
 
     #endregion
@@ -286,7 +383,12 @@ public sealed class PublishMapWindow : Window
 
     private void OnTargetChanged()
     {
-        var next = _targetBox.SelectedIndex == 1 ? MapPublishTarget.CocosLua : MapPublishTarget.UnityJson;
+        var next = _targetBox.SelectedIndex switch
+        {
+            1 => MapPublishTarget.CocosLua,
+            2 => MapPublishTarget.UnityLua,
+            _ => MapPublishTarget.UnityJson,
+        };
         if (next == _target)
         {
             UpdateVisibility();
@@ -295,13 +397,18 @@ public sealed class PublishMapWindow : Window
         }
 
         _target = next;
-        _outputBox.Text = next == MapPublishTarget.CocosLua
-            ? (string.IsNullOrWhiteSpace(_settings.CocosOutputDirectory)
+        _outputBox.Text = next switch
+        {
+            MapPublishTarget.CocosLua => string.IsNullOrWhiteSpace(_settings.CocosOutputDirectory)
                 ? MapPublishService.DefaultOutputRoot(MapPublishTarget.CocosLua)
-                : _settings.CocosOutputDirectory)
-            : (string.IsNullOrWhiteSpace(_settings.UnityOutputDirectory)
+                : _settings.CocosOutputDirectory,
+            MapPublishTarget.UnityLua => string.IsNullOrWhiteSpace(_settings.UnityLuaOutputDirectory)
+                ? MapPublishService.DefaultOutputRoot(MapPublishTarget.UnityLua)
+                : _settings.UnityLuaOutputDirectory,
+            _ => string.IsNullOrWhiteSpace(_settings.UnityOutputDirectory)
                 ? MapPublishService.DefaultOutputRoot(MapPublishTarget.UnityJson)
-                : _settings.UnityOutputDirectory);
+                : _settings.UnityOutputDirectory,
+        };
         UpdateVisibility();
         UpdatePreview();
     }
@@ -309,9 +416,12 @@ public sealed class PublishMapWindow : Window
     private void UpdateVisibility()
     {
         var isCocos = _target == MapPublishTarget.CocosLua;
+        var isUnityLua = _target == MapPublishTarget.UnityLua;
         _mapNameRow.IsVisible = isCocos;
-        _indexRow.IsVisible = isCocos;
-        _fogRow.IsVisible = !isCocos;
+        _indexRow.IsVisible = isCocos || isUnityLua;
+        _fogRow.IsVisible = !isCocos && !isUnityLua;
+        _backupRow.IsVisible = isUnityLua;
+        _syncAssetsRow.IsVisible = isUnityLua;
     }
 
     private void UpdatePreview()
@@ -354,6 +464,8 @@ public sealed class PublishMapWindow : Window
             IncludeFog = _fogBox.IsChecked == true,
             MapName = string.IsNullOrWhiteSpace(_mapNameBox.Text) ? "GameMainMap" : _mapNameBox.Text!.Trim(),
             UpdateCocosIndex = _indexBox.IsChecked == true,
+            BackupBeforeOverwrite = _backupBox.IsChecked == true,
+            SyncMissingAssets = _syncAssetsBox.IsChecked == true,
         };
 
         try
@@ -364,12 +476,17 @@ public sealed class PublishMapWindow : Window
             _settings.UnityOutputDirectory = _target == MapPublishTarget.UnityJson
                 ? output
                 : _settings.UnityOutputDirectory;
+            _settings.UnityLuaOutputDirectory = _target == MapPublishTarget.UnityLua
+                ? output
+                : _settings.UnityLuaOutputDirectory;
             _settings.CocosOutputDirectory = _target == MapPublishTarget.CocosLua
                 ? output
                 : _settings.CocosOutputDirectory;
             _settings.MapName = options.MapName;
             _settings.IncludeFog = options.IncludeFog;
             _settings.UpdateCocosIndex = options.UpdateCocosIndex;
+            _settings.BackupBeforeOverwrite = options.BackupBeforeOverwrite;
+            _settings.SyncMissingAssets = options.SyncMissingAssets;
             MapPublishSettingsStore.Save(_settings);
             Close(result);
         }

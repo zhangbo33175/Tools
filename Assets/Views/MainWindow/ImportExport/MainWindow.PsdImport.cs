@@ -406,7 +406,7 @@ public partial class MainWindow : Window
                 AnimName = MapToolDefaults.DefaultAnimName,
             };
 
-            _config.Objects.Add(instance);
+            _config.AddObject(instance);
 
             // 背景/道路组里也有独立的树、灌木、围栏层：它们不是整幅底图，不能被地表带永远压住。
             // 分带策略统一走 OcclusionAdjustmentStrategy，和「刷新画面 / 刷新层级」保持同一套判定。

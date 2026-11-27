@@ -70,8 +70,11 @@ public sealed partial class ItemElementPanel : UserControl
         foreach (var (type, button) in _tabButtons)
         {
             var active = type == _tabType;
-            button.Background = active ? UiTheme.Accent : IdleTabBrush;
-            button.Foreground = active ? UiTheme.White : UiTheme.TextPrimary;
+            // 与资源整理的分类按钮同一套语汇：选中浅青底 + 青描边 + 青字加粗，未选白底细描边
+            button.Background = active ? UiTheme.PreviewAccentSoft : UiTheme.Card;
+            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
+            button.BorderBrush = active ? UiTheme.Accent : UiTheme.PanelBorder;
+            button.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
         }
     }
 

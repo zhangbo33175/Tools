@@ -154,6 +154,29 @@ public sealed class MapConfigData
     /// <summary>收集物计划：目标数量、层级模式与选中的素材。</summary>
     public CollectiblePlanData Collectibles { get; set; } = new();
 
+    /// <summary>加入一个实例，并保证它的 8 位数字 ID 不与现有物件撞号。</summary>
+    /// <param name="instance">待加入的实例；ID 为空或撞号时会被重新生成。</param>
+    /// <returns>已加入集合的同一个实例。</returns>
+    public PlacedObject AddObject(PlacedObject instance)
+    {
+        var used = new HashSet<string>();
+        foreach (var item in Objects)
+        {
+            if (!string.IsNullOrWhiteSpace(item.Id))
+            {
+                used.Add(item.Id);
+            }
+        }
+
+        while (string.IsNullOrWhiteSpace(instance.Id) || !used.Add(instance.Id))
+        {
+            instance.Id = IdGenerator.NewNumericId();
+        }
+
+        Objects.Add(instance);
+        return instance;
+    }
+
     /// <summary>统计指定类型的实例数量。</summary>
     /// <param name="type">物体类型。</param>
     /// <returns>数量。</returns>

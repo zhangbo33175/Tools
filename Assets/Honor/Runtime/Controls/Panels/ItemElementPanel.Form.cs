@@ -29,6 +29,14 @@ public sealed partial class ItemElementPanel : UserControl
 {
     #region 表单骨架
 
+    /// <summary>分组卡片的柔和投影：让卡片从浅蓝底上浮起来一点，层次比纯描边清楚。</summary>
+    private static readonly BoxShadows GroupCardShadow = new(new BoxShadow
+    {
+        Blur = 12,
+        OffsetY = 3,
+        Color = Color.FromArgb(0x16, 0x0B, 0x30, 0x45),
+    });
+
     private TextBox _idBox = null!;
     private ComboBox _typeBox = null!;
     private TextBox _nameBox = null!;
@@ -123,21 +131,19 @@ public sealed partial class ItemElementPanel : UserControl
         };
         _nineSlicePreview.Changed += (_, _) => OnNineSlicePreviewChanged();
 
-        _groupsHost.Children.Add(BuildGroup("基础信息", content =>
+        AddGroup(0, "基础信息", content =>
         {
             content.Children.Add(Row(("ID：", _idBox), ("类型：", _typeBox)));
-            content.Children.Add(Row(("模板名称：", _nameBox)));
-            content.Children.Add(Row(("Icon：", _iconBox)));
-            content.Children.Add(Row(("ResName：", _resNameBox)));
+            content.Children.Add(Row(("模板名称：", _nameBox), ("ResName：", _resNameBox)));
+            content.Children.Add(Row(("Icon：", _iconBox), ("图层归属：", _layerKeyBox)));
             content.Children.Add(Row(("占格宽：", _widthBox), ("占格高：", _heightBox)));
-            content.Children.Add(Row(("图层归属：", _layerKeyBox)));
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("动画设置", content =>
+        AddGroup(1, "动画设置", content =>
         {
             content.Children.Add(Row(("默认动画：", _animBox)));
             content.Children.Add(Row(("循环：", _loopBox), ("播放速度：", _speedBox)));
-        }));
+        });
 
         _nineSliceFields = new StackPanel { Spacing = GroupContentSpacing };
         _nineSliceFields.Children.Add(new TextBlock
@@ -146,63 +152,72 @@ public sealed partial class ItemElementPanel : UserControl
             Foreground = UiTheme.TextSecondary,
             FontSize = FormHintFontSize,
             TextWrapping = TextWrapping.Wrap,
-            Width = FieldWidth * 2 + LabelWidth + PairGap,
         });
         _nineSliceFields.Children.Add(Row(("左边距：", _nineLeftBox), ("右边距：", _nineRightBox)));
         _nineSliceFields.Children.Add(Row(("上边距：", _nineTopBox), ("下边距：", _nineBottomBox)));
         _nineSliceFields.Children.Add(Row(("中心填充：", _nineCenterBox)));
 
-        _groupsHost.Children.Add(BuildGroup("九宫格设置", content =>
+        AddGroup(1, "九宫格设置", content =>
         {
             content.Children.Add(Row(("九宫格：", _nineSliceBox)));
             content.Children.Add(_nineSlicePreview);
             content.Children.Add(_nineSliceFields);
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("交互设置", content =>
+        AddGroup(0, "交互设置", content =>
         {
             content.Children.Add(Row(("可交互：", _interactableBox)));
             content.Children.Add(Row(("交互类型：", _interactTypeBox)));
             content.Children.Add(Row(("对话气泡：", _bubbleTextBox)));
             content.Children.Add(Row(("气泡ID：", _bubbleIdBox)));
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("层级与碰撞", content =>
+        AddGroup(1, "层级与碰撞", content =>
         {
             content.Children.Add(Row(("渲染层级：", _sortOrderBox), ("初始朝向：", _facingBox)));
             content.Children.Add(Row(("碰撞：", _collisionBox), ("阴影：", _shadowBox)));
             content.Children.Add(Row(("层级档：", _displayLayerBox)));
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("交通规则", content =>
+        AddGroup(1, "交通规则", content =>
         {
             content.Children.Add(Row(("交通类别：", _trafficBox)));
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("收集物设置", content =>
+        AddGroup(0, "收集物设置", content =>
         {
             content.Children.Add(RowUnit("是否收集物", _collectibleBox, "重生时间", _respawnBox, "秒"));
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("Y 坐标深度排序", content =>
+        AddGroup(1, "Y 坐标深度排序", content =>
         {
             content.Children.Add(Row(("启用 YSort：", _ySortBox), ("偏移：", _ySortOffsetBox)));
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("移动与循环", content =>
+        AddGroup(0, "移动与循环", content =>
         {
             content.Children.Add(RowUnit("可移动", _movableBox, "重启延迟", _loopRestartBox, "秒"));
             content.Children.Add(Row(("移动动画：", _moveAnimBox)));
             content.Children.Add(Row(("离开地图隐藏：", _hideOffMapBox)));
-        }));
+        });
 
-        _groupsHost.Children.Add(BuildGroup("传送门设置", content =>
+        AddGroup(1, "传送门设置", content =>
         {
             content.Children.Add(Row(("是否传送门：", _teleportBox), ("目标场景：", _teleportSceneBox)));
             content.Children.Add(Row(("目标X：", _teleportXBox), ("目标Y：", _teleportYBox)));
-        }));
+        });
 
         BindFields();
+    }
+
+    /// <summary>把一张分组卡片交替放进左 / 右栏，宽窗口里两栏并排、窄窗口仍可纵向滚动。</summary>
+    /// <param name="title">分组标题。</param>
+    /// <param name="build">字段构建回调，向传入面板追加字段行。</param>
+    private void AddGroup(int column, string title, Action<StackPanel> build)
+    {
+        var card = BuildGroup(title, build);
+        var target = column == 0 ? _groupColumnLeft : _groupColumnRight;
+        target.Children.Add(card);
     }
 
     /// <summary>构建一个可折叠属性分组：标题行点击切换展开，箭头随之翻转。</summary>
@@ -252,6 +267,8 @@ public sealed partial class ItemElementPanel : UserControl
         var header = new Border
         {
             Background = GroupHeaderBrush,
+            BorderBrush = GroupBorderBrush,
+            BorderThickness = new Thickness(0, 0, 0, GroupCardBorderThickness),
             Padding = GroupHeaderPadding,
             Cursor = new Cursor(StandardCursorType.Hand),
             Child = headerContent,
@@ -291,6 +308,7 @@ public sealed partial class ItemElementPanel : UserControl
             BorderThickness = new Thickness(GroupCardBorderThickness),
             CornerRadius = new CornerRadius(GroupCardCornerRadius),
             ClipToBounds = true,
+            BoxShadow = GroupCardShadow,
             Child = card,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
@@ -298,12 +316,17 @@ public sealed partial class ItemElementPanel : UserControl
 
     private Control Row(params (string Label, Control Control)[] cells)
     {
-        var columns = string.Join(",", Enumerable.Repeat($"{LabelWidth},{FieldWidth}", cells.Length));
+        // 标签按内容宽度自适应、字段吃掉剩余宽度：卡片拉宽时输入框跟着变宽，
+        // 不会像固定像素列那样右边空出一大块
         var grid = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions(columns + "," + PairGap + ",*"),
-            Margin = new Thickness(0),
+            ColumnSpacing = 8,
         };
+        for (var index = 0; index < cells.Length; index++)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+        }
 
         for (var index = 0; index < cells.Length; index++)
         {
@@ -332,7 +355,7 @@ public sealed partial class ItemElementPanel : UserControl
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions(
-                $"{LabelWidth},{NumberWidth},{PairGap},{LabelWidth},{NumberWidth},Auto,*"),
+                $"Auto,{NumberWidth},{PairGap},Auto,{NumberWidth},Auto,*"),
             Margin = new Thickness(0),
         };
 
@@ -369,16 +392,16 @@ public sealed partial class ItemElementPanel : UserControl
     {
         var label = new TextBlock
         {
-            Text = labelText,
+            Text = labelText.TrimEnd('：'),
             Foreground = UiTheme.TextSecondary,
             FontSize = FormFontSize,
             VerticalAlignment = VerticalAlignment.Center,
-            TextAlignment = TextAlignment.Right,
+            TextAlignment = TextAlignment.Left,
             Margin = new Thickness(leadingGap, 0, LabelRightGap, 0),
         };
 
         control.VerticalAlignment = VerticalAlignment.Center;
-        control.HorizontalAlignment = HorizontalAlignment.Left;
+        control.HorizontalAlignment = HorizontalAlignment.Stretch;
 
         Grid.SetColumn(label, labelColumn);
         Grid.SetColumn(control, controlColumn);
@@ -388,7 +411,7 @@ public sealed partial class ItemElementPanel : UserControl
 
     private static TextBox Text(double minWidth) => new()
     {
-        MinWidth = minWidth,
+        MinWidth = Math.Min(minWidth, FlexibleFieldMinWidth),
         Height = FieldHeight,
         Padding = FieldTextPadding,
         FontSize = FormFontSize,
@@ -411,12 +434,12 @@ public sealed partial class ItemElementPanel : UserControl
     private static ComboBox Combo(IReadOnlyList<string> items) => new()
     {
         ItemsSource = items,
-        MinWidth = FieldWidth,
+        MinWidth = FlexibleFieldMinWidth,
         Height = FieldHeight,
         FontSize = FormFontSize,
         Padding = FieldComboPadding,
         CornerRadius = new CornerRadius(FieldCornerRadius),
-        HorizontalAlignment = HorizontalAlignment.Left,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
         Background = FieldComboBrush,
         BorderBrush = FieldBorderBrush,
         BorderThickness = new Thickness(FieldBorderThickness),

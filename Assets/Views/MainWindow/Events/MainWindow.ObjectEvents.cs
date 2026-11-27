@@ -477,6 +477,25 @@ public partial class MainWindow : Window
         _mapPreviewWindow = null;
     }
 
+    /// <summary>
+    /// 打开示例路口交通演示窗。示例数据全在内存里，不读也不写当前地图，
+    /// 所以切换关卡时不必关闭它，用户可以先对照规则再回地图补数据。
+    /// </summary>
+    private void OpenTrafficDemo()
+    {
+        _trafficDemoWindow?.Close();
+        var window = new TrafficDemoWindow();
+        _trafficDemoWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_trafficDemoWindow, window))
+            {
+                _trafficDemoWindow = null;
+            }
+        };
+        window.Show(this);
+    }
+
 
     /// <summary>
     /// 路径绘制的唯一开关入口。路径状态只存 <see cref="MapCanvas.PathDrawing"/>，
@@ -557,6 +576,7 @@ public partial class MainWindow : Window
     {
         PathScroll.IsVisible = showPath;
         AnimPanel.IsVisible = !showPath;
+        PathEmptyHint.IsVisible = showPath && PathPointList.Children.Count == 0;
         ApplyTabVisual(TabEditPath, showPath);
         ApplyTabVisual(TabEditAnim, !showPath);
     }

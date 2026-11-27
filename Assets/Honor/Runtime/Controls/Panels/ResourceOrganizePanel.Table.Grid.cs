@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -155,14 +156,14 @@ public sealed partial class ResourceOrganizePanel : UserControl
         style switch
         {
             TableHeaderStyle.Name => new TableHeaderAppearance(
-                UiTheme.White,
+                TitleRowBrush,
                 CellBorderBrush,
                 NameTextBrush,
                 TableHeaderNameFontSize,
                 TableHeaderNameLineHeight,
                 FontWeight.SemiBold),
             TableHeaderStyle.Type => new TableHeaderAppearance(
-                UiTheme.White,
+                UiTheme.PreviewSlot,
                 CellBorderBrush,
                 TypeTextBrush,
                 TableHeaderTypeFontSize,
@@ -170,7 +171,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
                 FontWeight.Normal),
             _ => new TableHeaderAppearance(
                 CommentRowBrush,
-                TableLineBrush,
+                CellBorderBrush,
                 NameTextBrush,
                 TableHeaderCommentFontSize,
                 TableHeaderCommentLineHeight,
@@ -193,7 +194,8 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         var cell = new Border
         {
-            Background = UiTheme.White,
+            // 隔行铺一层浅青，长表滚动时眼睛不容易串行
+            Background = RowBackOf(row),
             BorderBrush = CellBorderBrush,
             BorderThickness = TableCellBorderThickness,
             Padding = TableCellPadding,
@@ -201,7 +203,101 @@ public sealed partial class ResourceOrganizePanel : UserControl
         };
         Grid.SetColumn(cell, column);
         Grid.SetRow(cell, row);
+
+        // 只登记行→单元格，悬停事件统一挂在表格网格上（单元格里是可编辑 TextBox，
+        // 直接挂在 Border 上时指针命中的是子控件，收不到 PointerEntered）
+        if (_rowHoverCells.TryGetValue(row, out var cells))
+        {
+            cells.Add(cell);
+        }
+        else
+        {
+            _rowHoverCells[row] = new List<Border> { cell };
+        }
+
         return cell;
+    }
+
+    /// <summary>按行号返回斑马纹底色（偶数行留白）。</summary>
+    /// <param name="row">行号。</param>
+    /// <returns>该行的常态底色。</returns>
+    private static IBrush RowBackOf(int row) =>
+        row % 2 == 0 ? UiTheme.White : UiTheme.ResourceTable.RowAlt;
+
+    /// <summary>给表格网格挂上整行悬停：按指针 Y 换算行号，跨行时只重绘前后两行。</summary>
+    /// <param name="grid">数据行网格。</param>
+    /// <param name="rows">数据行数。</param>
+    private void AttachRowHover(Grid grid, int rows)
+    {
+        // 用隧道阶段监听：即使 TextBox 在冒泡阶段处理了移动事件，这里也能拿到
+        grid.AddHandler(
+            InputElement.PointerMovedEvent,
+            (_, e) => UpdateHoveredRow(grid, rows, e.GetPosition(grid)),
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+
+        grid.PointerExited += (_, _) => ClearHoveredRow();
+    }
+
+    /// <summary>根据指针在网格内的位置更新悬停行。</summary>
+    /// <param name="grid">数据行网格。</param>
+    /// <param name="rows">数据行数。</param>
+    /// <param name="position">指针位置（网格坐标）。</param>
+    private void UpdateHoveredRow(Grid grid, int rows, Point position)
+    {
+        if (position.Y < 0 || position.Y > rows * TableRowHeight)
+        {
+            ClearHoveredRow();
+            return;
+        }
+
+        var row = Math.Clamp((int)(position.Y / TableRowHeight), 0, rows - 1);
+        if (row == _hoveredRow)
+        {
+            return;
+        }
+
+        if (_hoveredRow >= 0)
+        {
+            ApplyRowBack(_hoveredRow);
+        }
+
+        _hoveredRow = row;
+        if (_rowHoverCells.TryGetValue(row, out var cells))
+        {
+            foreach (var cell in cells)
+            {
+                cell.Background = UiTheme.ResourceTable.HoverRow;
+            }
+        }
+    }
+
+    /// <summary>清除当前悬停行并还原本行斑马纹。</summary>
+    private void ClearHoveredRow()
+    {
+        if (_hoveredRow < 0)
+        {
+            return;
+        }
+
+        ApplyRowBack(_hoveredRow);
+        _hoveredRow = -1;
+    }
+
+    /// <summary>把整行底色还原成斑马纹常态。</summary>
+    /// <param name="row">行号。</param>
+    private void ApplyRowBack(int row)
+    {
+        if (!_rowHoverCells.TryGetValue(row, out var cells))
+        {
+            return;
+        }
+
+        var back = RowBackOf(row);
+        foreach (var cell in cells)
+        {
+            cell.Background = back;
+        }
     }
 
     /// <summary>在已配置资源区放入统一样式的空状态提示。</summary>
@@ -233,6 +329,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         Height = TableEditorHeight,
         Padding = TableEditorPadding,
         VerticalContentAlignment = VerticalAlignment.Center,
+        Classes = { "cell" },
     };
 
     /// <summary>只读文本格：灰字、透明底，不显示可编辑暗示。</summary>

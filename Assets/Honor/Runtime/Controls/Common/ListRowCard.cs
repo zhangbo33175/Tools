@@ -19,7 +19,7 @@ namespace MapEditorTool.Controls
 {
     #region 列表卡片行
     /// <summary>
-    /// 列表条目的「卡片行」：1px 描边 + 2px 圆角 + 浅灰底 + 3px 行距，选中时蓝底蓝边、悬停时略提亮。
+    /// 列表条目的「卡片行」：1px 描边 + 6px 圆角 + 近白底 + 3px 行距，选中时蓝底蓝边、悬停时略提亮。
     /// 章节/物件列表（Button 行）与物品元件、未配置资源等面板（自定义内容行）共用同一套颜色与尺寸常量，
     /// 避免各面板各写一份色值导致风格漂移。
     /// </summary>
@@ -59,7 +59,8 @@ namespace MapEditorTool.Controls
             Margin = new Thickness(0, 0, 0, RowGap);
             Padding = new Thickness(RowPaddingX, 0);
             BorderThickness = new Thickness(1);
-            CornerRadius = new CornerRadius(2);
+            // 圆角 6 与全局「输入框 6」那一档对齐，列表行不再用近似直角的 2
+            CornerRadius = new CornerRadius(6);
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
             Cursor = new Cursor(StandardCursorType.Hand);
             _isSelected = isSelected;

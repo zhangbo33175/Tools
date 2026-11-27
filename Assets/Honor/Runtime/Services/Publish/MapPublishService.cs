@@ -31,6 +31,9 @@ public enum MapPublishTarget
 
     /// <summary>Cocos Lua 运行时拆分关卡表（Tables.LevelData_*）。</summary>
     CocosLua,
+
+    /// <summary>Unity Lua 运行时拆分关卡表（Tables.LevelData_*）及资源/角色桥接表。</summary>
+    UnityLua,
 }
 
 /// <summary>
@@ -52,6 +55,15 @@ public sealed class MapPublishOptions
 
     /// <summary>Cocos 发布时是否同步更新 TableLevelData.lua.txt 章节索引。</summary>
     public bool UpdateCocosIndex { get; set; } = true;
+
+    /// <summary>Unity Lua 发布时是否在覆盖前备份同名表与章节索引。</summary>
+    public bool BackupBeforeOverwrite { get; set; } = true;
+
+    /// <summary>Unity Lua 发布时是否把 Unity 缺失的贴图从编辑器 MapData 同步过去。</summary>
+    public bool SyncMissingAssets { get; set; } = true;
+
+    /// <summary>Unity Lua 发布时是否生成 Sprite 注册表与编辑器角色模板桥接表。</summary>
+    public bool GenerateUnityBridgeFiles { get; set; } = true;
 }
 
 /// <summary>发布预检摘要。</summary>
@@ -130,6 +142,8 @@ public static partial class MapPublishService
 
     private const string CocosLevelsRelative = @"assets\LuaScripts\Game\Tables\Levels";
     private const string UnityMapDatasRelative = @"Assets\GameData\MapDatas";
+    private const string UnityLevelsRelative = @"Assets\LuaScripts\Game\Tables\Levels";
+    private const string UnityProjectRoot = @"E:\Game\CatGame\CatGameCodeOptimizationBuild";
     private const string LuaNumberFormat = "0.##";
     private const string LuaBanner = "--=====================================================================================================";
     private const string LuaNotice = "由地图编辑器自动生成，禁止手动修改";
@@ -155,7 +169,18 @@ public static partial class MapPublishService
             return Path.Combine(editorRoot, "docs", "Publish", "Cocos", "Levels");
         }
 
-        var unity = Path.Combine(@"E:\Game\CatGame\CatGameCodeOptimizationBuild", UnityMapDatasRelative);
+        if (target == MapPublishTarget.UnityLua)
+        {
+            var unityLevels = Path.Combine(UnityProjectRoot, UnityLevelsRelative);
+            if (Directory.Exists(unityLevels))
+            {
+                return unityLevels;
+            }
+
+            return Path.Combine(editorRoot, "docs", "Publish", "UnityLua", "Levels");
+        }
+
+        var unity = Path.Combine(UnityProjectRoot, UnityMapDatasRelative);
         if (Directory.Exists(unity))
         {
             return unity;
@@ -224,12 +249,18 @@ public static partial class MapPublishService
             Paths = paths,
             Lights = config.TrafficLights.Count,
             Crosswalks = config.Crosswalks.Count,
-            Files = target == MapPublishTarget.UnityJson
-                ? 3
-                : 7,
-            TargetHint = target == MapPublishTarget.UnityJson
-                ? "写入 Unity MapConfigData JSON，供 MapConfigRepository 读取"
-                : "写入 Tables.LevelData_* 拆分 Lua 表，供 Cocos Lua 运行时读取",
+            Files = target switch
+            {
+                MapPublishTarget.UnityJson => 3,
+                MapPublishTarget.UnityLua => 9,
+                _ => 7,
+            },
+            TargetHint = target switch
+            {
+                MapPublishTarget.UnityJson => "写入 Unity MapConfigData JSON，供 MapConfigRepository 读取",
+                MapPublishTarget.UnityLua => "写入 Unity Assets/LuaScripts/Game/Tables/Levels，并生成 Sprite/角色桥接表，供现有 Lua 运行时直接加载",
+                _ => "写入 Tables.LevelData_* 拆分 Lua 表，供 Cocos Lua 运行时读取",
+            },
         };
     }
 
@@ -261,9 +292,12 @@ public static partial class MapPublishService
 
         var chapter = NumericOr(config.ChapterId, "1");
         var level = NumericOr(config.SceneId, "1");
-        var result = options.Target == MapPublishTarget.CocosLua
-            ? PublishCocosLua(config, options, root, chapter, level)
-            : PublishUnityJson(config, options, root, chapter, level, fog);
+        var result = options.Target switch
+        {
+            MapPublishTarget.CocosLua => PublishCocosLua(config, options, root, chapter, level),
+            MapPublishTarget.UnityLua => PublishUnityLua(config, options, root, chapter, level),
+            _ => PublishUnityJson(config, options, root, chapter, level, fog),
+        };
 
         return result;
     }

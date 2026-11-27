@@ -60,6 +60,9 @@ public static class TrafficMarkService
     /// <summary>矩形同步比较容差。</summary>
     private const double NearTolerance = 0.001;
 
+    /// <summary>横道轴与包围盒等价判断的半像素容差（缩放后包围盒可能带小数）。</summary>
+    private const double GeometryTolerance = 0.5;
+
     #region 区域
 
     /// <summary>查询某个物件是否已带指定交通标记；空 Id 一律返回 false。</summary>
@@ -404,16 +407,62 @@ public static class TrafficMarkService
                 continue;
             }
 
-            ApplyCrosswalkGeometry(crosswalk, instance);
-
-            foreach (var light in config.TrafficLights)
+            // 斑马线贴图多是 356×299 的横幅块：物件长宽比例会让「南北穿行」被判成「东西横穿」。
+            // 只要当前 A→B 轴 + 宽度表达的矩形已经和包围盒重合，就保留人工标好的穿行轴，
+            // 只同步名称；否则（物件真的被移动/缩放过）再按包围盒重算。
+            if (!CrosswalkMatchesBounds(crosswalk, instance))
             {
-                if (light.BoundCrosswalkId == crosswalk.Id)
+                ApplyCrosswalkGeometry(crosswalk, instance);
+
+                foreach (var light in config.TrafficLights)
                 {
-                    light.Direction = crosswalk.Direction;
+                    if (light.BoundCrosswalkId == crosswalk.Id)
+                    {
+                        light.Direction = crosswalk.Direction;
+                    }
                 }
             }
+
+            crosswalk.Name = instance.Name;
         }
+    }
+
+    /// <summary>
+    /// 判断横道的 A→B 轴与宽度表达的矩形是否已与物件包围盒重合。
+    /// 重合时说明规则和美术一致，不需要按包围盒重算（重算会把穿行轴转 90°）。
+    /// </summary>
+    /// <param name="crosswalk">横道数据。</param>
+    /// <param name="instance">横道对应的地图物件。</param>
+    /// <returns>矩形已重合时返回 true。</returns>
+    private static bool CrosswalkMatchesBounds(MapCrosswalkData crosswalk, PlacedObject instance)
+    {
+        var bounds = instance.Bounds;
+        var half = Math.Max(0, crosswalk.Width) / 2.0;
+        double left;
+        double right;
+        double top;
+        double bottom;
+        if (crosswalk.Direction == TrafficDirections.Vertical)
+        {
+            var centerX = (crosswalk.PointA.X + crosswalk.PointB.X) / 2.0;
+            left = centerX - half;
+            right = centerX + half;
+            top = Math.Min(crosswalk.PointA.Y, crosswalk.PointB.Y);
+            bottom = Math.Max(crosswalk.PointA.Y, crosswalk.PointB.Y);
+        }
+        else
+        {
+            var centerY = (crosswalk.PointA.Y + crosswalk.PointB.Y) / 2.0;
+            top = centerY - half;
+            bottom = centerY + half;
+            left = Math.Min(crosswalk.PointA.X, crosswalk.PointB.X);
+            right = Math.Max(crosswalk.PointA.X, crosswalk.PointB.X);
+        }
+
+        return Math.Abs(left - bounds.Left) < GeometryTolerance
+               && Math.Abs(top - bounds.Top) < GeometryTolerance
+               && Math.Abs(right - bounds.Right) < GeometryTolerance
+               && Math.Abs(bottom - bounds.Bottom) < GeometryTolerance;
     }
 
     /// <summary>物件移动/缩放/改名后，把以它为灯体的红绿灯同步到最新脚底锚点。</summary>

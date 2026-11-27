@@ -147,6 +147,24 @@ public partial class MainWindow : Window
         TrafficPanel.IsVisible = true;
     }
 
+    /// <summary>
+    /// 把右栏那组交通控件整体搬进「交通规则」面板的「物件标记」页。
+    /// <para>不重建控件：四个标记按钮、实例属性、绑定灯列表连同事件与刷新逻辑一起搬过去，
+    /// 两处不会各自维护一套标记口径；外观改成两张卡片，由 axaml 里的卡片 + markTool 样式负责。</para>
+    /// </summary>
+    /// <param name="panel">交通规则面板。</param>
+    private void MoveTrafficControlsToRulePanel(TrafficRulePanel panel)
+    {
+        var host = panel.MarkerHost;
+        if (TrafficDrawGroup.Parent is Panel oldHost && !ReferenceEquals(oldHost, host))
+        {
+            oldHost.Children.Remove(TrafficDrawGroup);
+        }
+
+        host.Children.Add(TrafficDrawGroup);
+        panel.SetMarkerTarget(Canvas.Selected);
+    }
+
     /// <summary>停止线输入框：支持 “x, y” 文本，失焦或回车提交。</summary>
     private void BindStopLine()
     {
@@ -289,6 +307,7 @@ public partial class MainWindow : Window
     {
         RefreshLightBindList();
         RefreshTrafficMarkButtons();
+        _trafficPanel?.SetMarkerTarget(Canvas.Selected);
     }
 
     /// <summary>同步四个交通标记按钮：未选中禁用，已标记的按钮变成「取消…」。</summary>
@@ -332,6 +351,7 @@ public partial class MainWindow : Window
     {
         button.Content = marked ? $"取消{roleName}" : $"标记{roleName}";
         button.IsEnabled = item is not null;
+        button.Classes.Set("marked", marked);
         ToolTip.SetTip(
             button,
             item is null

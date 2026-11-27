@@ -84,6 +84,9 @@ public sealed partial class MapCanvas : Control
     private AssetLibrary? _assets;
     private PlacedObject? _selected;
     private PlacedObject? _dragged;
+
+    /// <summary>按下时物件左上角的世界坐标；松手时与当前坐标比较得出一次「移动」操作。</summary>
+    private Point _dragOrigin;
     private Vector _dragGrab;
 
     /// <summary>路径绘制开关。必须只由 <see cref="PathDrawing"/> 读写，避免 UI 里再存一份 _pathEditing。</summary>
@@ -228,6 +231,12 @@ public sealed partial class MapCanvas : Control
     /// <summary>迷雾数据变化。</summary>
     public event EventHandler? FogChanged;
 
+    /// <summary>
+    /// 一次拖动在松手时结算。携带物件与「按下坐标 → 松手坐标」，窗口层据此压入撤销栈；
+    /// 拖动过程中的中间坐标不单独上报，避免一次拖动记成几十步。
+    /// </summary>
+    public event EventHandler<ObjectMoveEventArgs>? ObjectMoveCompleted;
+
     #endregion
 
 
@@ -329,6 +338,71 @@ public sealed partial class MapCanvas : Control
         _selected = target;
         InvalidateVisual();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 把视口平移到指定物体并保证可见：保持当前缩放，过小时抬到 0.3，避免从整图视角跳过去只看到一个小点。
+    /// 不改选中状态，调用方需要时自己再调 <see cref="Select"/>。
+    /// </summary>
+    /// <param name="target">目标物体。</param>
+    public void FocusObject(PlacedObject target)
+    {
+        if (target is null || Bounds.Width <= 0 || Bounds.Height <= 0)
+        {
+            return;
+        }
+
+        var center = ClampIntoMap(target.Bounds.Center);
+        _zoom = Math.Clamp(Math.Max(_zoom, 0.3), MapToolDefaults.MinZoom, MapToolDefaults.MaxZoom);
+        _offset = new Vector(
+            Bounds.Width / 2.0 - center.X * _zoom,
+            Bounds.Height / 2.0 - center.Y * _zoom);
+
+        RebuildInverse();
+        InvalidateVisual();
+        ViewChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 把视口平移到世界坐标点，保持当前缩放。
+    /// <para>红绿灯这类规则只存坐标、没有对应地图物件的对象用它定位，不会改变选中状态。</para>
+    /// </summary>
+    /// <param name="x">世界坐标 X。</param>
+    /// <param name="y">世界坐标 Y。</param>
+    public void FocusPoint(double x, double y)
+    {
+        if (Bounds.Width <= 0 || Bounds.Height <= 0)
+        {
+            return;
+        }
+
+        _zoom = Math.Clamp(Math.Max(_zoom, 0.3), MapToolDefaults.MinZoom, MapToolDefaults.MaxZoom);
+        var center = ClampIntoMap(new Point(x, y));
+        _offset = new Vector(
+            Bounds.Width / 2.0 - center.X * _zoom,
+            Bounds.Height / 2.0 - center.Y * _zoom);
+
+        RebuildInverse();
+        InvalidateVisual();
+        ViewChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 把定位中心夹进地图矩形内。载具起点可能在图外（如 x=-462），
+    /// 直接居中会把整张图推到屏幕另一侧、只剩空白，所以定位点一律夹回图内。
+    /// </summary>
+    /// <param name="point">世界坐标点。</param>
+    /// <returns>夹回图内的点。</returns>
+    private Point ClampIntoMap(Point point)
+    {
+        if (_config is null || _config.Width <= 0 || _config.Height <= 0)
+        {
+            return point;
+        }
+
+        return new Point(
+            Math.Clamp(point.X, 0, _config.Width),
+            Math.Clamp(point.Y, 0, _config.Height));
     }
 
     /// <summary>外部修改数据后请求重绘。</summary>

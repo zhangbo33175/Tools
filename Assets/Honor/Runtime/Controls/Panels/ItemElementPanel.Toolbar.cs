@@ -48,7 +48,11 @@ public sealed partial class ItemElementPanel : UserControl
             HorizontalAlignment = HorizontalAlignment.Right,
         };
 
-        buttons.Children.Add(BuildButton(SaveButtonText, SaveButtonWidth, UiTheme.Accent, UiTheme.White, async () => await SaveAsync()));
+        // 主行动（保存）：实心强调色 + 半粗字，与「资源整理 → 保存修改」同一套主按钮语言
+        var save = BuildButton(SaveButtonText, SaveButtonWidth, UiTheme.Accent, UiTheme.White, async () => await SaveAsync());
+        save.FontWeight = FontWeight.SemiBold;
+        save.BorderBrush = UiTheme.Accent;
+        buttons.Children.Add(save);
         buttons.Children.Add(BuildButton(AddButtonText, ActionButtonWidth, null, null, (_, _) => AddTemplate()));
         buttons.Children.Add(BuildButton(ImportButtonText, ActionButtonWidth, null, null, async () => await ImportCsvAsync()));
         buttons.Children.Add(BuildButton(ExportButtonText, ActionButtonWidth, null, null, async () => await ExportCsvAsync()));
@@ -67,9 +71,10 @@ public sealed partial class ItemElementPanel : UserControl
 
         return new Border
         {
-            Background = UiTheme.Form.SubtleSurface,
-            BorderBrush = UiTheme.PanelBorder,
-            BorderThickness = new Thickness(PanelBorderThickness),
+            // 顶栏白底 + 底部细线，与迷雾 / 剧情页的页头统一，灰底会显得脏
+            Background = UiTheme.Card,
+            BorderBrush = UiTheme.Divider,
+            BorderThickness = new Thickness(0, 0, 0, 1),
             Padding = ToolbarPadding,
             Child = grid,
         };

@@ -37,7 +37,24 @@ public partial class MainWindow : Window
         TabScene.Click += (_, _) => SwitchMode(0);
         TabItemElement.Click += (_, _) => SwitchMode(1);
         TabFog.Click += (_, _) => SwitchMode(2);
+        // 交通规则已从顶栏页签下移到场景工具条（排在「添加收集」之后），
+        // 语义从「切页」变成「开/关浮窗」，所以这里做成可再次点击收起的开关。
+        TabTraffic.Click += (_, _) =>
+        {
+            if (TrafficRulePanelHost.IsVisible)
+            {
+                HideTrafficRuleDock();
+            }
+            else
+            {
+                OpenTrafficRuleDock();
+            }
+
+            SwitchMode(0);
+            UpdateActiveTabVisual();
+        };
         TabResource.Click += (_, _) => SwitchMode(3);
+        TabStory.Click += (_, _) => SwitchMode(4);
 
         TabBuilding.Click += (_, _) => SwitchResourceType(MapObjectType.Building);
         TabGround.Click += (_, _) => SwitchResourceType(MapObjectType.Character);
@@ -53,6 +70,9 @@ public partial class MainWindow : Window
             _itemTable = LoadItemElementTable();
             _itemPanel?.SetItemTable(_itemTable);
             _resourcePanel?.SetItemTable(_itemTable);
+            _storyPanel?.SetItemTable(_itemTable);
+            Canvas.ItemTable = _itemTable;
+            Canvas.Refresh();
 
             _pendingTemplate = null;
             Canvas.PendingTemplate = null;
@@ -106,6 +126,27 @@ public partial class MainWindow : Window
         FogPanelHost.Child = _fogPanel;
     }
 
+    /// <summary>
+    /// 挂载交通规则编辑面板：面板放进画布上的悬浮窗容器，可拖动 / 贴边停靠，
+    /// 不再占用主工作区，编辑规则的同时地图与效果始终可见。
+    /// </summary>
+    private void WireTrafficRulePanel()
+    {
+        _trafficPanel = new TrafficRulePanel(SetMessage);
+        _trafficPanel.Attach(_config, Canvas);
+        _trafficPanel.DemoRequested += (_, _) => OpenTrafficDemo();
+        _trafficPanel.PreviewRequested += (_, _) =>
+        {
+            OpenMapPreview();
+            SetMessage("已打开地图预览：『交通仿真』默认开启，规则改动即时生效");
+        };
+        TrafficRuleContent.Child = _trafficPanel;
+
+        // 右栏的交通标记 / 实例属性整体并入面板「物件标记」页，右栏只留物件自身编辑项
+        MoveTrafficControlsToRulePanel(_trafficPanel);
+        WireTrafficRuleDock();
+    }
+
     /// <summary>挂载资源整理面板：扫描未配置 PNG、补字段、写入配置表。</summary>
     private void WireResourcePanel()
     {
@@ -117,9 +158,20 @@ public partial class MainWindow : Window
         {
             _itemPanel?.RefreshAll();
             BuildResourceList();
+            // 补齐 / 新建行后表内容变了，画布上的「未登记」标记要跟着消失
+            Canvas.ItemTable = _resourcePanel.ItemTable;
             Canvas.Refresh();
         };
         ResourcePanelHost.Child = _resourcePanel;
+    }
+
+    /// <summary>挂载剧情编辑面板：剧情文件与地图同名同目录，切页时按地图路径同步。</summary>
+    private void WireStoryPanel()
+    {
+        _storyPanel = new StoryEditorPanel(SetMessage);
+        _storyPanel.SetItemTable(_itemTable);
+        _storyPanel.Attach(_config, Canvas.Assets, _currentMapPath);
+        StoryPanelHost.Child = _storyPanel;
     }
 
     /// <summary>把迷雾文档写回磁盘（与地图 JSON 分离的 sidecar 文件）。</summary>
@@ -214,6 +266,10 @@ public partial class MainWindow : Window
         ItemPanelHost.IsVisible = mode == 1;
         FogPanelHost.IsVisible = mode == 2;
         ResourcePanelHost.IsVisible = mode == 3;
+        StoryPanelHost.IsVisible = mode == 4;
+
+        // 交通规则悬浮窗只在场景编辑里可见：切到其它页签先收起，回到场景再恢复。
+        TrafficRuleOverlay.IsVisible = mode == 0 && TrafficRulePanelHost.IsVisible;
 
         // 路径绘制只在场景模式生效，切走后复位，避免在别的面板误加点
         if (mode != 0)
@@ -233,6 +289,11 @@ public partial class MainWindow : Window
         {
             _resourcePanel?.RefreshAll();
         }
+        else if (mode == 4)
+        {
+            // 剧情跟着地图走：换了地图才重新读文件，同一张地图只同步上下文，避免丢掉未保存改动
+            _storyPanel?.SyncMap(_config, Canvas.Assets, _currentMapPath);
+        }
 
         Canvas.FogDrawing = mode == 2 && _fogPanel?.Drawing == true;
         Canvas.Refresh();
@@ -245,7 +306,9 @@ public partial class MainWindow : Window
         ApplyTabVisual(TabScene, _mode == 0);
         ApplyTabVisual(TabItemElement, _mode == 1);
         ApplyTabVisual(TabFog, _mode == 2);
+        ApplyTabVisual(TabTraffic, TrafficRulePanelHost.IsVisible);
         ApplyTabVisual(TabResource, _mode == 3);
+        ApplyTabVisual(TabStory, _mode == 4);
     }
 
     private void SwitchResourceType(MapObjectType type)

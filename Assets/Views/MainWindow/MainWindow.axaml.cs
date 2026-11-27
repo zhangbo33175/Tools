@@ -88,9 +88,27 @@ public partial class MainWindow : Window
     private SpineAnimationCatalog _spineAnimations = null!;
     private AnimationPreviewWindow? _animationPreviewWindow;
     private MapPreviewWindow? _mapPreviewWindow;
+    private TrafficDemoWindow? _trafficDemoWindow;
     private ItemElementPanel? _itemPanel;
     private FogEditPanel? _fogPanel;
+    private TrafficRulePanel? _trafficPanel;
+
+    /// <summary>交通规则悬浮窗的拖动 / 停靠 / 调宽状态，行为与收集物面板一致。</summary>
+    private CollectibleDockSide _trafficDockSide;
+    private bool _trafficDragging;
+    private bool _trafficDragMoved;
+    private Point _trafficDragOffset;
+    private bool _trafficResizing;
+    private double _trafficResizeStartX;
+    private double _trafficResizeStartWidth;
+    private const double TrafficPanelWidth = 640;
+    private const double TrafficPanelFloatHeight = 720;
+    private const double TrafficPanelMinDockWidth = 520;
+    private const double TrafficPanelMaxDockWidth = 980;
+    private double _trafficPanelDockWidth = TrafficPanelWidth;
+    private static readonly BoxShadows TrafficPanelShadow = BoxShadows.Parse("0 14 36 0 #66000000");
     private ResourceOrganizePanel? _resourcePanel;
+    private StoryEditorPanel? _storyPanel;
     private MapFogDocument _fogDoc = new();
 
     /// <summary>属性面板「编辑」勾选：控制右栏「物体编辑」分组是否显示。</summary>
@@ -199,6 +217,8 @@ public partial class MainWindow : Window
         }
 
         Canvas.Assets = _assets;
+        // 画布按配置表把「未登记资源」框出来：先挂表，后续刷新 / 补齐时同步
+        Canvas.ItemTable = _itemTable;
 
         Canvas.Config = _config;
         Canvas.Fog = _fogDoc;
@@ -222,9 +242,12 @@ public partial class MainWindow : Window
         WireAreaAndTransform();
         UpdateObjectEditVisibility();
         WireCanvas();
+        WireUndo();
         WireItemElementPanel();
         WireFogPanel();
+        WireTrafficRulePanel();
         WireResourcePanel();
+        WireStoryPanel();
 
         RefreshSceneFields();
         RefreshStatus();
@@ -232,11 +255,15 @@ public partial class MainWindow : Window
 
         // --open-map <路径>：直接打开某张地图（可用于对照 Unity 工程里的真实数据）
         var args = Environment.GetCommandLineArgs();
+        TraceStartup($"ctor args({args.Length}): {string.Join(" | ", args)}");
         for (var i = 0; i + 1 < args.Length; i++)
         {
             if (args[i] == "--open-map")
             {
-                LoadMapFile(Path.GetFullPath(args[i + 1]));
+                var target = Path.GetFullPath(args[i + 1]);
+                TraceStartup($"--open-map -> {target}");
+                LoadMapFile(target);
+                TraceStartup($"--open-map done, objects={_config.Objects.Count}, lights={_config.TrafficLights.Count}, path={_currentMapPath}");
                 break;
             }
 
@@ -275,6 +302,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (HandleUndoShortcut(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         Action? action = e.Key switch
         {
             Key.F1 => ToggleSelectedSidewalkMark,
@@ -298,6 +331,35 @@ public partial class MainWindow : Window
 
 
     #region 辅助
+
+    /// <summary>
+    /// 启动期诊断日志：只在设置环境变量 <c>MAPEDITOR_TRACE_STARTUP</c> 时写
+    /// <c>%TEMP%\MapEditorTool_startup.log</c>，用于排查「--open-map 打开了别的地图」这类只在启动阶段出现的问题。
+    /// 分布式的面板/文件域也会调用它，所以做成静态方法，避免多次实例状态耦合。
+    /// </summary>
+    /// <param name="message">一行诊断信息（调用方自带上下文）。</param>
+    /// <summary>启动期诊断日志开关：只有设置了 <c>MAPEDITOR_TRACE_STARTUP</c> 才为 true，便于在高频绘制处先判断再拼字符串。</summary>
+    internal static bool TraceStartupEnabled { get; } =
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MAPEDITOR_TRACE_STARTUP"));
+
+    internal static void TraceStartup(string message)
+    {
+        if (!TraceStartupEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            var logPath = Path.Combine(Path.GetTempPath(), "MapEditorTool_startup.log");
+            File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} [{Environment.ProcessId}] {message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // 诊断日志不能影响主流程
+        }
+    }
+
 
     private void SetMessage(string message) => WriteMessage(message, error: false);
 

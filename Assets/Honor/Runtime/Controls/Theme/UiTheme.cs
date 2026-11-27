@@ -254,11 +254,11 @@ public static class UiTheme
         /// <summary>表头与表格外框线。</summary>
         public static readonly IBrush Line = Rgb(0x5B, 0x78, 0x85);
 
-        /// <summary>标题行底色。</summary>
-        public static readonly IBrush TitleRow = Rgb(0xCF, 0xEA, 0xF6);
+        /// <summary>标题行底色（浅青，替代原来的蓝绿拼色表头）。</summary>
+        public static readonly IBrush TitleRow = Rgb(0xE4, 0xF4, 0xFA);
 
-        /// <summary>注释行底色。</summary>
-        public static readonly IBrush CommentRow = Rgb(0xBF, 0xE6, 0xD6);
+        /// <summary>注释行底色（比标题行更浅，保持整片表头同色系）。</summary>
+        public static readonly IBrush CommentRow = Rgb(0xF4, 0xFA, 0xFD);
 
         /// <summary>名称列文字。</summary>
         public static readonly IBrush NameText = Rgb(0x17, 0x32, 0x3D);
@@ -268,6 +268,12 @@ public static class UiTheme
 
         /// <summary>只读单元格文字（序号等不可编辑列）。</summary>
         public static readonly IBrush ReadOnlyText = Rgb(0x55, 0x73, 0x80);
+
+        /// <summary>数据行斑马纹底色（偶数行留白）；太浅等于没有，长表滚动时需要能一眼分行。</summary>
+        public static readonly IBrush RowAlt = Rgb(0xEF, 0xF7, 0xFB);
+
+        /// <summary>数据行鼠标悬停底色，比斑马纹再深一档，用于整行高亮。</summary>
+        public static readonly IBrush HoverRow = Rgb(0xDF, 0xF1, 0xFA);
 
         /// <summary>行内编辑按钮底色。</summary>
         public static readonly IBrush EditSurface = Rgb(0xE1, 0xF4, 0xFA);
@@ -477,11 +483,11 @@ public static class UiTheme
 
     #region 列表行色
 
-    /// <summary>列表行常态底色。</summary>
-    public static readonly IBrush RowBack = Rgb(0xE3, 0xE3, 0xE3);
+    /// <summary>列表行常态底色：接近纯白，靠 1px 青灰描边分行，不再用中性灰。</summary>
+    public static readonly IBrush RowBack = Rgb(0xFB, 0xFD, 0xFE);
 
-    /// <summary>列表行常态描边。</summary>
-    public static readonly IBrush RowBorder = Rgb(0xAD, 0xAD, 0xAD);
+    /// <summary>列表行常态描边：与卡片描边同源的青灰。</summary>
+    public static readonly IBrush RowBorder = Rgb(0xDF, 0xEF, 0xF5);
 
     /// <summary>列表行悬停底色。</summary>
     public static readonly IBrush RowHoverBack = Rgb(0xE7, 0xF3, 0xF8);
@@ -631,8 +637,147 @@ public static class UiTheme
         /// <summary>未激活标签底。</summary>
         public static readonly IBrush IdleTab = Rgb(0xE4, 0xE4, 0xE4);
 
+        /// <summary>激活标签底（浅青，卡片内分段页签与路径 / 动画页签共用）。</summary>
+        public static readonly IBrush ActiveTabSurface = Rgb(0xDD, 0xF2, 0xF9);
+
         /// <summary>未选中筛选按钮底。</summary>
         public static readonly IBrush FilterIdle = Rgb(0xE3, 0xE3, 0xE3);
+    }
+
+    #endregion
+
+    #region 交通规则面板色
+
+    /// <summary>
+    /// 交通规则面板的语义色：相位色、绑定状态徽标、统计胶囊与自检徽标。
+    /// 面板列表的相位条与表单的时序条共用这里的红 / 绿 / 黄，避免两处色值漂移。
+    /// </summary>
+    public static class Traffic
+    {
+        /// <summary>红灯相位。</summary>
+        public static readonly IBrush PhaseRed = Rgb(0xE5, 0x48, 0x4D);
+
+        /// <summary>绿灯相位。</summary>
+        public static readonly IBrush PhaseGreen = Rgb(0x43, 0xA0, 0x47);
+
+        /// <summary>黄灯相位。</summary>
+        public static readonly IBrush PhaseYellow = Rgb(0xF6, 0xC4, 0x45);
+
+        /// <summary>黄灯相位上的文字色（浅底上保证对比度）。</summary>
+        public static readonly IBrush PhaseYellowText = Rgb(0x5A, 0x43, 0x00);
+
+        /// <summary>已绑定的绿色文字。</summary>
+        public static readonly IBrush BoundText = Rgb(0x1B, 0x7F, 0x5F);
+
+        /// <summary>已绑定的绿色浅底。</summary>
+        public static readonly IBrush BoundSurface = Rgb(0xE3, 0xF7, 0xF2);
+
+        /// <summary>未绑定的琥珀文字。</summary>
+        public static readonly IBrush UnboundText = Rgb(0xA9, 0x78, 0x31);
+
+        /// <summary>未绑定的琥珀浅底。</summary>
+        public static readonly IBrush UnboundSurface = Rgb(0xFF, 0xF4, 0xE2);
+
+        /// <summary>统计胶囊底色。</summary>
+        public static readonly IBrush StatPillSurface = Rgb(0xEE, 0xF7, 0xFB);
+
+        /// <summary>统计胶囊描边。</summary>
+        public static readonly IBrush StatPillBorder = Rgb(0xD2, 0xE6, 0xF0);
+
+        /// <summary>统计胶囊里的数值文字。</summary>
+        public static readonly IBrush StatValueText = Rgb(0x07, 0x5E, 0x7C);
+
+        /// <summary>列表行相位条的衬底（无相位时显示）。</summary>
+        public static readonly IBrush PhaseStripTrack = Rgb(0xE9, 0xF2, 0xF6);
+
+        /// <summary>规则齐全徽标文字。</summary>
+        public static readonly IBrush ReadyText = Rgb(0x14, 0x7A, 0x69);
+
+        /// <summary>规则齐全徽标底色。</summary>
+        public static readonly IBrush ReadySurface = Rgb(0xE1, 0xF6, 0xF0);
+
+        /// <summary>待补徽标文字。</summary>
+        public static readonly IBrush GapText = Rgb(0xA9, 0x78, 0x31);
+
+        /// <summary>待补徽标底色。</summary>
+        public static readonly IBrush GapSurface = Rgb(0xFF, 0xF1, 0xDC);
+    }
+
+    #endregion
+
+    #region 剧情编辑色
+
+    /// <summary>
+    /// 剧情编辑面板与剧情预览窗的语义色：节点类型色点、舞台、对话框与选项。
+    /// 底色沿用低饱和青蓝，只有节点类型用低饱和的点色区分，避免整屏跳色。
+    /// </summary>
+    public static class Story
+    {
+        /// <summary>对白节点色点（青蓝）。</summary>
+        public static readonly IBrush KindLine = Rgb(0x2B, 0x8C, 0xB4);
+
+        /// <summary>旁白节点色点（灰蓝）。</summary>
+        public static readonly IBrush KindNarration = Rgb(0x8D, 0xA9, 0xB6);
+
+        /// <summary>选项节点色点（青绿）。</summary>
+        public static readonly IBrush KindChoice = Rgb(0x2E, 0x9E, 0x86);
+
+        /// <summary>章节标题色点（琥珀）。</summary>
+        public static readonly IBrush KindChapter = Rgb(0xC2, 0x92, 0x3C);
+
+        /// <summary>结束节点色点（砖红）。</summary>
+        public static readonly IBrush KindEnd = Rgb(0xB5, 0x6A, 0x5E);
+
+        /// <summary>节点列表选中行底。</summary>
+        public static readonly IBrush NodeSelectedSurface = Rgb(0xDD, 0xF2, 0xF9);
+
+        /// <summary>节点列表选中行描边。</summary>
+        public static readonly IBrush NodeSelectedBorder = Rgb(0x70, 0xB4, 0xDA);
+
+        /// <summary>起始节点徽标文字。</summary>
+        public static readonly IBrush StartText = Rgb(0x14, 0x7A, 0x69);
+
+        /// <summary>起始节点徽标底。</summary>
+        public static readonly IBrush StartSurface = Rgb(0xE1, 0xF6, 0xF0);
+
+        /// <summary>预览舞台渐变顶色（深青）。</summary>
+        public static readonly Color StageTop = Color.FromRgb(0x10, 0x3B, 0x4A);
+
+        /// <summary>预览舞台渐变底色（近黑青）。</summary>
+        public static readonly Color StageBottom = Color.FromRgb(0x07, 0x1C, 0x26);
+
+        /// <summary>舞台地面光带。</summary>
+        public static readonly IBrush StageFloor = Argb(0x22, 0x9F, 0xE0, 0xD8);
+
+        /// <summary>预览对话框底。</summary>
+        public static readonly IBrush DialogSurface = Argb(0xF2, 0x0C, 0x24, 0x2E);
+
+        /// <summary>预览对话框描边。</summary>
+        public static readonly IBrush DialogBorder = Argb(0x99, 0x6E, 0xBB, 0xCB);
+
+        /// <summary>预览对话框说话人文字。</summary>
+        public static readonly IBrush SpeakerText = Rgb(0x8F, 0xE0, 0xE8);
+
+        /// <summary>预览对话框正文。</summary>
+        public static readonly IBrush DialogText = Rgb(0xEA, 0xF6, 0xFA);
+
+        /// <summary>选项按钮底。</summary>
+        public static readonly IBrush ChoiceSurface = Argb(0xE6, 0x14, 0x4C, 0x5C);
+
+        /// <summary>选项按钮悬停底。</summary>
+        public static readonly IBrush ChoiceHover = Argb(0xF2, 0x1B, 0x5F, 0x73);
+
+        /// <summary>选项按钮描边。</summary>
+        public static readonly IBrush ChoiceBorder = Argb(0xCC, 0x9F, 0xDD, 0xE6);
+
+        /// <summary>选项按钮文字。</summary>
+        public static readonly IBrush ChoiceText = Rgb(0xF2, 0xFB, 0xFE);
+
+        /// <summary>预览里的进度文字。</summary>
+        public static readonly IBrush ProgressText = Argb(0xCC, 0xC5, 0xDD, 0xE8);
+
+        /// <summary>演出字段所在的浅底条。</summary>
+        public static readonly IBrush EffectStrip = Rgb(0xF4, 0xFA, 0xFD);
     }
 
     #endregion
@@ -642,8 +787,8 @@ public static class UiTheme
     /// <summary>主地图画布的语义色：底色、图层、编辑提示、碰撞/阴影占位、路径与红绿灯。</summary>
     public static class MapView
     {
-        /// <summary>画布外底色（视口空白处），延续状态栏深蓝。</summary>
-        public static readonly IBrush Backdrop = Rgb(0x00, 0x4A, 0x70);
+        /// <summary>画布外底色（视口空白处）：低饱和深青，与预览舞台同族，不再用高饱和亮蓝抢画面。</summary>
+        public static readonly IBrush Backdrop = Rgb(0x10, 0x3C, 0x4C);
 
         /// <summary>地图有效区域底色，与全局主强调色同源。</summary>
         public static readonly IBrush Surface = Rgb(0x0D, 0x8C, 0xB6);
@@ -696,6 +841,18 @@ public static class UiTheme
         /// <summary>未旋转图元的占格足迹描边。</summary>
         public static readonly IBrush Footprint = Argb(0x40, 0xFF, 0xFF, 0xFF);
 
+        /// <summary>未登记配置表的资源标记描边（低饱和砖红，与碰撞红区分），画布上给缺失资源画框。</summary>
+        public static readonly IBrush ResourceMissingStroke = Rgb(0xC2, 0x4A, 0x3A);
+
+        /// <summary>未登记资源标记的淡填充：只压一层薄色，不盖住美术本来的样子。</summary>
+        public static readonly IBrush ResourceMissingFill = Argb(0x1E, 0xC2, 0x4A, 0x3A);
+
+        /// <summary>未登记资源标签底板。</summary>
+        public static readonly IBrush ResourceMissingPlate = Argb(0xE6, 0x7A, 0x25, 0x1C);
+
+        /// <summary>未登记资源标签文字。</summary>
+        public static readonly IBrush ResourceMissingLabel = Rgb(0xFF, 0xEE, 0xE8);
+
         /// <summary>路径轨迹主色。</summary>
         public static readonly IBrush Path = Rgb(0xBF, 0xF0, 0x6B);
 
@@ -723,8 +880,8 @@ public static class UiTheme
         /// <summary>道路中心线。</summary>
         public static readonly IBrush Road = Argb(0xD8, 0xDC, 0xE6, 0xF2);
 
-        /// <summary>斑马线填充。</summary>
-        public static readonly IBrush Crosswalk = Argb(0xCC, 0xF7, 0xF7, 0xF7);
+        /// <summary>斑马线填充。蓝底地图上 0xCC 会泛蓝，用到 0xE6 保证条纹在深色道路上也够白。</summary>
+        public static readonly IBrush Crosswalk = Argb(0xE6, 0xFB, 0xFB, 0xFB);
 
         /// <summary>斑马线边线。</summary>
         public static readonly IBrush CrosswalkEdge = Argb(0xEE, 0xFF, 0xD2, 0x4A);

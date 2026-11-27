@@ -176,6 +176,41 @@ public static class UiFactory
         Child = child,
     };
 
+    /// <summary>
+    /// 创建栏标题：3px 青色竖条 + 加粗标题。
+    /// 物品元件、迷雾、资源整理、剧情四页的栏标题与小节标题共用这一套语汇。
+    /// </summary>
+    /// <param name="text">标题文案。</param>
+    /// <param name="fontSize">标题字号；默认 12。</param>
+    /// <param name="margin">标题外边距。</param>
+    /// <returns>水平排列的标题行。</returns>
+    public static Control SectionHead(string text, double fontSize = 12, Thickness? margin = null) => new StackPanel
+    {
+        Orientation = Orientation.Horizontal,
+        VerticalAlignment = VerticalAlignment.Center,
+        Margin = margin ?? default,
+        Children =
+        {
+            new Border
+            {
+                Width = 3,
+                Height = 12,
+                CornerRadius = new CornerRadius(2),
+                Background = UiTheme.Accent,
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            },
+            new TextBlock
+            {
+                Text = text,
+                Foreground = UiTheme.AccentDark,
+                FontWeight = FontWeight.Bold,
+                FontSize = fontSize,
+                VerticalAlignment = VerticalAlignment.Center,
+            },
+        },
+    };
+
     #endregion
 
     #region 标记

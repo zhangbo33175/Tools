@@ -61,6 +61,7 @@ public partial class MainWindow : Window
             PropTraffic.IsChecked = true;
             PropBandInfo.Text = string.Empty;
             PropBandInfoBox.IsVisible = false;
+            PropSceneIndexBadge.IsVisible = false;
             SetPropertyPanelEnabled(false);
             _suppressSync = false;
             RefreshTrafficUi();
@@ -70,8 +71,11 @@ public partial class MainWindow : Window
         SetPropertyPanelEnabled(true);
 
         ObjEditTitle.Text = $"对象编辑：{item.Name}";
-        PropTemplateId.Text = ResolveNumericId(item, out var idFromConfig);
-        ApplyIdSourceBadge(idFromConfig, PropTemplateId.Text);
+        // ID 框放物件自己的 8 位数字 ID（全图唯一、可对外引用）；配置表数字 ID 收进右侧徽标
+        var numericId = ResolveNumericId(item, out var idFromConfig);
+        PropTemplateId.Text = item.Id;
+        ApplyIdSourceBadge(idFromConfig, numericId);
+        ApplySceneIndexBadge(item);
         PropTag.Text = ResolveLayerTag(item);
         ApplyLayerTagColor(item);
         PropCellX.Text = item.CellX.ToString(CultureInfo.InvariantCulture);
@@ -160,23 +164,45 @@ public partial class MainWindow : Window
         return sliceIndex >= 0 ? sliceIndex.ToString(CultureInfo.InvariantCulture) : "—";
     }
 
-    /// <summary>ID 右侧来源角标：配置表命中显示「配置」，PSD 回退显示「切片」，两者都没有显示「无」。</summary>
+    /// <summary>ID 右侧来源角标：显示配置表数字 ID；PSD 回退时显示切片序号，两者都没有显示「无」。</summary>
     /// <param name="fromConfig">是否来自配置表。</param>
-    /// <param name="idText">当前显示的数字 ID。</param>
-    private void ApplyIdSourceBadge(bool fromConfig, string idText)
+    /// <param name="numericId">配置表行 ID 或切片序号。</param>
+    private void ApplyIdSourceBadge(bool fromConfig, string numericId)
     {
-        var missing = string.IsNullOrWhiteSpace(idText) || idText == "—";
+        var missing = string.IsNullOrWhiteSpace(numericId) || numericId == "—";
         PropIdSourceBadge.IsVisible = true;
-        PropIdSourceText.Text = missing ? "无" : fromConfig ? "配置" : "切片";
+        PropIdSourceText.Text = missing ? "无" : numericId;
         var style = UiTheme.IdSource.For(missing, fromConfig);
         PropIdSourceText.Foreground = style.Text;
         PropIdSourceBadge.Background = style.Surface;
         PropIdSourceBadge.BorderBrush = style.Border;
         ToolTip.SetTip(PropIdSourceBadge, missing
-            ? "配置表与 PSD 切片清单都没有命中"
+            ? "配置表与 PSD 切片清单都没有命中，这个物件没有配置数字 ID"
             : fromConfig
-                ? "数字 ID 来自物件配置表"
-                : "配置表无此行，数字 ID 回退到 PSD 切片序号");
+                ? $"配置表数字 ID {numericId}：表示这是哪一种物件，同一种摆多处时共用一个"
+                : $"配置表无此行，{numericId} 是 PSD 切片序号");
+    }
+
+    /// <summary>同模板摆多个时补一个位次徽标：数字 ID 只到「哪一种」，<c>#07</c> 指「第几个」。</summary>
+    /// <param name="item">当前选中实例。</param>
+    private void ApplySceneIndexBadge(PlacedObject item)
+    {
+        var slot = SceneObjectIndex.Locate(_config.Objects, item, SceneKeyOf);
+        PropSceneIndexBadge.IsVisible = slot.HasPeers;
+        PropSceneIndexText.Text = slot.HasPeers ? $"#{slot.Index:00}" : string.Empty;
+        if (slot.HasPeers)
+        {
+            ToolTip.SetTip(PropSceneIndexBadge, $"同一种物件共 {slot.Total} 个，这是第 {slot.Index} 个（按实例 ID 排序）");
+        }
+    }
+
+    /// <summary>位次分组键：数字 ID 优先，拿不到数字 ID 时退回类型 + 模板 ID。</summary>
+    /// <param name="item">物件实例。</param>
+    /// <returns>分组键。</returns>
+    private string SceneKeyOf(PlacedObject item)
+    {
+        var numeric = ResolveNumericId(item, out _);
+        return numeric.Length == 0 || numeric == "—" ? SceneObjectIndex.KeyOf(item) : numeric;
     }
 
     /// <summary>按图片路径 + 左上角在当前关卡的 slices.json 里找切片序号。</summary>
@@ -348,6 +374,8 @@ public partial class MainWindow : Window
         if (item is null)
         {
             PropBandInfo.Text = string.Empty;
+            PropBandOrderInfo.Text = string.Empty;
+            PropBandLayerInfo.Text = string.Empty;
             PropBandInfoBox.IsVisible = false;
             return;
         }
@@ -369,9 +397,9 @@ public partial class MainWindow : Window
         };
         var layer = LayerOrder.EffectiveLayer(item);
 
-        PropBandInfo.Text = $"{LayerBands.DisplayName(band)}（{source}）· {placement}\n"
-            + $"层序兜底 sortOrder {item.SortOrder}（层基线 {orderBase} · 第 {slot} 档）\n"
-            + $"图层 {layer} · 显示层 {MapLayerKeys.DisplayName(layer)} · PSD 层 {item.Name} · {item.Width}×{item.Height} 格";
+        PropBandInfo.Text = $"{LayerBands.DisplayName(band)}（{source}）· {placement}";
+        PropBandOrderInfo.Text = $"层序兜底 sortOrder {item.SortOrder}（层基线 {orderBase} · 第 {slot} 档）";
+        PropBandLayerInfo.Text = $"图层 {layer} · 显示层 {MapLayerKeys.DisplayName(layer)} · PSD 层 {item.Name} · {item.Width}×{item.Height} 格";
         PropBandInfoBox.IsVisible = true;
     }
 
@@ -429,27 +457,19 @@ public partial class MainWindow : Window
         var item = Canvas.Selected;
         if (item is null)
         {
-            PathPointList.Children.Add(new TextBlock
-            {
-                Text = "选中任意已放置物件后可编辑移动路径。",
-                Foreground = UiTheme.TextSecondary,
-                Margin = new Avalonia.Thickness(2, 4),
-            });
+            ShowPathEmpty("选中任意已放置物件后可编辑移动路径。");
             return;
         }
 
         if (item.PathPoints.Count == 0)
         {
-            PathPointList.Children.Add(new TextBlock
-            {
-                Text = Canvas.PathDrawing
-                    ? "暂无路径点：左键点地面即可加点；点到其他物件会忽略，不会切换选中。"
-                    : "暂无路径点，点击「开始绘制路径」后在画布上逐点绘制。",
-                Foreground = UiTheme.TextSecondary,
-                Margin = new Avalonia.Thickness(2, 4),
-            });
+            ShowPathEmpty(Canvas.PathDrawing
+                ? "正在绘制：左键点地面即可加点；点到其他物件会忽略，不会切换选中。"
+                : "暂无路径点，点「开始绘制路径」后在画布上逐点绘制。");
             return;
         }
+
+        PathEmptyHint.IsVisible = false;
 
         for (int index = 0; index < item.PathPoints.Count; index++)
         {
@@ -506,6 +526,14 @@ public partial class MainWindow : Window
 
             PathPointList.Children.Add(row);
         }
+    }
+
+    /// <summary>路径列表为空时显示居中的空态文案；动画页签激活时保持隐藏。</summary>
+    /// <param name="text">空态文案。</param>
+    private void ShowPathEmpty(string text)
+    {
+        PathEmptyHint.Text = text;
+        PathEmptyHint.IsVisible = PathScroll.IsVisible;
     }
 
     private void RefreshSceneFields()
@@ -594,6 +622,9 @@ public partial class MainWindow : Window
         _itemTable = LoadItemElementTable();
         _resourcePanel?.SetItemTable(_itemTable);
         _itemPanel?.SetItemTable(_itemTable);
+        _storyPanel?.SetItemTable(_itemTable);
+        Canvas.ItemTable = _itemTable;
+        Canvas.Refresh();
         _pendingTemplate = null;
         Canvas.PendingTemplate = null;
         BuildResourceList();

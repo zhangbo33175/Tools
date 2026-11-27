@@ -318,6 +318,21 @@ Unity 的「配置」按钮弹出 `MapConfigWindow`（uxml 3–46 行）。独�
 导出侧 `trafficLights` / `crosswalks` 已从空数组改为真实序列化（`TrafficLightPayload` / `CrosswalkPayload`），
 字段名与 Unity 一致；实例对象新增 `isVehicle / trafficRole / stopLineX / stopLineY / boundLightIds / yellowTreatAsRed`。
 
+#### 编辑器内仿真口径（与游戏 TrafficManager 对齐）
+
+地图预览窗勾选「交通仿真」后，`TrafficSimulation` 直接消费当前地图数据推进角色，不写回任何字段：
+
+- **相位**：`t = (已过时间 + OffsetPhase) % 周期`，顺序红 → 绿 → 黄，与 `TrafficManager:GetLightPhase` 完全同口径；
+  `InitialPhase` 只在周期为 0 时兜底。所以填了「初始相位 = 绿」但偏移为 0 的灯，预览开头仍然是红，和游戏一致。
+- **载具停点**：红灯 / 黄灯（`yellowTreatAsRed` 默认开）停在横道外沿，停点会把横道半厚、`VehicleStopGap` 和**车身半长**一起回退，
+  让车头对齐停止线而不是车中心压进斑马线。
+- **排队**：同路径指纹（点序列一致）、同向循环的载具按里程排序，后车与前车不足「两倍车身半长 + 6px」时回退到跟车间距；
+  多辆车依次拉开，不会在停止线叠成一辆。
+- **行人**：绑定灯全绿才离开路缘，否则停在横道端点外 `PedestrianStopGap`。
+- **动画**：仿真接管位置后，`IsPreviewPathMoving` 以角色真实速度为准；等灯 / 排队时速度为 0，播待机而不是原地踏步。
+- **可视对照**：预览交通开启时补画斑马线（编辑态仍由交通标记层负责），并画三灯位信号机、载具停止线、等灯胶囊；
+  预览窗底栏用浅底相位胶囊显示「灯名 + 当前相位 + 倒计时」和等待车 / 人数，方便和游戏录像逐帧比对。
+
 ### 物体编辑
 
 右栏（红框列）末段新增「物体编辑」组，跟着选中实例走：**未选中时整组禁用**（灰底、显示上次值），**选中后回填**该实例的旋转 / 大小 /

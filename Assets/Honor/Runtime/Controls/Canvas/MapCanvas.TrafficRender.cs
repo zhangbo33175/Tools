@@ -149,63 +149,29 @@ public sealed partial class MapCanvas : Control
                 continue;
             }
 
-            var a = new Point(crosswalk.PointA.X, crosswalk.PointA.Y);
-            var b = new Point(crosswalk.PointB.X, crosswalk.PointB.Y);
-
-            // 横道主体：按横穿方向铺斑马条纹（条纹垂直于行走方向）
-            var stripeWidth = crosswalk.Width > 0 ? crosswalk.Width : MapToolDefaults.GridSize;
-
-            if (crosswalk.Direction == TrafficDirections.Vertical)
-            {
-                var top = Math.Min(a.Y, b.Y);
-                var bottom = Math.Max(a.Y, b.Y);
-                var centerX = (a.X + b.X) / 2.0;
-
-                for (var y = top; y < bottom; y += cell * 2)
-                {
-                    context.FillRectangle(
-                        stripeBrush,
-                        new Rect(centerX - stripeWidth / 2.0, y, stripeWidth, Math.Min(cell, bottom - y)));
-                }
-            }
-            else
-            {
-                var left = Math.Min(a.X, b.X);
-                var right = Math.Max(a.X, b.X);
-                var centerY = (a.Y + b.Y) / 2.0;
-
-                for (var x = left; x < right; x += cell * 2)
-                {
-                    context.FillRectangle(
-                        stripeBrush,
-                        new Rect(x, centerY - stripeWidth / 2.0, Math.Min(cell, right - x), stripeWidth));
-                }
-            }
-
-            context.DrawLine(crosswalkPen, a, b);
+            DrawCrosswalkStripes(context, crosswalk, cell, stripeBrush, crosswalkPen);
         }
 
         foreach (var light in config.TrafficLights)
         {
-            // 灯体已经是地图上的普通物件时，由物件贴图负责显示，不再叠画三色假灯
-            if (objectIds.Contains(light.Id))
-            {
-                continue;
-            }
-
             var center = new Point(light.PosX, light.PosY);
             var radius = Math.Max(cell / 3.0, 6.0 * Hairline);
 
-            context.FillRectangle(
-                UiTheme.MapView.TrafficBody,
-                new Rect(center.X - radius, center.Y - radius * 2.4, radius * 2, radius * 4.8));
+            // 灯体已经是地图上的普通物件时，由物件贴图负责显示，不再叠画三色假灯；
+            // 但绑定引导线与时序文字仍要画，否则规则在画布上不可见
+            if (!objectIds.Contains(light.Id))
+            {
+                context.FillRectangle(
+                    UiTheme.MapView.TrafficBody,
+                    new Rect(center.X - radius, center.Y - radius * 2.4, radius * 2, radius * 4.8));
 
-            context.FillRectangle(UiTheme.MapView.TrafficRed,
-                new Rect(center.X - radius * 0.7, center.Y - radius * 2.0, radius * 1.4, radius * 1.2));
-            context.FillRectangle(UiTheme.MapView.TrafficYellow,
-                new Rect(center.X - radius * 0.7, center.Y - radius * 0.6, radius * 1.4, radius * 1.2));
-            context.FillRectangle(UiTheme.MapView.TrafficGreen,
-                new Rect(center.X - radius * 0.7, center.Y + radius * 0.8, radius * 1.4, radius * 1.2));
+                context.FillRectangle(UiTheme.MapView.TrafficRed,
+                    new Rect(center.X - radius * 0.7, center.Y - radius * 2.0, radius * 1.4, radius * 1.2));
+                context.FillRectangle(UiTheme.MapView.TrafficYellow,
+                    new Rect(center.X - radius * 0.7, center.Y - radius * 0.6, radius * 1.4, radius * 1.2));
+                context.FillRectangle(UiTheme.MapView.TrafficGreen,
+                    new Rect(center.X - radius * 0.7, center.Y + radius * 0.8, radius * 1.4, radius * 1.2));
+            }
 
             if (light.BoundCrosswalkId.Length > 0)
             {
@@ -214,6 +180,17 @@ public sealed partial class MapCanvas : Control
                     center,
                     FindCrosswalkCenter(config, light.BoundCrosswalkId));
             }
+
+            // 时序标牌：缩得太小会糊成一片，只在能看清的倍率下画
+            if (_zoom < 0.35)
+            {
+                continue;
+            }
+
+            var name = string.IsNullOrWhiteSpace(light.Name) ? light.Id : light.Name;
+            var timing = $"{name} 红{light.RedDuration:0.#}/绿{light.GreenDuration:0.#}/黄{light.YellowDuration:0.#}";
+            var label = CanvasText.Create(timing, 10.0 * Hairline, UiTheme.MapView.TrafficGuide);
+            context.DrawText(label, new Point(center.X - label.Width / Hairline * 0.5, center.Y - radius * 3.2 - label.Height / Hairline));
         }
 
         // 选中实例的停止线
@@ -224,6 +201,79 @@ public sealed partial class MapCanvas : Control
             context.DrawLine(stopPen, new Point(stop.X - cell, stop.Y), new Point(stop.X + cell, stop.Y));
             context.DrawLine(stopPen, stop, new Point(stop.X, stop.Y - cell));
         }
+    }
+
+    /// <summary>
+    /// 预览交通仿真时只画斑马线本身（不画灯体、引导线、停止线等编辑标记），
+    /// 让预览窗和游戏画面一样能看清「车停在横道哪一侧」。
+    /// </summary>
+    private void DrawPreviewCrosswalks(DrawingContext context, MapConfigData config)
+    {
+        if (config.Crosswalks.Count == 0)
+        {
+            return;
+        }
+
+        var cell = (double)config.GridSize;
+        var stripeBrush = UiTheme.MapView.Crosswalk;
+        var edgePen = new Pen(UiTheme.MapView.CrosswalkEdge, 1.2 * Hairline);
+        var objectIds = config.Objects
+            .Select(instance => instance.Id)
+            .Where(id => id.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var crosswalk in config.Crosswalks)
+        {
+            if (!objectIds.Contains(crosswalk.Id))
+            {
+                DrawCrosswalkStripes(context, crosswalk, cell, stripeBrush, edgePen);
+            }
+        }
+    }
+
+    /// <summary>按横穿方向铺斑马条纹，条纹垂直于行走方向；编辑态与预览态共用。</summary>
+    private static void DrawCrosswalkStripes(
+        DrawingContext context,
+        MapCrosswalkData crosswalk,
+        double cell,
+        IBrush stripeBrush,
+        Pen edgePen)
+    {
+        var a = new Point(crosswalk.PointA.X, crosswalk.PointA.Y);
+        var b = new Point(crosswalk.PointB.X, crosswalk.PointB.Y);
+        var stripeWidth = crosswalk.Width > 0 ? crosswalk.Width : MapToolDefaults.GridSize;
+
+        // 条纹占格子 55%，间距 45%，接近真实斑马线的密度；太稀会在缩小时只剩两三条
+        var stripeLength = cell * 0.55;
+
+        if (crosswalk.Direction == TrafficDirections.Vertical)
+        {
+            var top = Math.Min(a.Y, b.Y);
+            var bottom = Math.Max(a.Y, b.Y);
+            var centerX = (a.X + b.X) / 2.0;
+
+            for (var y = top; y < bottom; y += cell)
+            {
+                context.FillRectangle(
+                    stripeBrush,
+                    new Rect(centerX - stripeWidth / 2.0, y, stripeWidth, Math.Min(stripeLength, bottom - y)));
+            }
+        }
+        else
+        {
+            var left = Math.Min(a.X, b.X);
+            var right = Math.Max(a.X, b.X);
+            var centerY = (a.Y + b.Y) / 2.0;
+
+            for (var x = left; x < right; x += cell)
+            {
+                context.FillRectangle(
+                    stripeBrush,
+                    new Rect(x, centerY - stripeWidth / 2.0, Math.Min(stripeLength, right - x), stripeWidth));
+            }
+        }
+
+        context.DrawLine(edgePen, a, b);
     }
 
     private static Point FindCrosswalkCenter(MapConfigData config, string crosswalkId)

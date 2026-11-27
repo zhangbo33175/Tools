@@ -55,6 +55,7 @@ public sealed partial class ItemConfigSet
     #region 字段
 
     private readonly Dictionary<string, ItemElementRow> _index = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ItemElementRow> _idIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<ItemElementRow, ItemTableFile> _owner = new();
 
     #endregion

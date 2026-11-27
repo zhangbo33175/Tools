@@ -24,6 +24,9 @@ public sealed class MapPublishSettings
     /// <summary>Unity 目标输出目录。</summary>
     public string UnityOutputDirectory { get; set; } = string.Empty;
 
+    /// <summary>Unity Lua 目标输出目录。</summary>
+    public string UnityLuaOutputDirectory { get; set; } = string.Empty;
+
     /// <summary>Cocos 目标输出目录。</summary>
     public string CocosOutputDirectory { get; set; } = string.Empty;
 
@@ -35,6 +38,12 @@ public sealed class MapPublishSettings
 
     /// <summary>Cocos 是否更新章节索引。</summary>
     public bool UpdateCocosIndex { get; set; } = true;
+
+    /// <summary>Unity Lua 发布前是否备份同名表。</summary>
+    public bool BackupBeforeOverwrite { get; set; } = true;
+
+    /// <summary>Unity Lua 发布时是否同步缺失贴图。</summary>
+    public bool SyncMissingAssets { get; set; } = true;
 }
 
 /// <summary>发布设置读写（output\Config\PublishSettings.json）。</summary>
@@ -65,6 +74,11 @@ public static class MapPublishSettingsStore
                         loaded.CocosOutputDirectory = MapPublishService.DefaultOutputRoot(MapPublishTarget.CocosLua);
                     }
 
+                    if (string.IsNullOrWhiteSpace(loaded.UnityLuaOutputDirectory))
+                    {
+                        loaded.UnityLuaOutputDirectory = MapPublishService.DefaultOutputRoot(MapPublishTarget.UnityLua);
+                    }
+
                     return loaded;
                 }
             }
@@ -77,6 +91,7 @@ public static class MapPublishSettingsStore
         return new MapPublishSettings
         {
             UnityOutputDirectory = MapPublishService.DefaultOutputRoot(MapPublishTarget.UnityJson),
+            UnityLuaOutputDirectory = MapPublishService.DefaultOutputRoot(MapPublishTarget.UnityLua),
             CocosOutputDirectory = MapPublishService.DefaultOutputRoot(MapPublishTarget.CocosLua),
         };
     }

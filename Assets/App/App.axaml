@@ -39,15 +39,55 @@
         <SolidColorBrush x:Key="Theme.ScrollArrow" Color="#355663" />
         <SolidColorBrush x:Key="Theme.Selection" Color="#330D8CB6" />
 
+        <!-- 滑块沿用同一套冷蓝：Fluent 默认轨道是暖灰，放在青蓝界面里显得脏 -->
+        <SolidColorBrush x:Key="SliderTrackFill" Color="#D8E9F0" />
+        <SolidColorBrush x:Key="SliderTrackValueFill" Color="#0D8CB6" />
+        <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#075E7C" />
+        <SolidColorBrush x:Key="SliderThumbBackground" Color="#0D8CB6" />
+        <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#075E7C" />
+        <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#075E7C" />
+        <SolidColorBrush x:Key="SliderThumbBorderBrush" Color="#0D8CB6" />
+
+        <!-- 统一复选框：16px 圆角小方块 + 白色对勾，替掉 Fluent 默认的方头方脑（浅灰描边 + 黑勾） -->
+        <ControlTheme x:Key="FlatCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid ColumnDefinitions="Auto,*" Background="Transparent">
+                        <Panel Width="16" Height="16" VerticalAlignment="Center">
+                            <Border Name="CheckBoxBox"
+                                    CornerRadius="4"
+                                    Background="{StaticResource Theme.Card}"
+                                    BorderBrush="{StaticResource Theme.ButtonBorder}"
+                                    BorderThickness="1" />
+                            <Path Name="CheckBoxGlyph"
+                                  Data="M 3,7.6 L 6.6,11.2 L 13,4"
+                                  Stroke="{StaticResource Theme.Card}"
+                                  StrokeThickness="1.7"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Opacity="0" />
+                        </Panel>
+                        <ContentPresenter Grid.Column="1"
+                                          Margin="7,0,0,0"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
         <!-- 标题底色：取自地图空态立方体顶面的冰青渐变，用于面板 / 卡片标题条 -->
         <LinearGradientBrush x:Key="Theme.TitleBackground" StartPoint="0%,0%" EndPoint="100%,0%">
-            <GradientStop Color="#C5F8FA" Offset="0" />
-            <GradientStop Color="#5AC4D9" Offset="0.55" />
-            <GradientStop Color="#42B8D2" Offset="1" />
+            <GradientStop Color="#EEF8FC" Offset="0" />
+            <GradientStop Color="#DDF0F8" Offset="0.55" />
+            <GradientStop Color="#D2EBF6" Offset="1" />
         </LinearGradientBrush>
-        <SolidColorBrush x:Key="Theme.TitleBorder" Color="#2FA0BA" />
-        <SolidColorBrush x:Key="Theme.TitleText" Color="#06323F" />
-        <SolidColorBrush x:Key="Theme.TitleChip" Color="#DDF8FC" />
+        <SolidColorBrush x:Key="Theme.TitleBorder" Color="#AAD3E1" />
+        <SolidColorBrush x:Key="Theme.TitleText" Color="#0B4256" />
+        <SolidColorBrush x:Key="Theme.TitleChip" Color="#FFFFFF" />
         <SolidColorBrush x:Key="Theme.TitleHover" Color="#33FFFFFF" />
         <SolidColorBrush x:Key="Theme.TitlePressed" Color="#55000000" />
 
@@ -148,9 +188,49 @@
             <Setter Property="Background" Value="{StaticResource Theme.ButtonSurface}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="CornerRadius" Value="5" />
             <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
             <Setter Property="Padding" Value="8,3" />
+        </Style>
+        <!-- 顶部主界面导航：胶囊页签，未选中只留文字，选中铺浅青 + 青描边 + 加粗 -->
+        <Style Selector="Button.navTab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TextMuted}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.navTab:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+        </Style>
+
+        <!-- 工具条上的浮窗开关（交通规则）：未开=浅青幽灵按钮，打开=实心青，状态一眼可辨 -->
+        <Style Selector="Button.toolToggle">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimarySoft}" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+
+        <!-- 表格行内的扁平文字按钮：常态只有彩色文字，悬停才浮出浅底 -->
+        <Style Selector="Button.rowAction">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="7,0" />
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+        <Style Selector="Button.rowAction:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimarySoft}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.rowAction:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryPressed}" />
         </Style>
         <!-- 所有按钮文字统一水平 / 垂直居中，避免宽按钮内文字贴左 -->
         <Style Selector="Button">
@@ -266,16 +346,48 @@
             <Setter Property="Foreground" Value="{StaticResource Theme.Card}" />
         </Style>
 
-        <!-- 输入框：白底 + 蓝灰边 -->
+        <!-- 输入框：白底 + 蓝灰边 + 圆角 6（与卡片 8 / 按钮 5 成一套） -->
         <Style Selector="TextBox">
             <Setter Property="Background" Value="{StaticResource Theme.Card}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
         </Style>
         <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
             <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+        </Style>
+        <!-- 表格内单元格编辑器：常态与悬停都保持透明底，让整行高亮带完整透出来；
+             只有获得焦点时才浮出白底 + 强调描边，明确「这一格可以改」 -->
+        <Style Selector="TextBox.cell">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="3" />
+        </Style>
+        <Style Selector="TextBox.cell /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="TextBox.cell:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBox.cell:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{StaticResource Theme.Card}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <!-- 未选中对象时属性区会整片禁用：Fluent 默认铺灰，换成浅青白底，看着像「待填写」而不是「坏掉」 -->
+        <Style Selector="TextBox:disabled /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{StaticResource Theme.PanelAlt}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Divider}" />
+        </Style>
+        <Style Selector="TextBox:disabled">
+            <Setter Property="Foreground" Value="{StaticResource Theme.TextMuted}" />
+        </Style>
+        <Style Selector="ComboBox:disabled /template/ Border#Background">
+            <Setter Property="Background" Value="{StaticResource Theme.PanelAlt}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Divider}" />
         </Style>
         <!-- Fluent 文本框的文字 presenter 默认贴模板上沿，数字 / 中文墨迹会比 24px 框中心高约 2px；统一下移 2px 回到视觉中线。 -->
         <Style Selector="TextBox.field /template/ TextPresenter">
@@ -287,7 +399,7 @@
             <Setter Property="Background" Value="{StaticResource Theme.PanelAlt}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
         </Style>
         <!-- Fluent 模板里的选中内容默认贴顶，把模板内 ContentPresenter 压回垂直居中；
@@ -306,10 +418,33 @@
 
         <!-- 复选框：被勾选时用强调蓝；文字与勾选框同高居中，避免文字贴行顶 -->
         <Style Selector="CheckBox">
+            <Setter Property="Theme" Value="{StaticResource FlatCheckBox}" />
             <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
             <Setter Property="MinHeight" Value="24" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="CheckBox /template/ Border#CheckBoxBox">
+            <Setter Property="Background" Value="{StaticResource Theme.Card}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
+        </Style>
+        <Style Selector="CheckBox:pointerover /template/ Border#CheckBoxBox">
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+        </Style>
+        <Style Selector="CheckBox:checked /template/ Border#CheckBoxBox">
+            <Setter Property="Background" Value="{StaticResource Theme.Primary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+        </Style>
+        <Style Selector="CheckBox:checked /template/ Path#CheckBoxGlyph">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="CheckBox:checked:pointerover /template/ Border#CheckBoxBox">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.PrimaryDark}" />
+        </Style>
+        <Style Selector="CheckBox:disabled /template/ Border#CheckBoxBox">
+            <Setter Property="Background" Value="{StaticResource Theme.Disabled}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.DisabledText}" />
         </Style>
 
         <!-- 三栏分隔条：平时透明只露 1px 灰线，悬停整条 6px 变淡蓝提示可拖。
@@ -327,20 +462,20 @@
             <Setter Property="Background" Value="{StaticResource Theme.Selection}" />
         </Style>
 
-        <!-- 卡片：底部三栏统一的白底 + 1px 蓝灰边 + 圆角 -->
+        <!-- 卡片：底部三栏统一的白底 + 1px 蓝灰边 + 圆角 8 -->
         <Style Selector="Border.card">
             <Setter Property="Background" Value="{StaticResource Theme.Card}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.Border}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="CornerRadius" Value="8" />
         </Style>
 
-        <!-- 外层分区框：比卡片重一级的描边，用来把「左侧栏 / 工具条 / 画布」这些大区块框出来 -->
+        <!-- 外层分区框：比卡片重一级的描边，用来把「左侧栏 / 工具条 / 画布」这些大区块框出来；圆角与卡片统一 8 -->
         <Style Selector="Border.frame">
             <Setter Property="Background" Value="{StaticResource Theme.Panel}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.Border}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="CornerRadius" Value="8" />
         </Style>
 
         <!-- 卡片内白色分组框 -->
@@ -365,7 +500,7 @@
             <Setter Property="Background" Value="{StaticResource Theme.TitleBackground}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.TitleBorder}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
-            <Setter Property="CornerRadius" Value="4,4,0,0" />
+            <Setter Property="CornerRadius" Value="8,8,0,0" />
             <Setter Property="Padding" Value="10,4" />
         </Style>
         <Style Selector="TextBlock.cardTitle">
@@ -432,6 +567,62 @@
             <Setter Property="MinHeight" Value="24" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Padding" Value="6,1" />
+        </Style>
+
+        <!-- 分段页签按钮：默认透明，选中态由 ApplyTabVisual 铺白底胶囊（路径 / 动画页签用） -->
+        <Style Selector="Button.segTab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TextMuted}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <!-- 交通标记按钮：白底细边 + 圆角 5；已标记时整颗变浅青底、主色描边，未选中物件时置灰 -->
+        <Style Selector="Button.markTool">
+            <Setter Property="Background" Value="{StaticResource Theme.Card}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.markTool:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.ButtonSurface}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+        </Style>
+        <Style Selector="Button.markTool:pointerover">
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
+        </Style>
+        <Style Selector="Button.markTool:disabled">
+            <Setter Property="Foreground" Value="{StaticResource Theme.DisabledText}" />
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+        <Style Selector="Button.markTool:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.Disabled}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Divider}" />
+        </Style>
+        <Style Selector="Button.markTool.marked">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimarySoft}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.markTool.marked:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryPressed}" />
         </Style>
 
         <!-- 滑动列表：常显的经典滚动条（14px 宽 + 上下箭头） -->

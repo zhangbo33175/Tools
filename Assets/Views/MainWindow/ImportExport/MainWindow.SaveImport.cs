@@ -191,12 +191,19 @@ public partial class MainWindow : Window
                 return false;
             }
 
+            // 落盘前先把实例模板 ID 对到配置表数字 ID：Unity 侧只按配置表 ID 认资源
+            var bind = BindMapTemplates(createMissing: false);
             MapJsonService.Save(_config, target);
             PersistFog();
+
+            // 剧情跟着地图同名存：打开过剧情页并改过内容时，随地图一起落盘，避免只存地图漏了剧情
+            var storyPath = _storyPanel?.SaveIfDirty() ?? string.Empty;
             _currentMapPath = target;
             BuildChapters();
             var displayName = Path.GetFileName(target);
-            SetMessage($"已保存：{displayName}");
+            SetMessage(storyPath.Length == 0
+                ? $"已保存：{displayName}{DescribeBind(bind)}"
+                : $"已保存：{displayName}{DescribeBind(bind)}；剧情已同步 {Path.GetFileName(storyPath)}");
             SetSaveHint($"已保存：{displayName} · {DateTime.Now:HH:mm:ss}", ok: true);
             FlashSaveButton(true);
             return true;
@@ -249,6 +256,23 @@ public partial class MainWindow : Window
             return;
         }
 
+        // 发布产物要直接给 Unity / Cocos 用：实例必须引用配置表数字 ID，资源名不能当 ID 混过去
+        var bind = BindMapTemplates(createMissing: false);
+        if (!bind.IsComplete)
+        {
+            var missing = string.Join("、", bind.Missing.Take(8));
+            var more = bind.Missing.Count > 8 ? $" 等 {bind.Missing.Count} 个" : string.Empty;
+            await new ConfirmWindow(
+                "发布已拦截：资源未登记配置表",
+                $"还有 {bind.Missing.Count} 个资源在配置表里没有 ID，地图实例仍在用资源名当模板 ID：\n{missing}{more}\n\n" +
+                "请到「资源整理」点「补齐地图资源 ID」，把缺的资源建成配置行并分配 ID，保存后再发布。",
+                "知道了",
+                "关闭").ShowDialog<bool>(this);
+            SetMessage($"未发布：{bind.Missing.Count} 个资源未登记配置表");
+            SetSaveHint($"未发布：{bind.Missing.Count} 个资源缺配置表 ID", ok: false);
+            return;
+        }
+
         try
         {
             var dialog = new PublishMapWindow(_config, _fogDoc);
@@ -281,6 +305,7 @@ public partial class MainWindow : Window
     /// <param name="fitToView">true = 载入后整图居中；切关卡时传 false，由调用方恢复该关卡自己的视口。</param>
     private void LoadMapFile(string path, bool fitToView = true)
     {
+        TraceStartup($"LoadMapFile enter: {path} (fit={fitToView})");
         // 切关卡 / 从磁盘重载后，上一关的 PSD 文档不再对应本关的图层序号：
         // 先清会话状态，避免「导出切片」把旧 PSD 烘到新关卡目录
         ResetPsdSession();
@@ -293,6 +318,12 @@ public partial class MainWindow : Window
             var loaded = MapJsonLoader.Load(path);
             CloseMapPreview();
             _config = loaded;
+
+            // 配置表是资源身份的唯一来源：历史地图按资源名存的模板 ID，载入时统一对到配置表数字 ID
+            var bind = BindAfterMapLoad();
+
+            // 撤销栈里存的是上一张图的对象引用，换图后必须清空，否则 Ctrl+Z 会去改已不在场景里的实例
+            _undo.Clear();
             SyncCollectiblePlanFromMap();
 
             // 载入后把「这张地图自己的 Chapter{n}\Level{n}」挂成唯一关卡根：
@@ -305,6 +336,7 @@ public partial class MainWindow : Window
             ResetPlacementState();
             LoadFogForScene();
             _fogPanel?.Attach(_config, _fogDoc, Canvas);
+            _trafficPanel?.Attach(_config, Canvas);
             _resourcePanel?.Attach(_templates, _config);
             RefreshSceneFields();
             RefreshStatus();
@@ -314,12 +346,14 @@ public partial class MainWindow : Window
             {
                 Canvas.FitToView();
             }
-            SetMessage($"已载入地图：{name}（{_config.Objects.Count} 个物件、{_config.TrafficLights.Count} 盏灯、{_config.Crosswalks.Count} 条横道）");
+            SetMessage($"已载入地图：{name}（{_config.Objects.Count} 个物件、{_config.TrafficLights.Count} 盏灯、{_config.Crosswalks.Count} 条横道）{DescribeBind(bind)}");
             SetSaveHint($"当前：{Path.GetFileName(path)}", neutral: true);
+            TraceStartup($"LoadMapFile ok: objects={_config.Objects.Count}, lights={_config.TrafficLights.Count}, crosswalks={_config.Crosswalks.Count}");
         }
         catch (Exception error)
         {
             SetMessageError($"载入失败：{error.Message}");
+            TraceStartup($"LoadMapFile FAILED: {error}");
         }
     }
 

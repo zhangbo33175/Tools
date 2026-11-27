@@ -62,6 +62,16 @@ public sealed partial class MapCanvas : Control
             return null;
         }
 
+        // 交通仿真开启时用仿真里程：它带刹车曲线与信号等待，位置不再与时间线性相关
+        if (_trafficPreviewEnabled && _trafficSim is not null)
+        {
+            var simulated = _trafficSim.PositionOf(item.Id);
+            if (simulated is not null)
+            {
+                return simulated;
+            }
+        }
+
         var total = PathMath.Length(item.PathPoints);
         if (total <= 0)
         {
@@ -87,6 +97,13 @@ public sealed partial class MapCanvas : Control
         if (!PreviewMode || !PreviewShowPaths || !HasPreviewPath(item))
         {
             return false;
+        }
+
+        // 交通仿真接管时以角色真实速度为准：等灯 / 排队时速度为 0，
+        // 播待机而不是原地踏步（与游戏里停在停止线外的状态一致）。
+        if (_trafficPreviewEnabled && _trafficSim?.AgentOf(item.Id) is { } simulated)
+        {
+            return simulated.Speed > 0.05 && !simulated.Arrived;
         }
 
         var total = PathMath.Length(item.PathPoints);
@@ -435,7 +452,9 @@ public sealed partial class MapCanvas : Control
         }
 
         // 切窗口回来可能攒出很大的间隔，单帧步长限到 0.1s，避免角色瞬移
-        _previewElapsedSeconds += Math.Min(delta, 0.1) * _previewPlaybackSpeed;
+        var step = Math.Min(delta, 0.1) * _previewPlaybackSpeed;
+        _previewElapsedSeconds += step;
+        AdvanceTrafficSimulation(step);
         return true;
     }
 

@@ -193,7 +193,12 @@ public sealed partial class ResourceOrganizePanel : UserControl
         var category = ResourceCategories.Classify(_selectedPath ?? _selectedName);
         var type = _editing?.Type ?? ResourceCategories.ObjectTypeOfKey(category);
         var isUpdate = _editing is not null;
-        var target = _editing ?? new ObjectTemplate
+
+        // ---TODO 资源整理：模板库里已有同名素材时复用该模板，只补配置表行。
+        // 之前把「模板库已登记」当成「已配置」直接拒绝，导致 ObjectTemplates.json 登记过的图（收集物 cl_*）永远加不进表。
+        var existingTemplate = isUpdate ? null : _idCoordinator.FindTemplate(name, _selectedPath);
+        var reusesTemplate = existingTemplate is not null;
+        var target = _editing ?? existingTemplate ?? new ObjectTemplate
         {
             Type = type,
             IsBuiltIn = false,
@@ -211,11 +216,6 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         var preferredTable = targetTable.File;
         var createdTable = targetTable.Created;
-        if (!isUpdate && _idCoordinator.HasTemplateNamed(name))
-        {
-            _notify($"配置表里已有同名资源：{name}");
-            return;
-        }
 
         // 配置表行数据（同名的行）：先套未在表单里展示的列（预制体 / 碰撞 / 气泡 / 交通 / 传送门…）
         // ---TODO ID 管理：新增只按当前资源名查绑定行；更新才从编辑对象映射回原行，避免旧选中名把新行改写成旧行。
@@ -232,21 +232,39 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
 
         // 表单里可见的字段最后写入，用户的手改优先于配置表原值
+        // ---TODO 资源整理：复用模板时不覆盖它的模板 ID，避免打乱已有引用。
         var templateId = _fieldId.Text?.Trim() ?? string.Empty;
-        if (TemplateIdAllocator.TryParse(templateId, out _))
+        if (!reusesTemplate && TemplateIdAllocator.TryParse(templateId, out _))
         {
             target.TemplateId = templateId;
         }
 
-        if (!isUpdate
-            && (string.IsNullOrWhiteSpace(target.TemplateId) || _idCoordinator.IsTaken(target.TemplateId)))
+        if (!isUpdate && string.IsNullOrWhiteSpace(target.TemplateId))
         {
             target.TemplateId = _idCoordinator.Allocate(type);
         }
-        target.ResName = boundRow is not null && !string.IsNullOrWhiteSpace(boundRow.Icon) ? boundRow.Icon : name;
-        ApplyFormFields(target, name);
+        else if (!isUpdate && !reusesTemplate && _idCoordinator.IsTaken(target.TemplateId))
+        {
+            target.TemplateId = _idCoordinator.Allocate(type);
+        }
+        if (reusesTemplate)
+        {
+            // 复用模板：只保证资源名 / 图片名指向当前素材，表单值仅在字段为空时兜底。
+            target.ResName = name;
+            if (string.IsNullOrWhiteSpace(target.ImagePath))
+            {
+                target.ImagePath = name;
+            }
 
-        if (!isUpdate)
+            ApplyBatchFormDefaults(target, ReadFormValues(target.SortOrder, target.IsCollectible));
+        }
+        else
+        {
+            target.ResName = boundRow is not null && !string.IsNullOrWhiteSpace(boundRow.Icon) ? boundRow.Icon : name;
+            ApplyFormFields(target, name);
+        }
+
+        if (!isUpdate && !reusesTemplate)
         {
             _templates.Add(target);
         }
@@ -257,11 +275,12 @@ public sealed partial class ResourceOrganizePanel : UserControl
         ExitEditMode();
 
         RefreshAfterTableChange();
+        var reuseText = reusesTemplate ? $"（复用模板 {target.TemplateId}）" : string.Empty;
         _notify(isUpdate
             ? $"已修改 {target.TemplateId}（{name}），记得点「保存修改」落盘"
             : createdTable
-                ? $"已创建 {preferredTable?.Name} 并添加 {target.TemplateId}（{name}），记得点「保存修改」落盘"
-                : $"已添加 {target.TemplateId}（{name}）到配置表，记得点「保存修改」落盘");
+                ? $"已创建 {preferredTable?.Name} 并添加 {target.TemplateId}（{name}）{reuseText}，记得点「保存修改」落盘"
+                : $"已添加 {target.TemplateId}（{name}）到配置表{reuseText}，记得点「保存修改」落盘");
     }
 
     /// <summary>
@@ -287,9 +306,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
 
         var category = categories[0];
+        // ---TODO 资源整理：只跳过「配置表里已有行」的图；模板库登记过但没落表的图（如 cl_*）要能批量落表。
         var pending = _selection
             .Where(item => _itemTable.Find(item.Name) is null)
-            .Where(item => !_idCoordinator.HasTemplateNamed(item.Name))
             .ToList();
         var skipped = _selection.Count - pending.Count;
 
@@ -313,27 +332,53 @@ public sealed partial class ResourceOrganizePanel : UserControl
             LayerOrder.Base(TemplateDefaults.LayerKey(type)),
             category == ResourceCategories.CollectibleKey);
 
+        var reusedCount = 0;
         foreach (var item in pending)
         {
-            var target = new ObjectTemplate
+            var existing = _idCoordinator.FindTemplate(item.Name, item.Path);
+            ObjectTemplate target;
+            if (existing is not null)
             {
-                Type = type,
-                IsBuiltIn = false,
-                TemplateId = _idCoordinator.Allocate(type),
-                TemplateName = item.Name,
-                ResName = item.Name,
-                ImagePath = item.Name,
-                AnimName = form.AnimName,
-                Loop = form.Loop,
-                Speed = form.Speed,
-                SortOrder = form.SortOrder,
-                ShadowEnabled = form.ShadowEnabled,
-                IsCollectible = form.IsCollectible,
-                InteractType = TemplateDefaults.InteractType(type),
-                CollisionEnabled = TemplateDefaults.CollisionEnabled(type),
-            };
+                // 复用已有模板：只补空字段，不覆盖动画/排序等既有配置，也不改它的模板 ID。
+                target = existing;
+                reusedCount++;
+                target.ResName = string.IsNullOrWhiteSpace(target.ResName) ? item.Name : target.ResName;
+                target.ImagePath = string.IsNullOrWhiteSpace(target.ImagePath) ? item.Name : target.ImagePath;
+                if (string.IsNullOrWhiteSpace(target.TemplateName))
+                {
+                    target.TemplateName = item.Name;
+                }
 
-            _templates.Add(target);
+                if (string.IsNullOrWhiteSpace(target.TemplateId))
+                {
+                    target.TemplateId = _idCoordinator.Allocate(target.Type);
+                }
+
+                ApplyBatchFormDefaults(target, form);
+            }
+            else
+            {
+                target = new ObjectTemplate
+                {
+                    Type = type,
+                    IsBuiltIn = false,
+                    TemplateId = _idCoordinator.Allocate(type),
+                    TemplateName = item.Name,
+                    ResName = item.Name,
+                    ImagePath = item.Name,
+                    AnimName = form.AnimName,
+                    Loop = form.Loop,
+                    Speed = form.Speed,
+                    SortOrder = form.SortOrder,
+                    ShadowEnabled = form.ShadowEnabled,
+                    IsCollectible = form.IsCollectible,
+                    InteractType = TemplateDefaults.InteractType(type),
+                    CollisionEnabled = TemplateDefaults.CollisionEnabled(type),
+                };
+
+                _templates.Add(target);
+            }
+
             _itemTable.Upsert(target, preferredTable);
         }
 
@@ -342,8 +387,37 @@ public sealed partial class ResourceOrganizePanel : UserControl
         RefreshAfterTableChange();
 
         var tableText = createdTable ? $"已创建 {preferredTable?.Name} 并" : "已";
-        var skipText = skipped > 0 ? $"，跳过 {skipped} 项已存在资源" : string.Empty;
-        _notify($"{tableText}批量添加 {pending.Count} 项到配置表{skipText}，记得点「保存修改」落盘");
+        var reuseText = reusedCount > 0 ? $"（其中 {reusedCount} 项复用已有模板）" : string.Empty;
+        var skipText = skipped > 0 ? $"，跳过 {skipped} 项已在配置表" : string.Empty;
+        _notify($"{tableText}批量添加 {pending.Count} 项到配置表{reuseText}{skipText}，记得点「保存修改」落盘");
+    }
+
+    /// <summary>批量新增复用模板时，只把表单值写进尚未设置的字段，避免把已有动画 / 排序配置刷掉。</summary>
+    /// <param name="target">被复用的模板。</param>
+    /// <param name="values">表单聚合值。</param>
+    private static void ApplyBatchFormDefaults(ObjectTemplate target, ResourceFormValues values)
+    {
+        if (string.IsNullOrWhiteSpace(target.AnimName))
+        {
+            target.AnimName = values.AnimName;
+        }
+
+        if (!target.Loop)
+        {
+            target.Loop = values.Loop;
+        }
+
+        if (target.Speed <= 0)
+        {
+            target.Speed = values.Speed;
+        }
+
+        if (target.SortOrder == 0)
+        {
+            target.SortOrder = values.SortOrder;
+        }
+
+        target.IsCollectible = target.IsCollectible || values.IsCollectible;
     }
 
     /// <summary>点「编辑」：把已配置模板与配置表行回填到表单，进入修改模式。</summary>

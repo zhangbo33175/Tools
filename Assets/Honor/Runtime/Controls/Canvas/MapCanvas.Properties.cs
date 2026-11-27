@@ -40,6 +40,7 @@ public sealed partial class MapCanvas
             _lastPreviewClockSeconds = 0;
             _lastSpineTick = CurrentAnimationTime;
             _spinePlayers.Clear();
+            InvalidateTrafficSimulation();
             SetSelectedCell(null);
             RebuildInverse();
             EnsureAnimationTimer();
@@ -205,6 +206,7 @@ public sealed partial class MapCanvas
     public void RestartPreview()
     {
         ResetPreviewPlayback();
+        ResetTrafficSimulation();
         InvalidateVisual();
     }
 

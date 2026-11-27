@@ -43,6 +43,9 @@ public sealed partial class ItemElementPanel : UserControl
     /// <summary>普通输入控件的列宽：所有字段同宽，行与行之间不参差。</summary>
     private const double FieldWidth = 252.0;
 
+    /// <summary>字段放在弹性列里的最小宽度：比整列窄，窗宽变化时可以跟着拉宽。</summary>
+    private const double FlexibleFieldMinWidth = 150.0;
+
     /// <summary>数字输入控件自身的宽度（列宽仍按 <see cref="FieldWidth"/>，控件靠左摆放）。</summary>
     private const double NumberWidth = 96.0;
 
@@ -59,7 +62,7 @@ public sealed partial class ItemElementPanel : UserControl
     private const double LabelRightGap = 8.0;
 
     /// <summary>字段控件统一高度（输入框与下拉框对齐同一基线）。</summary>
-    private const double FieldHeight = 26.0;
+    private const double FieldHeight = 30.0;
 
     /// <summary>输入框内边距：左右 6、上下 2。</summary>
     private static readonly Thickness FieldTextPadding = new(6, 2);
@@ -68,7 +71,7 @@ public sealed partial class ItemElementPanel : UserControl
     private static readonly Thickness FieldComboPadding = new(6, 1);
 
     /// <summary>输入框与下拉框统一的圆角。</summary>
-    private const double FieldCornerRadius = 2.0;
+    private const double FieldCornerRadius = 6.0;
 
     /// <summary>输入框与下拉框统一的描边线宽。</summary>
     private const double FieldBorderThickness = 1.0;
@@ -92,19 +95,19 @@ public sealed partial class ItemElementPanel : UserControl
     private static readonly Thickness GroupTitleMargin = new(7, 0, 0, 0);
 
     /// <summary>分组标题条内边距：左右 9、上下 6。</summary>
-    private static readonly Thickness GroupHeaderPadding = new(9, 6);
+    private static readonly Thickness GroupHeaderPadding = new(10, 7);
 
-    /// <summary>分组内容区行间距。</summary>
-    private const double GroupContentSpacing = 9.0;
+    /// <summary>分组内容区行间距：字段框 30 高，配 8 的行距让整组更紧凑、少留空。</summary>
+    private const double GroupContentSpacing = 8.0;
 
     /// <summary>分组内容区四周留白：左 12、上 10、右 12、下 12。</summary>
-    private static readonly Thickness GroupContentMargin = new(12, 10, 12, 12);
+    private static readonly Thickness GroupContentMargin = new(14, 12, 14, 14);
 
     /// <summary>分组卡片描边线宽。</summary>
     private const double GroupCardBorderThickness = 1.0;
 
     /// <summary>分组卡片圆角。</summary>
-    private const double GroupCardCornerRadius = 4.0;
+    private const double GroupCardCornerRadius = 8.0;
 
     /// <summary>单位后缀与数字控件之间的间距。</summary>
     private static readonly Thickness UnitLabelMargin = new(6, 0, 0, 0);
@@ -186,8 +189,8 @@ public sealed partial class ItemElementPanel : UserControl
     /// <summary>面板卡片描边线宽。</summary>
     private const double PanelBorderThickness = 1.0;
 
-    /// <summary>带圆角列表卡片的圆角半径。</summary>
-    private const double PanelCornerRadius = 2.0;
+    /// <summary>左右两栏面板卡片的圆角半径，与全局卡片语言保持一致（卡片 8）。</summary>
+    private const double PanelCornerRadius = 8.0;
 
     /// <summary>属性表单宿主的外边距。</summary>
     private static readonly Thickness FormHostMargin = new(12, 10, 12, 12);
@@ -244,8 +247,6 @@ public sealed partial class ItemElementPanel : UserControl
 
     #endregion
 
-    private static readonly IBrush IdleTabBrush = UiTheme.Form.IdleTab;
-
     // 分组卡片：白底 + 浅蓝灰标题条 + 更浅的描边，比纯文字标题更容易分组阅读
     private static readonly IBrush GroupCardBrush = UiTheme.Card;
     private static readonly IBrush GroupHeaderBrush = UiTheme.Form.GroupHeader;
@@ -292,7 +293,10 @@ public sealed partial class ItemElementPanel : UserControl
 
     private readonly StackPanel _listHost = new();
     private readonly StackPanel _formHost = new();
-    private readonly StackPanel _groupsHost = new();
+    // 分组按左右两栏排布：宽窗口里不再把所有卡片挤在左边半幅、右边整片空白
+    private readonly Grid _groupsHost = new();
+    private readonly StackPanel _groupColumnLeft = new();
+    private readonly StackPanel _groupColumnRight = new();
     private readonly TextBlock _emptyHint = new();
     private readonly TextBlock _statusLabel = new();
     private readonly Dictionary<MapObjectType, Button> _tabButtons = new();
@@ -311,7 +315,8 @@ public sealed partial class ItemElementPanel : UserControl
         _notify = notify;
         _assets = new AssetLibrary(store.OutputDirectory);
 
-        Background = UiTheme.Form.SubtleSurface;
+        // 页面底色统一成浅青，和迷雾 / 资源 / 剧情页保持一致，不再用中性灰
+        Background = UiTheme.PanelSurface;
 
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*") };
         root.Children.Add(BuildToolbar());

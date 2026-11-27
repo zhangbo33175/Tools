@@ -41,7 +41,7 @@ public sealed partial class MapCanvas : Control
         }
 
         var instance = CreateInstance(template, worldTopLeft, isCollectible, collectibleLayer);
-        _config.Objects.Add(instance);
+        _config.AddObject(instance);
         Select(instance);
         InvalidateVisual();
         DocumentChanged?.Invoke(this, EventArgs.Empty);
@@ -187,7 +187,7 @@ public sealed partial class MapCanvas : Control
                 }
 
                 var point = new Point(col * grid, row * grid);
-                config.Objects.Add(CreateInstance(template, point, true, layerMode));
+                config.AddObject(CreateInstance(template, point, true, layerMode));
                 for (var dx = 0; dx < width; dx++)
                 {
                     for (var dy = 0; dy < height; dy++)
