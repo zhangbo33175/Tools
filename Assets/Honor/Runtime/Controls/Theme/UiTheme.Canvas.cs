@@ -77,6 +77,12 @@ public static partial class UiTheme
         /// <summary>占用格内部十字线：比外框淡一档，看得出格子四分，又不抢外框。</summary>
         public static readonly IBrush OccupancyCross = Argb(0xD0, 0x9C, 0xFF, 0xB4);
 
+        /// <summary>
+        /// 大块占地的内部格线：只用来提示「这块占了 12×10 格」，压到两成透明度，
+        /// 铺在美术之上也不至于把路面盖成一张网（原先是按格描边 + 十字，密度翻倍）。
+        /// </summary>
+        public static readonly IBrush OccupancyGridLine = Argb(0x52, 0x9C, 0xFF, 0xB4);
+
         /// <summary>未选中图元的淡占格描边：同色系压淡，避免一屏几百个占格抢视线。</summary>
         public static readonly IBrush OccupancyIdleStroke = Argb(0x55, 0xFF, 0xD2, 0x4A);
 

@@ -72,9 +72,9 @@ public sealed partial class MapCanvas : Control
     // 占格：三种形状统一用游戏内落位格配色（半透明绿填充 + 亮绿描边 + 格内十字）。
     // Outline 专门画在图元之上，保证 1 格大小的贴图把整格盖住时仍能看见占格边界。
     private static readonly IBrush OccupancyFillBrush = UiTheme.MapView.OccupancyFill;
-    private static readonly IBrush OccupancyStrokeBrush = UiTheme.MapView.OccupancyStroke;
     private static readonly IBrush OccupancyIdleStrokeBrush = UiTheme.MapView.OccupancyIdleStroke;
     private static readonly IBrush OccupancyCrossBrush = UiTheme.MapView.OccupancyCross;
+    private static readonly IBrush OccupancyGridLineBrush = UiTheme.MapView.OccupancyGridLine;
     private static readonly IBrush OccupancyOutlineBrush = UiTheme.MapView.OccupancyOutline;
 
     // 摆放网格与路径网格统一由 MapGridRenderer 绘制，颜色见 UiTheme.MapGrid

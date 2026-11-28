@@ -50,14 +50,10 @@ public sealed partial class MapCanvas : Control
         // 选中框内容拆成本地函数：裁剪开/关只切换 PushClip，内容与碰撞/阴影逻辑只写一份。
         void DrawContent()
         {
-            // 选中框外扩 3px：占格框画在同一圈包围盒上，两条线重合会糊成一团。
-            // 让选择框退到外侧，绿色占格框在内、蓝色选择框在外，一眼分得清「占了哪几格」和「选中了谁」。
-            var outset = 3.0 * Hairline;
-            var frame = new Rect(
-                bounds.X - outset,
-                bounds.Y - outset,
-                bounds.Width + outset * 2,
-                bounds.Height + outset * 2);
+            // 选中框与占格框画在同一圈「落位格 + 格数」上：物件包围盒是按 PSD 像素算的，
+            // 和格子块常差十几个像素，两条线一内一外会看成「占格没对准物件」。
+            // 吸附到格块后只剩一条框，框角手柄也正好落在格角上，拖拽就是对格调整。
+            var frame = ResolveSelectionFrame(item, bounds);
             context.DrawRectangle(null, new Pen(AccentBrush, 2.0 * Hairline), frame);
 
             // 绿化层的 collision/shadow 是 PSD 批量导入时统一带上的 true，画出来只会把
@@ -68,22 +64,26 @@ public sealed partial class MapCanvas : Control
             // 碰撞 / 阴影区域：只对当前选中实例描绘，便于在画布上对准「碰撞区域 / 阴影区域」的数值。
             // Spine 动画本身透明，若继续铺半透明填充，会在角色背后露出一整块「背景图」；
             // 因此 Spine 物件只保留虚线轮廓，不画填充。
+            // 区域铺满整个包围盒时（碰撞宽高留 0 的默认值就是这样）只画虚线框：铺满没有任何信息量，
+            // 一块 356×299 的路面被红紫两层各铺一遍会变成脏粉色，反而盖住美术。
             var spineVisual = UsesSpineVisual(item);
             if (item.CollisionEnabled && !greenery)
             {
+                var area = item.CollisionBounds;
                 DrawEditableArea(
                     context,
-                    item.CollisionBounds,
-                    spineVisual ? null : CollisionAreaFillBrush,
+                    area,
+                    spineVisual || CoversBounds(area, bounds) ? null : CollisionAreaFillBrush,
                     CollisionAreaStrokeBrush);
             }
 
             if (item.ShadowEnabled && !greenery)
             {
+                var area = item.ShadowBounds;
                 DrawEditableArea(
                     context,
-                    item.ShadowBounds,
-                    spineVisual ? null : ShadowAreaFillBrush,
+                    area,
+                    spineVisual || CoversBounds(area, bounds) ? null : ShadowAreaFillBrush,
                     ShadowAreaStrokeBrush);
             }
 
@@ -112,6 +112,66 @@ public sealed partial class MapCanvas : Control
             }
         }
     }
+
+    /// <summary>
+    /// 选中框的落点：未旋转的矩形地图吸附到「落位格 + 格数」的格块上，和占格框共用一条边；
+    /// 菱形 / 六边形 / 带旋转的物件仍按包围盒画（格块轴对齐，硬套上去会和转过的贴图错开）。
+    /// </summary>
+    /// <param name="item">实例。</param>
+    /// <param name="bounds">实例包围盒。</param>
+    /// <returns>外扩 3 设备像素后的选中框矩形（世界坐标）。</returns>
+    private Rect ResolveSelectionFrame(PlacedObject item, Rect bounds)
+    {
+        var outset = 3.0 * Hairline;
+        var target = bounds;
+
+        if (_config is { } config
+            && !DrawShapes.IsDiamond(config.DrawShape)
+            && !DrawShapes.IsHex(config.DrawShape)
+            && Math.Abs(EffectiveRotationOf(item)) < 0.01)
+        {
+            var cell = (double)(config.GridSize > 0 ? config.GridSize : MapToolDefaults.GridSize);
+            if (cell > 0 && bounds.Width > 0 && bounds.Height > 0)
+            {
+                // 与 RectFootprintCells / 导出同一口径：落位格向下取整，格数按尺寸向上取整
+                var cols = Math.Max(1, (int)Math.Ceiling(bounds.Width / cell - 1e-6));
+                var rows = Math.Max(1, (int)Math.Ceiling(bounds.Height / cell - 1e-6));
+                target = new Rect(
+                    Math.Floor(bounds.X / cell) * cell,
+                    Math.Floor(bounds.Y / cell) * cell,
+                    cols * cell,
+                    rows * cell);
+            }
+        }
+
+        return new Rect(
+            target.X - outset,
+            target.Y - outset,
+            target.Width + outset * 2,
+            target.Height + outset * 2);
+    }
+
+    /// <summary>
+    /// 编辑区（碰撞 / 阴影）是否正好铺满整个包围盒：宽高留 0 的默认值就是这个状态，
+    /// 这种区域铺半透明填充等于给整块贴图刷一层色，只有真正缩进或偏移的区域才值得铺色。
+    /// </summary>
+    /// <param name="area">碰撞或阴影区域（世界像素）。</param>
+    /// <param name="bounds">实例包围盒。</param>
+    /// <returns>四边都在半像素容差内重合时返回 true。</returns>
+    private static bool CoversBounds(Rect area, Rect bounds)
+    {
+        const double tolerance = 0.5;
+        return Math.Abs(area.X - bounds.X) <= tolerance
+            && Math.Abs(area.Y - bounds.Y) <= tolerance
+            && Math.Abs(area.Right - bounds.Right) <= tolerance
+            && Math.Abs(area.Bottom - bounds.Bottom) <= tolerance;
+    }
+
+    /// <summary>
+    /// 占格绘图里还画十字的最大格数：道具、单格装饰这类 1~4 格的小件靠十字确认落位，
+    /// 12×10 这种大块再逐格画十字会把 120 个格糊成一张密度翻倍的网，看不出「占了几格」。
+    /// </summary>
+    private const int MaxCrossCells = 4;
 
     /// <summary>
     /// 选中实例的格子级占格（碰撞区域）：在所有图元贴图**之前**画一次，
@@ -152,9 +212,9 @@ public sealed partial class MapCanvas : Control
     }
 
     /// <summary>
-    /// 实例的格子级占格：把「落位格 + 格数」铺成一格格游戏内落位格（半透明绿填充 + 亮绿描边 + 格内十字）。
-    /// 这一层画在所有贴图**之前**，整体沉在地面，看起来像物件站在格子上；贴图把格子盖住的部分由
-    /// <see cref="DrawSelectedOccupancyOutline"/> 在顶层补描边。
+    /// 实例的格子级占格（地面层）：只铺半透明填充 + 一档细描边，让物件看起来像「站在格子上」。
+    /// 强调用的亮线、格线与十字全部交给顶层的 <see cref="DrawSelectedOccupancyOutline"/>，
+    /// 两层都描边等于把同一条格线画两遍，线会变粗变亮（原来选中大件时就是这样糊成一片绿网）。
     /// </summary>
     /// <param name="context">绘制上下文（世界坐标）。</param>
     /// <param name="item">实例。</param>
@@ -174,7 +234,6 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
-        var thin = Hairline;
         var cells = OccupiedCells(item, cell, config.DrawShape);
         if (cells.Count == 0)
         {
@@ -183,16 +242,22 @@ public sealed partial class MapCanvas : Control
 
         // 注意：这里刻意不使用 PushClip —— 一旦用 PushClip 包住占格，Avalonia 会把这批图元
         // 合成到贴图之上，占格又会浮在美术表面；越界格子改为逐格判断裁掉。
-        var stroke = emphasized
-            ? new Pen(OccupancyStrokeBrush, 2.0 * thin)
-            : new Pen(OccupancyIdleStrokeBrush, thin);
+        var stroke = new Pen(OccupancyIdleStrokeBrush, Hairline);
         var fill = emphasized && !suppressFill ? OccupancyFillBrush : null;
-        DrawOccupancyLayer(context, cells, cell, config.DrawShape, fill, stroke, emphasized ? OccupancyCrossBrush : null);
+        if (fill is null && !emphasized)
+        {
+            // 未选中（带旋转的提示态）只留一圈淡描边，不铺色
+            DrawOccupancyLayer(context, cells, cell, config.DrawShape, null, stroke, null);
+            return;
+        }
+
+        DrawOccupancyLayer(context, cells, cell, config.DrawShape, fill, stroke, null);
     }
 
     /// <summary>
-    /// 选中实例占格的顶层描边：贴图盖住整格时（1 格大小的道具是常态）地面那层填充完全看不见，
-    /// 所以在所有图元之后再用细线补一遍格子边界与十字，保证任何尺寸都能看清它占了哪几格。
+    /// 选中实例占格的顶层：画在所有图元之后，保证贴图盖住整格时仍看得出占了哪几格。
+    /// 矩形大地块只描「整块外框 + 淡淡的内部格线」，小件才逐格描边加十字——
+    /// 这样 12×10 一眼就是一块 12×10，而不是 24×20 的网格。
     /// </summary>
     /// <param name="context">绘制上下文（世界坐标）。</param>
     private void DrawSelectedOccupancyOutline(DrawingContext context)
@@ -214,9 +279,117 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
-        // 顶层占格：只描边 + 十字，线宽比选中框细一档，不铺填充（填充会盖住美术本体）
-        var outline = new Pen(OccupancyOutlineBrush, 2.2 * Hairline);
-        DrawOccupancyLayer(context, cells, cell, config.DrawShape, null, outline, OccupancyCrossBrush);
+        // 顶层占格：只描边，不铺填充（填充会盖住美术本体）
+        var frame = new Pen(OccupancyOutlineBrush, 2.0 * Hairline);
+
+        if (!DrawShapes.IsDiamond(config.DrawShape) && !DrawShapes.IsHex(config.DrawShape))
+        {
+            DrawRectOccupancyGrid(
+                context,
+                cells,
+                cell,
+                new Rect(0, 0, config.Width, config.Height),
+                frame,
+                new Pen(OccupancyGridLineBrush, Hairline),
+                OccupancyCrossBrush);
+            return;
+        }
+
+        DrawOccupancyLayer(
+            context,
+            cells,
+            cell,
+            config.DrawShape,
+            null,
+            frame,
+            cells.Count <= MaxCrossCells ? OccupancyCrossBrush : null);
+    }
+
+    /// <summary>
+    /// 矩形地图的顶层占格：整块画一条外框，内部格线改成「一条长线」而不是每格四条边，
+    /// 相邻格共用的边只画一次，接缝不会叠成两倍粗细；格数少时再补格内十字确认单格落位。
+    /// </summary>
+    /// <param name="context">绘制上下文（世界坐标）。</param>
+    /// <param name="cells">格子行列集合（矩形块，行列连续）。</param>
+    /// <param name="cell">格子边长。</param>
+    /// <param name="mapRect">地图范围，用于裁掉越界部分。</param>
+    /// <param name="frame">整块外框画笔。</param>
+    /// <param name="grid">内部格线画笔。</param>
+    /// <param name="cross">格内十字画刷；只在格数不多于 <see cref="MaxCrossCells"/> 时生效。</param>
+    private void DrawRectOccupancyGrid(
+        DrawingContext context,
+        List<(int Col, int Row)> cells,
+        double cell,
+        Rect mapRect,
+        IPen frame,
+        IPen grid,
+        IBrush? cross)
+    {
+        var minCol = int.MaxValue;
+        var maxCol = int.MinValue;
+        var minRow = int.MaxValue;
+        var maxRow = int.MinValue;
+        foreach (var (col, row) in cells)
+        {
+            minCol = Math.Min(minCol, col);
+            maxCol = Math.Max(maxCol, col);
+            minRow = Math.Min(minRow, row);
+            maxRow = Math.Max(maxRow, row);
+        }
+
+        var area = new Rect(minCol * cell, minRow * cell, (maxCol - minCol + 1) * cell, (maxRow - minRow + 1) * cell);
+        area = area.Intersect(mapRect);
+        if (area.Width <= 0 || area.Height <= 0)
+        {
+            return;
+        }
+
+        // 内部格线：只画块内那几条，并且裁到可视范围内，地图边上的半格不会拖出框外
+        for (var col = minCol + 1; col <= maxCol; col++)
+        {
+            var x = col * cell;
+            if (x <= area.X + 0.5 || x >= area.Right - 0.5)
+            {
+                continue;
+            }
+
+            context.DrawLine(grid, new Point(x, area.Y), new Point(x, area.Bottom));
+        }
+
+        for (var row = minRow + 1; row <= maxRow; row++)
+        {
+            var y = row * cell;
+            if (y <= area.Y + 0.5 || y >= area.Bottom - 0.5)
+            {
+                continue;
+            }
+
+            context.DrawLine(grid, new Point(area.X, y), new Point(area.Right, y));
+        }
+
+        if (cross is not null && cells.Count <= MaxCrossCells)
+        {
+            var crossPen = new Pen(cross, Hairline);
+            foreach (var (col, row) in cells)
+            {
+                var rect = new Rect(col * cell, row * cell, cell, cell);
+                if (!rect.Intersects(area))
+                {
+                    continue;
+                }
+
+                context.DrawLine(crossPen, new Point(rect.X, rect.Center.Y), new Point(rect.Right, rect.Center.Y));
+                context.DrawLine(crossPen, new Point(rect.Center.X, rect.Y), new Point(rect.Center.X, rect.Bottom));
+            }
+        }
+
+        // 外框线宽一半画在路径外，向内缩半宽才不会压到相邻格子上
+        var inset = frame.Thickness / 2.0;
+        var framed = area.Deflate(inset);
+        if (framed.Width > 0 && framed.Height > 0)
+        {
+            context.DrawRectangle(null, frame, framed);
+        }
     }
 
     /// <summary>

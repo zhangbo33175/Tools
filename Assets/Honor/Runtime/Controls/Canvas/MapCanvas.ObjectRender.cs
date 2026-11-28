@@ -236,22 +236,20 @@ public sealed partial class MapCanvas : Control
 
         // 图片外框与占格描边受 DrawBorder 开关控制：关掉后只剩贴图本身，方便比对美术效果
         // 拖动平移时也跳过：每帧 500+ 条 Pen 描边纯属无谓开销，松手后补画
-        if (ShowImageBorder && !_isPanning && !PreviewMode)
+        // 选中实例不画：它的占格框就落在同一条足迹上，再补一条白线会和绿框错开十几像素、叠成双框
+        if (ShowImageBorder && !_isPanning && !PreviewMode
+            && Math.Abs(rotation) < 0.01 && !ReferenceEquals(item, _selected))
         {
             // 未旋转的图元：一条轴对齐格足迹描边，便于核对占格；旋转图元的格子级占格见 DrawSelectedOccupancy。
             // 格数按当前地图的格子边长现算，和占格显示、导出同一口径（原来写死 32，换 16px 格宽就会算错一半）。
             var cell = (double)(_config?.GridSize > 0 ? _config.GridSize : MapToolDefaults.GridSize);
             var footprintPen = new Pen(UiTheme.MapView.Footprint, Hairline);
-
-            if (Math.Abs(rotation) < 0.01)
-            {
-                var cols = Math.Max(1, (int)Math.Ceiling(item.Bounds.Width / cell));
-                var rows = Math.Max(1, (int)Math.Ceiling(item.Bounds.Height / cell));
-                context.DrawRectangle(
-                    null,
-                    footprintPen,
-                    new Rect(item.X, item.Y, cols * cell, rows * cell));
-            }
+            var cols = Math.Max(1, (int)Math.Ceiling(item.Bounds.Width / cell));
+            var rows = Math.Max(1, (int)Math.Ceiling(item.Bounds.Height / cell));
+            context.DrawRectangle(
+                null,
+                footprintPen,
+                new Rect(item.X, item.Y, cols * cell, rows * cell));
         }
 
         // 物件名是编辑态辅助：预览窗口里再画一遍会盖在角色/载具上，反而挡住美术本来的朝向
