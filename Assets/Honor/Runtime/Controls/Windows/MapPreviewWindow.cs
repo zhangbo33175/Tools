@@ -57,6 +57,7 @@ public sealed class MapPreviewWindow : Window
     private readonly CheckBox _showAnimationsBox = new();
     private readonly CheckBox _showPathsBox = new();
     private readonly CheckBox _trafficBox = new();
+    private readonly CheckBox _trafficPlanBox = new();
     private readonly TextBlock _trafficText = new();
     private readonly StackPanel _trafficChips = new()
     {
@@ -161,7 +162,7 @@ public sealed class MapPreviewWindow : Window
         fit.Click += (_, _) => _canvas.FitToView();
 
         _showAnimationsBox.Content = "显示动画";
-        _showAnimationsBox.FontSize = 12;
+        _showAnimationsBox.FontSize = UiMetrics.FontTitle;
         _showAnimationsBox.IsChecked = true;
         _showAnimationsBox.VerticalAlignment = VerticalAlignment.Center;
         _showAnimationsBox.IsCheckedChanged += (_, _) =>
@@ -172,7 +173,7 @@ public sealed class MapPreviewWindow : Window
         };
 
         _showPathsBox.Content = "显示路径";
-        _showPathsBox.FontSize = 12;
+        _showPathsBox.FontSize = UiMetrics.FontTitle;
         _showPathsBox.IsChecked = true;
         _showPathsBox.VerticalAlignment = VerticalAlignment.Center;
         _showPathsBox.IsCheckedChanged += (_, _) =>
@@ -183,14 +184,26 @@ public sealed class MapPreviewWindow : Window
         };
 
         _trafficBox.Content = "交通仿真";
-        _trafficBox.FontSize = 12;
+        _trafficBox.FontSize = UiMetrics.FontTitle;
         _trafficBox.IsChecked = true;
         _trafficBox.VerticalAlignment = VerticalAlignment.Center;
         _trafficBox.IsCheckedChanged += (_, _) =>
         {
             _canvas.TrafficPreviewEnabled = _trafficBox.IsChecked == true;
+            // 仿真关掉时规划线也要一起收起来，否则会只剩一堆没人遵守的停点线
+            _trafficPlanBox.IsEnabled = _canvas.TrafficPreviewEnabled;
             _canvas.RefreshAnimations();
             RefreshStatus();
+        };
+
+        _trafficPlanBox.Content = "交通规划";
+        _trafficPlanBox.FontSize = UiMetrics.FontTitle;
+        _trafficPlanBox.IsChecked = true;
+        _trafficPlanBox.VerticalAlignment = VerticalAlignment.Center;
+        _trafficPlanBox.IsCheckedChanged += (_, _) =>
+        {
+            _canvas.PreviewShowTrafficPlan = _trafficPlanBox.IsChecked == true;
+            _canvas.RefreshAnimations();
         };
 
         _speedSlider.Minimum = 0.25;
@@ -207,19 +220,19 @@ public sealed class MapPreviewWindow : Window
         };
 
         _speedText.Text = "1.00×";
-        _speedText.FontSize = 11;
+        _speedText.FontSize = UiMetrics.FontBody;
         _speedText.Foreground = UiTheme.PreviewHint;
         _speedText.Width = 44;
         _speedText.VerticalAlignment = VerticalAlignment.Center;
 
         _timeText.Text = "00:00";
-        _timeText.FontSize = 12;
+        _timeText.FontSize = UiMetrics.FontTitle;
         _timeText.Foreground = UiTheme.PreviewText;
-        _timeText.FontFamily = new FontFamily("Consolas");
+        _timeText.FontFamily = UiFonts.Mono;
         _timeText.VerticalAlignment = VerticalAlignment.Center;
 
         _zoomText.Text = "100%";
-        _zoomText.FontSize = 11;
+        _zoomText.FontSize = UiMetrics.FontBody;
         _zoomText.Foreground = UiTheme.PreviewHint;
         _zoomText.VerticalAlignment = VerticalAlignment.Center;
 
@@ -238,7 +251,8 @@ public sealed class MapPreviewWindow : Window
                 _showAnimationsBox,
                 _showPathsBox,
                 _trafficBox,
-                new TextBlock { Text = "速度", FontSize = 11, Foreground = UiTheme.PreviewHint, VerticalAlignment = VerticalAlignment.Center },
+                _trafficPlanBox,
+                new TextBlock { Text = "速度", FontSize = UiMetrics.FontBody, Foreground = UiTheme.PreviewHint, VerticalAlignment = VerticalAlignment.Center },
                 _speedSlider,
                 _speedText,
                 _zoomText,
@@ -254,16 +268,11 @@ public sealed class MapPreviewWindow : Window
         _canvas.HorizontalAlignment = HorizontalAlignment.Stretch;
         _canvas.VerticalAlignment = VerticalAlignment.Stretch;
 
-        var surface = new Border
-        {
-            Background = UiTheme.PreviewView.Stage,
-            BorderBrush = UiTheme.PreviewView.FrameBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(3),
-            ClipToBounds = true,
-            Margin = new Thickness(10, 8, 10, 8),
-            Child = _canvas,
-        };
+        var surface = UiFactory.CanvasStage(
+            _canvas,
+            UiTheme.PreviewView.FrameBorder,
+            cornerRadius: UiMetrics.SmallCornerRadius,
+            margin: new Thickness(10, 8, 10, 8));
 
         return new Grid { Children = { surface } };
     }
@@ -279,7 +288,7 @@ public sealed class MapPreviewWindow : Window
     private Control BuildFooterBlock()
     {
         _trafficText.Text = "交通仿真准备中…";
-        _trafficText.FontSize = 12;
+        _trafficText.FontSize = UiMetrics.FontTitle;
         _trafficText.Foreground = UiTheme.InfoText;
         _trafficText.TextTrimming = TextTrimming.CharacterEllipsis;
         _trafficText.VerticalAlignment = VerticalAlignment.Center;
@@ -287,7 +296,7 @@ public sealed class MapPreviewWindow : Window
         var label = new TextBlock
         {
             Text = "交通仿真",
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.InfoText,
             VerticalAlignment = VerticalAlignment.Center,
@@ -409,7 +418,12 @@ public sealed class MapPreviewWindow : Window
         }
 
         UpdateTrafficChips(sim);
-        _trafficText.Text = $"等待 车 {sim.WaitingVehicleCount} · 人 {sim.WaitingPedestrianCount}";
+        var vehicleCount = sim.Agents.Count(agent => agent.IsVehicle);
+        var pedestrianCount = sim.Agents.Count - vehicleCount;
+        var stopCount = sim.Agents.Sum(agent => agent.Stops.Count);
+        _trafficText.Text =
+            $"角色 {vehicleCount} 车 / {pedestrianCount} 人 · 停点 {stopCount} · " +
+            $"等待 车 {sim.WaitingVehicleCount} · 人 {sim.WaitingPedestrianCount}";
         _trafficText.Foreground = UiTheme.PreviewText;
     }
 
@@ -435,13 +449,13 @@ public sealed class MapPreviewWindow : Window
                 var name = new TextBlock
                 {
                     Text = string.IsNullOrWhiteSpace(light.Name) ? light.Id : light.Name,
-                    FontSize = 11,
+                    FontSize = UiMetrics.FontBody,
                     Foreground = UiTheme.PreviewText,
                     VerticalAlignment = VerticalAlignment.Center,
                 };
                 var phase = new TextBlock
                 {
-                    FontSize = 11,
+                    FontSize = UiMetrics.FontBody,
                     FontWeight = FontWeight.SemiBold,
                     Margin = new Thickness(6, 0, 0, 0),
                     VerticalAlignment = VerticalAlignment.Center,

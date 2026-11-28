@@ -117,10 +117,106 @@ public static partial class MapJsonService
             Regions = BuildRegions(config),
             SidewalkCells = BuildCells(config.SidewalkCells),
             RoadCells = BuildCells(config.RoadCells),
+            TileCells = BuildTileCells(config),
+            TileRules = BuildTileRules(config),
+            Levels = BuildLevels(config),
+            Rooms = BuildRooms(config),
             CollectibleTotal = config.Collectibles.Total,
             CollectibleLayer = CollectibleLayers.Normalize(config.Collectibles.LayerMode),
             CollectibleKinds = BuildCollectibleKinds(config),
         };
+    }
+
+    /// <summary>地表瓦片格 → JSON DTO；没有画瓦片时输出空数组。</summary>
+    /// <param name="config">地图配置。</param>
+    /// <returns>DTO 列表。</returns>
+    private static List<TileCellPayload> BuildTileCells(MapConfigData config)    {
+        var result = new List<TileCellPayload>();
+        foreach (var cell in config.TileCells)
+        {
+            if (string.IsNullOrWhiteSpace(cell.Image))
+            {
+                continue;
+            }
+
+            result.Add(new TileCellPayload { X = cell.X, Y = cell.Y, Level = cell.Level, Image = cell.Image });
+        }
+
+        return result;
+    }
+
+    /// <summary>楼层表 → JSON DTO：编号 + 显示名 + 可见性 + 像素抬升。</summary>
+    /// <param name="config">地图配置。</param>
+    /// <returns>DTO 列表。</returns>
+    private static List<LevelPayload> BuildLevels(MapConfigData config)
+    {
+        var result = new List<LevelPayload>(config.Levels.Count);
+        foreach (var level in config.Levels)
+        {
+            result.Add(new LevelPayload
+            {
+                Index = level.Index,
+                Name = level.Name,
+                Visible = level.Visible,
+                Elevation = level.Elevation,
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>房间表 → JSON DTO：范围 + 进屋隐藏策略 + 淡出时长；没有房间时输出空数组。</summary>
+    /// <param name="config">地图配置。</param>
+    /// <returns>DTO 列表。</returns>
+    private static List<RoomPayload> BuildRooms(MapConfigData config)
+    {
+        var result = new List<RoomPayload>(config.Rooms.Count);
+        foreach (var room in config.Rooms)
+        {
+            if (string.IsNullOrWhiteSpace(room.Id))
+            {
+                continue;
+            }
+
+            result.Add(new RoomPayload
+            {
+                Id = room.Id,
+                Name = room.Name,
+                Level = room.Level,
+                CellX = room.CellX,
+                CellY = room.CellY,
+                CellWidth = Math.Max(MapRoomData.MinExtent, room.CellWidth),
+                CellHeight = Math.Max(MapRoomData.MinExtent, room.CellHeight),
+                HideRoof = room.HideRoof,
+                HideFrontWall = room.HideFrontWall,
+                HideFloorUnder = room.HideFloorUnder,
+                FadeSeconds = room.FadeSeconds,
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>瓦片邻接规则 → JSON DTO；九宫格不足 9 位时补「无所谓」。</summary>
+    /// <param name="config">地图配置。</param>
+    /// <returns>DTO 列表。</returns>
+    private static List<TileRulePayload> BuildTileRules(MapConfigData config)
+    {
+        var result = new List<TileRulePayload>();
+        foreach (var rule in config.TileRules)
+        {
+            var pattern = new List<int>(TilePatternCells.Count);
+            for (var i = 0; i < TilePatternCells.Count; i++)
+            {
+                pattern.Add(rule.Pattern is not null && i < rule.Pattern.Length
+                    ? TileNeighborStates.Normalize(rule.Pattern[i])
+                    : TileNeighborStates.Any);
+            }
+
+            result.Add(new TileRulePayload { Name = rule.Name, Image = rule.Image, Pattern = pattern });
+        }
+
+        return result;
     }
 
     /// <summary>收集物切页数据 → JSON DTO；没有计划时输出空数组。</summary>
@@ -214,6 +310,10 @@ public static partial class MapJsonService
         payload.Interactable = item.Interactable;
         payload.InteractType = item.InteractType;
         payload.SortOrder = item.SortOrder;
+        payload.Level = item.Level;
+        payload.SpanLevels = item.SpanLevels;
+        payload.RoomId = item.RoomId ?? string.Empty;
+        payload.HideOnEnter = item.HideOnEnter;
         payload.YSortEnabled = item.YSortEnabled;
         payload.YSortOffset = item.YSortOffset;
         payload.Rotation = item.Rotation;
@@ -255,3 +355,5 @@ public static partial class MapJsonService
 
     #endregion
 }
+
+

@@ -218,6 +218,13 @@ public static class LayerOrder
             return bandA.CompareTo(bandB);
         }
 
+        // 楼层：剖面式布景的核心排序键。上层后画，2F 楼板才会压在 1F 房间顶部，
+        // 而不是被 1F 里脚底 Y 更大的家具反压过去。单层地图（全是 0）这一档直接跳过。
+        if (a.Level != b.Level)
+        {
+            return a.Level.CompareTo(b.Level);
+        }
+
         if (bandA == LayerBands.Standing)
         {
             // 收集物是立体带里的独立夹层：物件下 → 排在所有普通立体物之前；

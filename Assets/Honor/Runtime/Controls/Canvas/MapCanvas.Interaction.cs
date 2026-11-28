@@ -105,6 +105,240 @@ public sealed partial class MapCanvas : Control
         DocumentChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>路径点命中半径（屏幕像素）；按缩放折算成世界半径，缩到整图视角也点得中。</summary>
+    private const double PathPointPickRadius = 7.0;
+
+    /// <summary>当前选中的路径点序号；-1 表示没有选中。</summary>
+    public int SelectedPathIndex => _selectedPathPoint;
+
+    /// <summary>
+    /// 选中 / 取消选中某个路径点。序号会被夹进当前物件的点数范围，越界与 -1 都按「取消选中」处理，
+    /// 避免列表删点后残留一个指向空位的序号。
+    /// </summary>
+    /// <param name="index">路径点序号；传 -1 取消选中。</param>
+    public void SelectPathPoint(int index)
+    {
+        var count = _selected?.PathPoints.Count ?? 0;
+        var normalized = index >= 0 && index < count ? index : -1;
+        if (_selectedPathPoint == normalized)
+        {
+            return;
+        }
+
+        _selectedPathPoint = normalized;
+        InvalidateVisual();
+        PathPointSelectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 把某个路径点移到指定世界坐标。吸附、越界拒绝、重绘与文档广播都走这一处，
+    /// 画布拖动与列表里的数值编辑共用，不会出现两套校验口径。
+    /// </summary>
+    /// <param name="index">路径点序号。</param>
+    /// <param name="world">目标世界坐标。</param>
+    /// <returns>坐标真的变了才返回 true。</returns>
+    public bool MovePathPoint(int index, Point world)
+    {
+        if (_selected is not { } target || index < 0 || index >= target.PathPoints.Count)
+        {
+            return false;
+        }
+
+        var point = SnapPathPoint(world);
+        var cell = CellIndexOf(point);
+        if (!IsCellInsideMap(cell))
+        {
+            PathPointFeedback?.Invoke(this, $"路径点超出地图范围（格 {cell.X:0},{cell.Y:0}），已忽略。");
+            return false;
+        }
+
+        var current = target.PathPoints[index];
+        if (Math.Abs(current.X - point.X) < 0.001 && Math.Abs(current.Y - point.Y) < 0.001)
+        {
+            return false;
+        }
+
+        current.X = point.X;
+        current.Y = point.Y;
+        InvalidateVisual();
+        DocumentChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>把一个路径点挪到新的序号（列表里「上移 / 下移」用），选中态跟着点走。</summary>
+    /// <param name="from">原序号。</param>
+    /// <param name="to">目标序号。</param>
+    /// <returns>真的换了位置才返回 true。</returns>
+    public bool ReorderPathPoint(int from, int to)
+    {
+        if (_selected is not { } target)
+        {
+            return false;
+        }
+
+        var count = target.PathPoints.Count;
+        if (from < 0 || from >= count || to < 0 || to >= count || from == to)
+        {
+            return false;
+        }
+
+        var moved = target.PathPoints[from];
+        target.PathPoints.RemoveAt(from);
+        target.PathPoints.Insert(to, moved);
+        _selectedPathPoint = to;
+        PathPointFeedback?.Invoke(this, $"已把路径点 P{from} 移到 P{to}。");
+        InvalidateVisual();
+        DocumentChanged?.Invoke(this, EventArgs.Empty);
+        PathPointSelectionChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>删除指定序号的路径点；选中态顺延到同序号的点（删的是最后一个就清空选中）。</summary>
+    /// <param name="index">路径点序号。</param>
+    /// <returns>真的删掉了才返回 true。</returns>
+    public bool RemovePathPointAt(int index)
+    {
+        if (_selected is not { } target || index < 0 || index >= target.PathPoints.Count)
+        {
+            return false;
+        }
+
+        target.PathPoints.RemoveAt(index);
+        _selectedPathPoint = index < target.PathPoints.Count ? index : -1;
+        PathPointFeedback?.Invoke(this, $"已删除路径点 P{index}，当前剩余 {target.PathPoints.Count} 个。");
+        InvalidateVisual();
+        DocumentChanged?.Invoke(this, EventArgs.Empty);
+        PathPointSelectionChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
+    /// 在指定位置插入一个路径点。用于「在已画好的路径中间补点」，
+    /// 与末尾追加共用同一套吸附 / 去重 / 越界校验。
+    /// </summary>
+    /// <param name="index">插入后的序号。</param>
+    /// <param name="world">世界坐标。</param>
+    /// <returns>插入成功返回 true。</returns>
+    public bool InsertPathPointAt(int index, Point world)
+    {
+        if (_selected is not { } target)
+        {
+            return false;
+        }
+
+        var point = SnapPathPoint(world);
+        var cell = CellIndexOf(point);
+        if (!IsCellInsideMap(cell))
+        {
+            PathPointFeedback?.Invoke(this, $"路径点超出地图范围（格 {cell.X:0},{cell.Y:0}），已忽略。");
+            return false;
+        }
+
+        var insertAt = Math.Clamp(index, 0, target.PathPoints.Count);
+        target.PathPoints.Insert(insertAt, new MapPathPointData(point.X, point.Y));
+        _selectedPathPoint = insertAt;
+        PathPointFeedback?.Invoke(
+            this,
+            $"已在 P{insertAt} 插入路径点（{point.X:0},{point.Y:0}），当前 {target.PathPoints.Count} 个。");
+        InvalidateVisual();
+        DocumentChanged?.Invoke(this, EventArgs.Empty);
+        PathPointSelectionChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>找出当前物件上离鼠标最近的路径点序号；没命中返回 -1。</summary>
+    /// <param name="world">鼠标世界坐标。</param>
+    private int FindSelectedPathPoint(Point world)
+    {
+        if (_selected is not { } target || target.PathPoints.Count == 0)
+        {
+            return -1;
+        }
+
+        var radius = PathPointPickRadius / Math.Max(_zoom, MinRenderableZoom);
+        var best = -1;
+        var bestDistance = double.MaxValue;
+        for (var index = 0; index < target.PathPoints.Count; index++)
+        {
+            var point = target.PathPoints[index];
+            var distance = VectorLength(point.X - world.X, point.Y - world.Y);
+            if (distance <= radius && distance < bestDistance)
+            {
+                best = index;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>找出当前物件路径上离鼠标最近的线段，给出插入序号与投影点；没命中返回 null。</summary>
+    /// <param name="world">鼠标世界坐标。</param>
+    private (int Index, Point World)? FindSelectedPathSegment(Point world)
+    {
+        if (_selected is not { } target || target.PathPoints.Count < 2)
+        {
+            return null;
+        }
+
+        var radius = PathPointPickRadius / Math.Max(_zoom, MinRenderableZoom);
+        (int Index, Point World)? best = null;
+        var bestDistance = double.MaxValue;
+        for (var index = 0; index < target.PathPoints.Count - 1; index++)
+        {
+            var a = target.PathPoints[index];
+            var b = target.PathPoints[index + 1];
+            var projected = ProjectOnSegment(new Point(a.X, a.Y), new Point(b.X, b.Y), world);
+            var distance = VectorLength(projected.X - world.X, projected.Y - world.Y);
+            if (distance <= radius && distance < bestDistance)
+            {
+                best = (index + 1, projected);
+                bestDistance = distance;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>点到线段的垂足；退化线段（两端重合）直接回退到起点。</summary>
+    private static Point ProjectOnSegment(Point a, Point b, Point target)
+    {
+        var dx = b.X - a.X;
+        var dy = b.Y - a.Y;
+        var lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared < 1e-9)
+        {
+            return a;
+        }
+
+        var t = Math.Clamp(((target.X - a.X) * dx + (target.Y - a.Y) * dy) / lengthSquared, 0, 1);
+        return new Point(a.X + dx * t, a.Y + dy * t);
+    }
+
+    /// <summary>向量长度；路径点命中只做距离比较，不需要 <see cref="Vector"/> 的完整语义。</summary>
+    private static double VectorLength(double x, double y) => Math.Sqrt(x * x + y * y);
+
+    /// <summary>
+    /// 路径模式下按下左键：若落在已有点的命中半径内就进入拖动，否则返回 false 让调用方去加点。
+    /// </summary>
+    /// <param name="e">指针按下事件，用于捕获指针。</param>
+    private bool TryBeginPathPointDrag(PointerPressedEventArgs e, Point world)
+    {
+        var index = FindSelectedPathPoint(world);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        SelectPathPoint(index);
+        _pathPointDrag = index;
+        _pathPointDragFrom = new Point(_selected!.PathPoints[index].X, _selected.PathPoints[index].Y);
+        Cursor = GrabCursor;
+        e.Pointer.Capture(this);
+        e.Handled = true;
+        return true;
+    }
+
     /// <inheritdoc />
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
@@ -167,6 +401,28 @@ public sealed partial class MapCanvas : Control
         // 想选别的物件，先停止绘制路径或按 Esc 退出。
         var pathEditing = PathDrawing && _selected is not null;
 
+        // 退出绘制后路径点仍然画在画布上（DrawEditingPath 不受绘制开关约束），
+        // 所以「抓点改坐标 / Alt 线上插点」不能只活在绘制状态里，否则列表能改、画布干瞪眼。
+        if (!pathEditing
+            && properties.IsLeftButtonPressed
+            && _selected is { } shownPathOwner
+            && shownPathOwner.PathPoints.Count > 0)
+        {
+            if (TryBeginPathPointDrag(e, world))
+            {
+                LogPathDebug($"begin path point drag (idle) index={_pathPointDrag} world={world.X:0},{world.Y:0}");
+                return;
+            }
+
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && FindSelectedPathSegment(world) is { } idleSegment)
+            {
+                InsertPathPointAt(idleSegment.Index, idleSegment.World);
+                LogPathDebug($"insert path point (idle) index={idleSegment.Index} world={idleSegment.World.X:0},{idleSegment.World.Y:0}");
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (pathEditing && properties.IsRightButtonPressed && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             RemoveSelectedPathPoint();
@@ -176,6 +432,30 @@ public sealed partial class MapCanvas : Control
 
         if (pathEditing && properties.IsLeftButtonPressed)
         {
+            // 先看有没有按在已画好的路径点上：命中即进入「拖动改点」，这是从「只能追加」升级成可修改的关键一步。
+            if (TryBeginPathPointDrag(e, world))
+            {
+                LogPathDebug($"begin path point drag index={_pathPointDrag} world={world.X:0},{world.Y:0}");
+                return;
+            }
+
+            // Alt+左键：把点插到最近的一段路径上（中间补点），不改变末尾追加的默认手感。
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+            {
+                if (FindSelectedPathSegment(world) is { } segment)
+                {
+                    InsertPathPointAt(segment.Index, segment.World);
+                    LogPathDebug($"insert path point index={segment.Index} world={segment.World.X:0},{segment.World.Y:0}");
+                }
+                else
+                {
+                    PathPointFeedback?.Invoke(this, "Alt+左键需要在已画好的路径线上点击，才会插入中间点。");
+                }
+
+                e.Handled = true;
+                return;
+            }
+
             // 路径加点使用 PathPoint 命中口径：普通选中仍按包围盒，这里额外过滤透明像素。
             var pathHit = HitTest(world, ObjectHitKind.PathPoint);
             var pathDecision = ObjectHitRules.EvaluatePathPoint(pathHit);
@@ -193,8 +473,8 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
-        // 右键拖动平移画布（迷雾绘制状态下右键为擦除，见上面的分支）
-        var rightIsErase = FogDrawing;
+        // 右键拖动平移画布（迷雾绘制 / 瓦片编辑状态下右键为擦除，见上面的分支）
+        var rightIsErase = FogDrawing || (TileEditEnabled && !PreviewMode);
         if (properties.IsRightButtonPressed && !rightIsErase)
         {
             BeginPan(e, position);
@@ -204,6 +484,16 @@ public sealed partial class MapCanvas : Control
         // 预览模式只保留缩放 / 平移：左键不选中、不摆放、不画框，避免误改地图数据
         if (PreviewMode)
         {
+            e.Handled = true;
+            return;
+        }
+
+        // 瓦片编辑（Tile Palette 的 Edit* 态）优先于物件选中与迷雾：
+        // 编辑态开着时左键就是落笔、右键就是橡皮，否则用户每点一下都会把底下的树选中，刷不动地面。
+        if (TileEditEnabled && (properties.IsLeftButtonPressed || properties.IsRightButtonPressed))
+        {
+            BeginTileStroke(world, properties.IsRightButtonPressed);
+            e.Pointer.Capture(this);
             e.Handled = true;
             return;
         }
@@ -250,7 +540,17 @@ public sealed partial class MapCanvas : Control
         // 空白处点击：摆放模式下落位；否则选中该格子并高亮成绿色，同时保留框选能力
         if (PlacementEnabled && PendingTemplate is { } template)
         {
-            PlaceObject(template, SnapToCell(world));
+            // 斜边吸附：菱形下把墙脚贴到共边中点，并按那条边的朝向落位
+            if (EdgeSnapEnabled && CanEdgeSnap)
+            {
+                var edgeTarget = SnapToEdge(world, template.DefaultWidth, template.DefaultHeight, out var rotation);
+                PlaceObject(template, edgeTarget, false, null, rotation);
+            }
+            else
+            {
+                PlaceObject(template, SnapToCell(world));
+            }
+
             e.Handled = true;
             return;
         }
@@ -299,11 +599,35 @@ public sealed partial class MapCanvas : Control
         if (_dragged is not null)
         {
             var dragWorld = ScreenToWorld(position);
-            var target = SnapToCell(new Point(dragWorld.X - _dragGrab.X, dragWorld.Y - _dragGrab.Y));
+            var grabPoint = new Point(dragWorld.X - _dragGrab.X, dragWorld.Y - _dragGrab.Y);
+            var target = SnapToCell(grabPoint);
+            if (EdgeSnapEnabled && CanEdgeSnap)
+            {
+                // 拖动同样贴斜边：以当前物件尺寸求脚底中点，墙不会在拖动时回落到格心
+                var edgeTarget = SnapToEdge(grabPoint, _dragged.Width, _dragged.Height, out var dragRotation);
+                target = edgeTarget;
+                _dragged.Rotation = dragRotation;
+            }
+
             _dragged.X = target.X;
             _dragged.Y = target.Y;
             InvalidateVisual();
             DocumentChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        // 路径点拖动：只重绘不广播文档，松手时才写一次「已移动」，避免状态栏每帧刷一遍。
+        if (_pathPointDrag >= 0 && _selected is { } pathOwner)
+        {
+            var snapped = SnapPathPoint(ScreenToWorld(position));
+            if (IsCellInsideMap(CellIndexOf(snapped)) && _pathPointDrag < pathOwner.PathPoints.Count)
+            {
+                var point = pathOwner.PathPoints[_pathPointDrag];
+                point.X = snapped.X;
+                point.Y = snapped.Y;
+                InvalidateVisual();
+            }
+
             return;
         }
 
@@ -327,6 +651,14 @@ public sealed partial class MapCanvas : Control
         if (_fogPainting)
         {
             PaintFogAt(world);
+            PointerWorldChanged?.Invoke(this, world);
+            return;
+        }
+
+        // 瓦片拖笔：笔刷 / 橡皮按住时按格连画，填充与取色不参与拖动
+        if (_tilePainting)
+        {
+            ContinueTileStroke(world);
             PointerWorldChanged?.Invoke(this, world);
             return;
         }
@@ -377,6 +709,31 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
+        if (_pathPointDrag >= 0)
+        {
+            var index = _pathPointDrag;
+            _pathPointDrag = -1;
+            Cursor = PathDrawing ? CrossCursor : ArrowCursor;
+            e.Pointer.Capture(null);
+
+            if (_selected is { } owner && index < owner.PathPoints.Count)
+            {
+                var current = owner.PathPoints[index];
+                var moved = Math.Abs(current.X - _pathPointDragFrom.X) > 1e-6 ||
+                            Math.Abs(current.Y - _pathPointDragFrom.Y) > 1e-6;
+                if (moved)
+                {
+                    PathPointFeedback?.Invoke(
+                        this,
+                        $"已移动 P{index} 到（{current.X:0},{current.Y:0}，格 {current.GridX},{current.GridY}）。");
+                    DocumentChanged?.Invoke(this, EventArgs.Empty);
+                }
+            }
+
+            InvalidateVisual();
+            return;
+        }
+
         if (_isMarquee)
         {
             ApplyMarqueeSelection();
@@ -390,6 +747,14 @@ public sealed partial class MapCanvas : Control
         if (_fogPainting)
         {
             EndFogStroke();
+            e.Pointer.Capture(null);
+            Cursor = ArrowCursor;
+            return;
+        }
+
+        if (_tilePainting)
+        {
+            EndTileStroke();
             e.Pointer.Capture(null);
             Cursor = ArrowCursor;
             return;
@@ -432,6 +797,7 @@ public sealed partial class MapCanvas : Control
                 PendingTemplate = null;
                 PendingCollectibleTemplate = null;
                 PathDrawing = false;
+                _pathPointDrag = -1;
                 SetSelectedCell(null);
                 Select(null);
                 Cursor = ArrowCursor;
@@ -455,3 +821,4 @@ public sealed partial class MapCanvas : Control
 
     #endregion
 }
+

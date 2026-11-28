@@ -30,6 +30,34 @@ public enum ConfirmChoice
 /// </summary>
 public sealed class ConfirmWindow : Window
 {
+    /// <summary>主操作与「不保存」按钮的定宽。</summary>
+    private const double ConfirmWidth = 104;
+
+    /// <summary>取消按钮的定宽（文案更短，宽度收窄）。</summary>
+    private const double CancelWidth = 84;
+
+    /// <summary>确认窗按钮尺寸档：30 高、全局按钮圆角、左右内边距为 0（靠定宽居中）。</summary>
+    private static readonly UiFactory.ActionSkin ConfirmSkin =
+        new(30, UiMetrics.ButtonCornerRadius, 0);
+
+    /// <summary>确认窗按钮配色：主操作青底白字，次操作浅青底；描边沿用全局按钮描边。</summary>
+    private static readonly UiFactory.ActionPalette ConfirmPalette = new(
+        UiTheme.Accent,
+        UiTheme.White,
+        null,
+        UiTheme.DialogSecondary,
+        UiTheme.TextPrimary,
+        null);
+
+    /// <summary>按强调档与定宽创建确认窗按钮。</summary>
+    /// <param name="text">按钮文案。</param>
+    /// <param name="tone">强调档。</param>
+    /// <param name="width">按钮定宽。</param>
+    /// <param name="skin">尺寸档。</param>
+    /// <returns>确认窗操作按钮。</returns>
+    private static Button MakeAction(string text, UiFactory.ActionTone tone, double width, UiFactory.ActionSkin skin) =>
+        UiFactory.ActionButton(text, tone, skin with { Width = width }, ConfirmPalette);
+
     /// <summary>按文案构建确认窗。</summary>
     /// <param name="title">窗口标题。</param>
     /// <param name="message">说明文字（自动换行）。</param>
@@ -59,15 +87,7 @@ public sealed class ConfirmWindow : Window
             Foreground = UiTheme.TextPrimary,
         };
 
-        var confirm = new Button
-        {
-            Content = confirmText,
-            Width = 104,
-            Height = 30,
-            Background = UiTheme.Accent,
-            Foreground = UiTheme.White,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-        };
+        var confirm = MakeAction(confirmText, UiFactory.ActionTone.Primary, ConfirmWidth, ConfirmSkin);
         confirm.Click += (_, _) =>
         {
             if (threeWay)
@@ -80,24 +100,11 @@ public sealed class ConfirmWindow : Window
             }
         };
 
-        var discard = new Button
-        {
-            Content = discardText ?? string.Empty,
-            Width = 104,
-            Height = 30,
-            IsVisible = threeWay,
-            Background = UiTheme.DialogSecondary,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-        };
+        var discard = MakeAction(discardText ?? string.Empty, UiFactory.ActionTone.Secondary, ConfirmWidth, ConfirmSkin);
+        discard.IsVisible = threeWay;
         discard.Click += (_, _) => Close(ConfirmChoice.Discard);
 
-        var cancel = new Button
-        {
-            Content = cancelText,
-            Width = 84,
-            Height = 30,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-        };
+        var cancel = MakeAction(cancelText, UiFactory.ActionTone.Neutral, CancelWidth, ConfirmSkin);
         cancel.Click += (_, _) =>
         {
             if (threeWay)

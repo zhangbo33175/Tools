@@ -135,14 +135,14 @@ public sealed class TrafficDemoWindow : Window
         };
 
         _speedText.Text = "1.00×";
-        _speedText.FontSize = 11;
+        _speedText.FontSize = UiMetrics.FontBody;
         _speedText.Foreground = UiTheme.PreviewHint;
         _speedText.Width = 44;
         _speedText.VerticalAlignment = VerticalAlignment.Center;
 
         _phaseText.Text = "等待启动";
-        _phaseText.FontSize = 12;
-        _phaseText.FontFamily = new FontFamily("Consolas");
+        _phaseText.FontSize = UiMetrics.FontTitle;
+        _phaseText.FontFamily = UiFonts.Mono;
         _phaseText.Foreground = UiTheme.PreviewText;
         _phaseText.VerticalAlignment = VerticalAlignment.Center;
 
@@ -158,7 +158,7 @@ public sealed class TrafficDemoWindow : Window
                 _playButton,
                 restart,
                 skip,
-                new TextBlock { Text = "速度", FontSize = 11, Foreground = UiTheme.PreviewHint, VerticalAlignment = VerticalAlignment.Center },
+                new TextBlock { Text = "速度", FontSize = UiMetrics.FontBody, Foreground = UiTheme.PreviewHint, VerticalAlignment = VerticalAlignment.Center },
                 _speedSlider,
                 _speedText,
             },
@@ -173,16 +173,11 @@ public sealed class TrafficDemoWindow : Window
         _view.HorizontalAlignment = HorizontalAlignment.Stretch;
         _view.VerticalAlignment = VerticalAlignment.Stretch;
 
-        var surface = new Border
-        {
-            Background = UiTheme.PreviewView.Stage,
-            BorderBrush = UiTheme.PreviewView.FrameBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(3),
-            ClipToBounds = true,
-            Margin = new Thickness(10, 8, 10, 8),
-            Child = _view,
-        };
+        var surface = UiFactory.CanvasStage(
+            _view,
+            UiTheme.PreviewView.FrameBorder,
+            cornerRadius: UiMetrics.SmallCornerRadius,
+            margin: new Thickness(10, 8, 10, 8));
 
         return new Grid { Children = { surface } };
     }

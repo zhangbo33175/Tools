@@ -159,7 +159,7 @@ public partial class MainWindow : Window
                 RestoreObjectsAfterFailedImport(backupObjects);
             }
 
-            SetMessageError($"PSD 重读失败：{error.Message}；已恢复重读前的摆放物");
+            SetMessageError(UiFeedback.Failed("PSD 重读", error.Message + "；已恢复重读前的摆放物"));
         }
         finally
         {
@@ -222,7 +222,7 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessage($"PSD 解析失败：{error.Message}");
+            SetMessage(UiFeedback.Failed("PSD 解析", error));
         }
     }
 
@@ -238,7 +238,7 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessage($"PSD 解析失败：{error.Message}");
+            SetMessage(UiFeedback.Failed("PSD 解析", error));
         }
     }
 
@@ -301,8 +301,9 @@ public partial class MainWindow : Window
 
         if (document.Width > 0 && document.Height > 0)
         {
-            _config.Width = document.Width;
-            _config.Height = document.Height;
+            // 地图尺寸跟画稿走，但同样受全局上下限约束，避免一份超大 PSD 把画布撑到放不下
+            _config.Width = Math.Clamp(document.Width, MapToolDefaults.MapPixelMin, MapToolDefaults.MapPixelMax);
+            _config.Height = Math.Clamp(document.Height, MapToolDefaults.MapPixelMin, MapToolDefaults.MapPixelMax);
         }
 
         foreach (var layer in document.Layers)

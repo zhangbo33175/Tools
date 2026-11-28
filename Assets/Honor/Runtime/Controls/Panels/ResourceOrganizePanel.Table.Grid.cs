@@ -53,14 +53,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
             RowDefinitions = new RowDefinitions(TableHeaderRows),
         };
 
-        // 第一行：分组标题条，横跨全部列
-        var titleCell = new Border
-        {
-            Background = TitleRowBrush,
-            BorderBrush = TableLineBrush,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = TableTitlePadding,
-            Child = new TextBlock
+        // 第一行：分组标题条，横跨全部列（与其它页头共用「底色 + 单边描边」这一份实现）
+        var titleCell = UiFactory.HeaderBand(
+            new TextBlock
             {
                 Text = titleText,
                 Foreground = NameTextBrush,
@@ -69,7 +64,9 @@ public sealed partial class ResourceOrganizePanel : UserControl
                 LineHeight = TableTitleLineHeight,
                 VerticalAlignment = VerticalAlignment.Center,
             },
-        };
+            TableTitlePadding,
+            TableLineBrush,
+            TitleRowBrush);
         Grid.SetColumn(titleCell, 0);
         Grid.SetColumnSpan(titleCell, ResourceColumns.Length);
         Grid.SetRow(titleCell, 0);
@@ -85,10 +82,11 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
         _configuredHeaderHost.Children.Add(headerGrid);
 
-        // 有配置表时，列表直接显示「分类对应那张表」的行（Unity 同款：按钮 ↔ 表）
+        // 有配置表时，列表直接显示「分类对应那张表」的行（Unity 同款：按钮 ↔ 表）；
+        // 「全部」走去重视图，同一张图在汇总表与分类表各登记一份时只显示一条
         var tableRows = _itemTable is null
             ? null
-            : activeFile?.Rows ?? (ResourceCategories.IsAll(_filter) ? _itemTable.Rows : null);
+            : activeFile?.Rows ?? (ResourceCategories.IsAll(_filter) ? _itemTable.DistinctRows.ToList() : null);
         if (tableRows is not null)
         {
             BuildTableRows(tableRows);
@@ -354,14 +352,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
 
         box.LostFocus += (_, _) => Commit();
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                Commit();
-                e.Handled = true;
-            }
-        };
+        UiFactory.CommitOnEnter(box, Commit);
 
         return box;
     }

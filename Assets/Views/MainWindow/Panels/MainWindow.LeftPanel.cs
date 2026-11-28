@@ -60,7 +60,7 @@ public partial class MainWindow : Window
             {
                 Text = "未读到章节配置表",
                 Foreground = UiTheme.TextSecondary,
-                FontSize = 12,
+                FontSize = UiMetrics.FontTitle,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Avalonia.Thickness(6, 8, 6, 3),
             });
@@ -68,7 +68,7 @@ public partial class MainWindow : Window
             {
                 Text = _chapters.ChaptersPath,
                 Foreground = UiTheme.TextSecondary,
-                FontSize = 10,
+                FontSize = UiMetrics.FontCaption,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Avalonia.Thickness(6, 0, 6, 4),
             });
@@ -91,7 +91,7 @@ public partial class MainWindow : Window
         {
             Text = collapsed ? "▸" : "▾",
             Width = 12,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             Foreground = UiTheme.TextSecondary,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -99,7 +99,7 @@ public partial class MainWindow : Window
         var title = new TextBlock
         {
             Text = ChapterHeaderText(chapter),
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.TextPrimary,
             VerticalAlignment = VerticalAlignment.Center,
@@ -195,7 +195,7 @@ public partial class MainWindow : Window
         var name = new TextBlock
         {
             Text = $"关卡 {index + 1}",
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             Foreground = selected ? UiTheme.White : UiTheme.TextPrimary,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -203,7 +203,7 @@ public partial class MainWindow : Window
         var resource = new TextBlock
         {
             Text = levelRow is null ? levelId : levelRow.LevelId,
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             Foreground = selected ? UiTheme.White : UiTheme.TextSecondary,
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
@@ -213,7 +213,7 @@ public partial class MainWindow : Window
         var badge = new TextBlock
         {
             Text = hasFile ? FormatFileSize(bytes) : "空",
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             Foreground = selected
                 ? UiTheme.White
                 : hasFile
@@ -483,7 +483,7 @@ public partial class MainWindow : Window
             {
                 Text = $"（{table.Name} 没有数据行）",
                 Foreground = UiTheme.TextSecondary,
-                FontSize = 12,
+                FontSize = UiMetrics.FontTitle,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Avalonia.Thickness(6, 4),
             });
@@ -560,11 +560,33 @@ public partial class MainWindow : Window
             _pendingTemplate = template;
             Canvas.PendingCollectibleTemplate = null;
             Canvas.PendingTemplate = template;
+            EnsurePlacementMode();
             BuildResourceList();
             SetMessage($"已选择资源：{template.TemplateName}，点击画布摆放");
         };
 
         return row;
+    }
+
+    /// <summary>
+    /// 选中资源时确保画布处于摆放模式，并同步左侧「摆放模式」开关。
+    /// <para>
+    /// 切关卡会复位摆放模式（防止上一关的待摆模板变成幽灵预览），复位后用户再从资源列表选一个物件，
+    /// 点画布只会选中格子、看起来像“点了没反应”。选资源本身就是摆放意图，这里把开关补回来，
+    /// 与收集物素材「选中即可落位」的口径保持一致。
+    /// </para>
+    /// </summary>
+    private void EnsurePlacementMode()
+    {
+        if (Canvas.PlacementEnabled && PlacementToggle.IsChecked == true)
+        {
+            return;
+        }
+
+        // 先写画布状态再同步开关：开关事件会往状态栏写一条“摆放模式已开启”，
+        // 调用方随后写入的“已选择资源…”文案会把它覆盖掉，顺序不能反。
+        Canvas.PlacementEnabled = true;
+        PlacementToggle.IsChecked = true;
     }
 
     /// <summary>
@@ -631,49 +653,25 @@ public partial class MainWindow : Window
         }
 
         // class 负责悬停态；这里再落一层本地颜色，避免模板默认底色把选中蓝盖掉。
-        button.Background = active ? UiTheme.Accent : UiTheme.Transparent;
-        button.Foreground = active ? UiTheme.White : UiTheme.Chrome.SideTabText;
+        UiFactory.ApplyToggle(button, active, UiTheme.Toggle.SideTab);
         button.BorderThickness = new Thickness(0);
     }
 
-    /// <summary>选中态用蓝色底白字，未选中态用浅灰底深字。</summary>
-    /// <param name="button">目标 Tab 按钮。</param>
+    /// <summary>
+    /// 按页签的样式类选择两态配色，统一交给按钮状态工厂落地。
+    /// 顶栏导航、卡片内分段页签、工具条浮窗开关与左栏模式页签共用同一套调用方式。
+    /// </summary>
+    /// <param name="button">目标页签按钮。</param>
     /// <param name="active">是否处于选中态。</param>
     private static void ApplyTabVisual(Button button, bool active)
     {
-        if (button.Classes.Contains("toolToggle"))
-        {
-            // 场景工具条里的浮窗开关：打开=实心青，关闭=浅青幽灵，和旁边同级按钮同一套尺码
-            button.Background = active ? UiTheme.Accent : UiTheme.PreviewAccentSoft;
-            button.Foreground = active ? UiTheme.White : UiTheme.AccentDark;
-            button.BorderBrush = active ? UiTheme.Accent : UiTheme.PanelBorder;
-            button.FontWeight = active ? FontWeight.SemiBold : FontWeight.Normal;
-            return;
-        }
+        var visual = button.Classes.Contains("menuRow") ? UiTheme.Toggle.MenuRow
+            : button.Classes.Contains("toolToggle") ? UiTheme.Toggle.ToolToggle
+            : button.Classes.Contains("segTab") ? UiTheme.Toggle.SegTab
+            : button.Classes.Contains("navTab") ? UiTheme.Toggle.NavTab
+            : UiTheme.Toggle.ModeTab;
 
-        if (button.Classes.Contains("segTab"))
-        {
-            // 卡片内的分段页签：选中=浅青胶囊 + 主色描边 + 深青加粗，未选中=透明只留灰字
-            button.Background = active ? UiTheme.Form.ActiveTabSurface : UiTheme.Transparent;
-            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
-            button.BorderBrush = active ? UiTheme.Accent : UiTheme.Transparent;
-            button.FontWeight = active ? FontWeight.SemiBold : FontWeight.Normal;
-            return;
-        }
-
-        if (button.Classes.Contains("navTab"))
-        {
-            // 顶部导航：胶囊页签。未选中只留文字，选中铺浅青 + 青描边 + 加粗，不再用大块实心蓝压住标题栏
-            button.Background = active ? UiTheme.PreviewAccentSoft : UiTheme.Transparent;
-            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
-            button.BorderBrush = active ? UiTheme.Accent : UiTheme.Transparent;
-            button.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
-            return;
-        }
-
-        button.Background = active ? UiTheme.Accent : UiTheme.Form.IdleTab;
-        button.Foreground = active ? UiTheme.White : UiTheme.TextPrimary;
+        UiFactory.ApplyToggle(button, active, visual);
     }
-
     #endregion
 }

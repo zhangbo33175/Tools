@@ -161,55 +161,88 @@ public sealed partial class TrafficRulePanel : UserControl
 
     private void RefreshLightList(string? keepId)
     {
-        _sync = true;
-        _lightItems.Clear();
-        foreach (var light in _config!.TrafficLights)
-        {
-            _lightItems.Add(TrafficRuleRow.ForLight(light, CrosswalkName(light.BoundCrosswalkId)));
-        }
-
-        _lightList.ItemsSource = _lightItems;
-        SetPageContent(_lightItems.Count > 0, _lightListHost, _lightFormScroll, _lightEmpty);
-        var index = _config.TrafficLights.FindIndex(light => light.Id == keepId);
-        _lightList.SelectedIndex = index >= 0 ? index : (_lightItems.Count > 0 ? 0 : -1);
-        _light = index >= 0 ? _config.TrafficLights[index] : _config.TrafficLights.FirstOrDefault();
-        _sync = false;
+        RebuildRowList(
+            _lightList, _lightItems, _config!.TrafficLights,
+            light => TrafficRuleRow.ForLight(light, CrosswalkName(light.BoundCrosswalkId)),
+            light => light.Id, keepId,
+            _lightListHost, _lightFormScroll, _lightEmpty,
+            current => _light = current);
     }
 
     private void RefreshCrosswalkList(string? keepId)
     {
-        _sync = true;
-        _crosswalkItems.Clear();
-        foreach (var crosswalk in _config!.Crosswalks)
-        {
-            _crosswalkItems.Add(TrafficRuleRow.ForCrosswalk(
-                crosswalk, LightName(crosswalk.BoundLightId), CrosswalkName(crosswalk.Id)));
-        }
-
-        _crosswalkList.ItemsSource = _crosswalkItems;
-        SetPageContent(_crosswalkItems.Count > 0, _crosswalkListHost, _crosswalkFormScroll, _crosswalkEmpty);
-        var index = _config.Crosswalks.FindIndex(crosswalk => crosswalk.Id == keepId);
-        _crosswalkList.SelectedIndex = index >= 0 ? index : (_crosswalkItems.Count > 0 ? 0 : -1);
-        _crosswalk = index >= 0 ? _config.Crosswalks[index] : _config.Crosswalks.FirstOrDefault();
-        _sync = false;
+        RebuildRowList(
+            _crosswalkList, _crosswalkItems, _config!.Crosswalks,
+            crosswalk => TrafficRuleRow.ForCrosswalk(
+                crosswalk, LightName(crosswalk.BoundLightId), CrosswalkName(crosswalk.Id)),
+            crosswalk => crosswalk.Id, keepId,
+            _crosswalkListHost, _crosswalkFormScroll, _crosswalkEmpty,
+            current => _crosswalk = current);
     }
 
     private void RefreshActorList(string? keepId)
     {
-        _sync = true;
         _actorSources.Clear();
         _actorSources.AddRange(TrafficRuleService.BuildActors(_config!));
-        _actorItems.Clear();
-        foreach (var item in _actorSources)
+        RebuildRowList(
+            _actorList, _actorItems, _actorSources,
+            item => TrafficRuleRow.ForActor(item),
+            item => item.Id, keepId,
+            _actorListHost, _actorFormScroll, _actorEmpty,
+            current => _actor = current);
+    }
+
+    /// <summary>
+    /// 三张列表共用的重建骨架：丢弃旧行容器 → 逐条生成展示行 → 按 ID 恢复选中 → 回写当前编辑对象。
+    /// <para>列表整体重建而不是原位替换，是因为 Avalonia 的 ListBox 对集合项替换不重建行容器，
+    /// 行文案与相位条会停在旧值；行数只有几十条，重建成本可忽略。</para>
+    /// </summary>
+    /// <typeparam name="T">数据源元素类型（灯 / 横道 / 角色）。</typeparam>
+    /// <param name="list">目标列表控件。</param>
+    /// <param name="rows">该列表的展示行集合。</param>
+    /// <param name="source">数据源，通常直接取 <see cref="MapConfigData"/> 上的集合。</param>
+    /// <param name="rowOf">把一条数据转换成展示行。</param>
+    /// <param name="idOf">取数据的稳定 ID，用于重建后恢复选中。</param>
+    /// <param name="keepId">重建前选中的数据 ID，找不到或为 null 时回退到首条。</param>
+    /// <param name="host">列表区容器（决定空态是否显示）。</param>
+    /// <param name="scroll">表单滚动区。</param>
+    /// <param name="empty">数据为空时的占位提示。</param>
+    /// <param name="onCurrent">回写当前编辑对象；空表时传 null。</param>
+    private void RebuildRowList<T>(
+        ListBox list,
+        ObservableCollection<TrafficRuleRow> rows,
+        IList<T> source,
+        Func<T, TrafficRuleRow> rowOf,
+        Func<T, string> idOf,
+        string? keepId,
+        Control host,
+        Control scroll,
+        Control empty,
+        Action<T?> onCurrent)
+    {
+        _sync = true;
+        list.ItemsSource = null;
+        rows.Clear();
+        foreach (var item in source)
         {
-            _actorItems.Add(TrafficRuleRow.ForActor(item));
+            rows.Add(rowOf(item));
         }
 
-        _actorList.ItemsSource = _actorItems;
-        SetPageContent(_actorItems.Count > 0, _actorListHost, _actorFormScroll, _actorEmpty);
-        var index = _actorSources.FindIndex(item => item.Id == keepId);
-        _actorList.SelectedIndex = index >= 0 ? index : (_actorItems.Count > 0 ? 0 : -1);
-        _actor = index >= 0 ? _actorSources[index] : _actorSources.FirstOrDefault();
+        list.ItemsSource = rows;
+        SetPageContent(rows.Count > 0, host, scroll, empty);
+
+        var index = -1;
+        for (var i = 0; i < source.Count; i++)
+        {
+            if (idOf(source[i]) == keepId)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        list.SelectedIndex = index >= 0 ? index : (rows.Count > 0 ? 0 : -1);
+        onCurrent(index >= 0 ? source[index] : source.Count > 0 ? source[0] : default);
         _sync = false;
     }
 
@@ -258,44 +291,26 @@ public sealed partial class TrafficRulePanel : UserControl
             : string.IsNullOrWhiteSpace(light.Name) ? id : light.Name;
     }
 
-    /// <summary>编辑提交后的统一收尾：刷新画布、通知文档已改、重建预览仿真、更新列表行文案。</summary>
+    /// <summary>
+    /// 编辑提交后的统一收尾：刷新画布、通知文档已改、重建预览仿真、重建三张列表并刷新状态行。
+    /// 列表一律整体重建：Avalonia 的 ListBox 对集合项原位替换不会重建行容器，
+    /// 行文案与相位条会停在旧值；列表本身只有几十行，重建成本可忽略，且重建后仍按 ID 保持选中。
+    /// </summary>
+    /// <param name="refreshLists">是否连整页（表单与空态）一起重建。</param>
     private void ApplyChange(bool refreshLists = false)
     {
-        _canvas?.Refresh();
-        _canvas?.NotifyDocumentChanged();
+        _canvas?.CommitEdit();
         _canvas?.RebuildTrafficSimulation();
-
         if (refreshLists)
         {
             RefreshAll();
             return;
         }
 
-        // 只改参数时刷新当前行的显示内容，避免输入过程中列表重建抢走焦点
-        ReplaceRow(_lightList, _lightItems, _config?.TrafficLights.IndexOf(_light!) ?? -1,
-            _light is null ? null : TrafficRuleRow.ForLight(_light, CrosswalkName(_light.BoundCrosswalkId)));
-        ReplaceRow(_crosswalkList, _crosswalkItems, _config?.Crosswalks.IndexOf(_crosswalk!) ?? -1,
-            _crosswalk is null ? null : TrafficRuleRow.ForCrosswalk(
-            _crosswalk, LightName(_crosswalk.BoundLightId), CrosswalkName(_crosswalk.Id)));
-        ReplaceRow(_actorList, _actorItems, _actor is null ? -1 : _actorSources.IndexOf(_actor),
-            _actor is null ? null : TrafficRuleRow.ForActor(_actor));
+        RefreshLightList(_light?.Id);
+        RefreshCrosswalkList(_crosswalk?.Id);
+        RefreshActorList(_actor?.Id);
         RefreshStatusLine();
-    }
-
-    private static void ReplaceRow(
-        ListBox list,
-        ObservableCollection<TrafficRuleRow> items,
-        int index,
-        TrafficRuleRow? row)
-    {
-        if (row is null || index < 0 || index >= items.Count || items[index] == row)
-        {
-            return;
-        }
-
-        var selected = list.SelectedIndex;
-        items[index] = row;
-        list.SelectedIndex = selected;
     }
 
     #endregion
@@ -383,29 +398,6 @@ public sealed partial class TrafficRulePanel : UserControl
         _notify("角色页不提供删除：角色的增减由场景里的路径决定");
     }
 
-    /// <summary>
-    /// 列表换行时把对应物件同步选中到画布上：点一条规则，场景里立刻高亮它管的灯 / 斑马线 / 车，
-    /// 不必再点「定位」。已经选中的物件直接跳过，避免每次刷新都重复触发属性回填。
-    /// </summary>
-    /// <param name="objectId">规则对应的地图物件 ID。</param>
-    /// <returns>找到并选中（或已选中）物件时返回 true。</returns>
-    private bool SyncCanvasSelection(string? objectId)
-    {
-        if (_canvas is null || _config is null || string.IsNullOrEmpty(objectId))
-        {
-            return false;
-        }
-
-        var target = _config.Objects.FirstOrDefault(item => item.Id == objectId);
-        if (target is null)
-        {
-            return false;
-        }
-
-        SelectObjectOnCanvas(target);
-        return true;
-    }
-
     /// <summary>把物件选中到画布并居中；规则行与「定位」按钮共用。</summary>
     /// <param name="target">目标物件。</param>
     private void SelectObjectOnCanvas(PlacedObject target)
@@ -425,36 +417,48 @@ public sealed partial class TrafficRulePanel : UserControl
     }
 
     /// <summary>
-    /// 找到灯对应的地图物件。灯是从物件标记出来的独立记录，ID 未必继承物件 ID，
-    /// 所以先按 ID 找，找不到再按同名 + 灯位最近兜底。
+    /// 按 ID 找规则对应的地图物件；ID 对不上再按名字找最近的一个。
+    /// <para>灯是从物件标记出来的独立记录，横道的 ID 也可能与物件 ID 不同，
+    /// 所以统一走「先 ID、后同名 + 锚点最近」这两步，三个页签共用一份兜底逻辑。</para>
     /// </summary>
-    /// <param name="light">当前灯。</param>
+    /// <param name="id">规则记录里的 ID。</param>
+    /// <param name="name">规则记录里的名字，同名的多份实例按锚点距离挑最近。</param>
+    /// <param name="anchorX">锚点 X（灯位 / 横道端点 / 物件中心）。</param>
+    /// <param name="anchorY">锚点 Y。</param>
     /// <returns>对应物件，找不到返回 null。</returns>
-    private PlacedObject? ResolveLightObject(MapTrafficLightData light)
+    private PlacedObject? ResolveObject(string id, string? name, double anchorX, double anchorY)
     {
         if (_config is null)
         {
             return null;
         }
 
-        var byId = _config.Objects.FirstOrDefault(item => item.Id == light.Id);
-        if (byId is not null)
+        if (!string.IsNullOrEmpty(id))
         {
-            return byId;
+            var byId = _config.Objects.FirstOrDefault(item => item.Id == id);
+            if (byId is not null)
+            {
+                return byId;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
         }
 
         PlacedObject? best = null;
         var bestDistance = double.MaxValue;
         foreach (var item in _config.Objects)
         {
-            if (!string.Equals(item.Name, light.Name, StringComparison.Ordinal))
+            if (!string.Equals(item.Name, name, StringComparison.Ordinal))
             {
                 continue;
             }
 
             var center = item.Bounds.Center;
-            var dx = center.X - light.PosX;
-            var dy = center.Y - light.PosY;
+            var dx = center.X - anchorX;
+            var dy = center.Y - anchorY;
             var distance = dx * dx + dy * dy;
             if (distance >= bestDistance)
             {
@@ -469,53 +473,106 @@ public sealed partial class TrafficRulePanel : UserControl
     }
 
     /// <summary>
+    /// 把一条规则对应的物件定位到画布：有物件就选中并居中；
+    /// 只有规则坐标时只移视口，并通过状态栏说明没有对应物件。
+    /// </summary>
+    /// <param name="target">解析出的物件，null 表示只有规则坐标。</param>
+    /// <param name="label">规则名称，用于提示文案。</param>
+    /// <param name="fallbackX">没有物件时的兜底视口中心 X。</param>
+    /// <param name="fallbackY">没有物件时的兜底视口中心 Y。</param>
+    /// <param name="quiet">true 时成功不弹提示（列表行切换用），失败仍会说明。</param>
+    private void LocateRule(PlacedObject? target, string label, double fallbackX, double fallbackY, bool quiet)
+    {
+        if (_canvas is null)
+        {
+            return;
+        }
+
+        if (target is not null)
+        {
+            SelectObjectOnCanvas(target);
+            if (!quiet)
+            {
+                _notify($"已在画布上选中「{target.Name}」");
+            }
+
+            return;
+        }
+
+        _canvas.FocusPoint(fallbackX, fallbackY);
+        _notify($"「{label}」没有对应的地图物件，已把视口移到规则坐标"
+                + $" ({fallbackX:0},{fallbackY:0})");
+    }
+
+    /// <summary>
     /// 灯行：灯位来自规则数据，未必有对应的地图物件。
     /// 有物件就选中它；没有就保持选中不变，只把视口移到灯位上。
     /// </summary>
     /// <param name="light">当前灯。</param>
     private void SyncLightOnCanvas(MapTrafficLightData? light)
     {
-        if (light is null || _canvas is null)
+        if (light is null)
         {
             return;
         }
 
-        var target = ResolveLightObject(light);
-        if (target is not null)
+        LocateRule(ResolveObject(light.Id, light.Name, light.PosX, light.PosY),
+            light.Name, light.PosX, light.PosY, quiet: true);
+    }
+
+    /// <summary>横道行：解析对应物件后定位；横道 ID 与物件 ID 不同时按名字 + 端点最近兜底。</summary>
+    /// <param name="crosswalk">当前横道。</param>
+    private void SyncCrosswalkOnCanvas(MapCrosswalkData? crosswalk)
+    {
+        if (crosswalk is null)
         {
-            SelectObjectOnCanvas(target);
             return;
         }
 
-        _canvas.FocusPoint(light.PosX, light.PosY);
+        var anchor = crosswalk.PointA;
+        LocateRule(ResolveObject(crosswalk.Id, crosswalk.Name, anchor.X, anchor.Y),
+            crosswalk.Name, anchor.X, anchor.Y, quiet: true);
+    }
+
+    /// <summary>角色行：解析对应物件后定位；按名字兜底时取包围盒中心最近的一份实例。</summary>
+    /// <param name="actor">当前角色物件。</param>
+    private void SyncActorOnCanvas(PlacedObject? actor)
+    {
+        if (actor is null)
+        {
+            return;
+        }
+
+        var center = actor.Bounds.Center;
+        LocateRule(ResolveObject(actor.Id, actor.Name, center.X, center.Y),
+            actor.Name, center.X, center.Y, quiet: true);
     }
 
     /// <summary>把当前行对应的物件选中到画布上并居中，方便对照位置。</summary>
     private void SelectCurrentOnCanvas()
     {
-        var target = _pageIndex switch
+        switch (_pageIndex)
         {
-            0 => _light is null ? null : ResolveLightObject(_light),
-            1 => _config?.Objects.FirstOrDefault(item => item.Id == _crosswalk?.Id),
-            _ => _config?.Objects.FirstOrDefault(item => item.Id == _actor?.Id),
-        };
-        if (target is not null && _canvas is not null)
-        {
-            _canvas.Select(target);
-            _canvas.FocusObject(target);
-            _notify($"已在画布上选中「{target.Name}」");
-            return;
+            case 0 when _light is not null:
+                LocateRule(ResolveObject(_light.Id, _light.Name, _light.PosX, _light.PosY),
+                    _light.Name, _light.PosX, _light.PosY, quiet: false);
+                return;
+            case 1 when _crosswalk is not null:
+                LocateRule(ResolveObject(_crosswalk.Id, _crosswalk.Name,
+                        _crosswalk.PointA.X, _crosswalk.PointA.Y),
+                    _crosswalk.Name, _crosswalk.PointA.X, _crosswalk.PointA.Y, quiet: false);
+                return;
+            case 2 when _actor is not null:
+            {
+                var center = _actor.Bounds.Center;
+                LocateRule(ResolveObject(_actor.Id, _actor.Name, center.X, center.Y),
+                    _actor.Name, center.X, center.Y, quiet: false);
+                return;
+            }
+            default:
+                _notify("当前页签没有可定位的规则记录");
+                return;
         }
-
-        if (_pageIndex == 0 && _light is not null && _canvas is not null)
-        {
-            _canvas.FocusPoint(_light.PosX, _light.PosY);
-            _notify($"「{_light.Name}」只有规则坐标，已把视口移到灯位"
-                    + $" ({_light.PosX:0},{_light.PosY:0})");
-            return;
-        }
-
-        _notify("当前规则没有对应的地图物件，无法在画布上选中");
     }
 
     private bool TryGetSelectedObject(string expect, out PlacedObject item)

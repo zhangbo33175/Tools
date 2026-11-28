@@ -84,21 +84,23 @@ public sealed partial class TrafficRulePanel : UserControl
         _lightCrosswalk = Combo();
         _lightBindSummary = new TextBlock
         {
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             TextWrapping = TextWrapping.Wrap,
             LineHeight = 14,
             Foreground = UiTheme.TextSecondary,
         };
         _lightCycleText = Hint(string.Empty);
 
-        HookCommit(_lightName, () => CommitLight());
-        HookCommit(_lightX, () => CommitLight());
-        HookCommit(_lightY, () => CommitLight());
-        HookCommit(_lightRed, () => CommitLight());
-        HookCommit(_lightGreen, () => CommitLight());
-        HookCommit(_lightYellow, () => CommitLight());
-        HookCommit(_lightOffset, () => CommitLight());
-        HookCommit(_lightGroup, () => CommitLight());
+        HookCommit(
+            () => CommitLight(),
+            _lightName,
+            _lightX,
+            _lightY,
+            _lightRed,
+            _lightGreen,
+            _lightYellow,
+            _lightOffset,
+            _lightGroup);
 
         _lightDir.SelectionChanged += (_, _) => CommitLight(deferFill: true);
         _lightSide.SelectionChanged += (_, _) => CommitLight(deferFill: true);
@@ -123,26 +125,20 @@ public sealed partial class TrafficRulePanel : UserControl
             ApplyAfterCombo();
         };
 
-        var pickPosition = ActionButton("取选中物件位置", () =>
-        {
-            var item = _canvas?.Selected;
-            if (item is null || _light is null)
+        var pickPosition = PickFromSelectionButton(
+            "取选中物件位置",
+            "先在场景里选中灯体物件，再点这里取位置",
+            () => _light,
+            (light, item) =>
             {
-                _notify("先在场景里选中灯体物件，再点这里取位置");
-                return;
-            }
-
-            var bounds = item.Bounds;
-            _light.PosX = bounds.Center.X;
-            _light.PosY = bounds.Bottom;
-            _light.Name = item.Name;
-            FillLightForm();
-            ApplyChange();
-        });
-        pickPosition.HorizontalAlignment = HorizontalAlignment.Stretch;
+                var bounds = item.Bounds;
+                light.PosX = bounds.Center.X;
+                light.PosY = bounds.Bottom;
+                light.Name = item.Name;
+                FillLightForm();
+            });
 
         var select = ActionButton("在画布选中该物件", SelectCurrentOnCanvas);
-        select.HorizontalAlignment = HorizontalAlignment.Stretch;
 
         _lightCycleText.FontSize = 10.5;
         _lightCycleText.Foreground = UiTheme.InfoText;
@@ -425,12 +421,14 @@ public sealed partial class TrafficRulePanel : UserControl
         _crosswalkBY = Field();
         _crosswalkLight = Combo();
 
-        HookCommit(_crosswalkName, () => CommitCrosswalk());
-        HookCommit(_crosswalkWidth, () => CommitCrosswalk());
-        HookCommit(_crosswalkAX, () => CommitCrosswalk());
-        HookCommit(_crosswalkAY, () => CommitCrosswalk());
-        HookCommit(_crosswalkBX, () => CommitCrosswalk());
-        HookCommit(_crosswalkBY, () => CommitCrosswalk());
+        HookCommit(
+            () => CommitCrosswalk(),
+            _crosswalkName,
+            _crosswalkWidth,
+            _crosswalkAX,
+            _crosswalkAY,
+            _crosswalkBX,
+            _crosswalkBY);
         _crosswalkDir.SelectionChanged += (_, _) => CommitCrosswalk(deferFill: true);
         _crosswalkLight.SelectionChanged += (_, _) =>
         {
@@ -449,33 +447,28 @@ public sealed partial class TrafficRulePanel : UserControl
             ApplyAfterCombo();
         };
 
-        var pickGeometry = ActionButton("取选中物件包围盒", () =>
-        {
-            var item = _canvas?.Selected;
-            if (item is null || _crosswalk is null)
+        var pickGeometry = PickFromSelectionButton(
+            "取选中物件包围盒",
+            "先在场景里选中斑马线物件，再点这里取几何",
+            () => _crosswalk,
+            (crosswalk, item) =>
             {
-                _notify("先在场景里选中斑马线物件，再点这里取几何");
-                return;
-            }
-
-            var bounds = item.Bounds;
-            var horizontal = bounds.Width >= bounds.Height;
-            _crosswalk.Name = item.Name;
-            _crosswalk.Direction = horizontal ? TrafficDirections.Horizontal : TrafficDirections.Vertical;
-            _crosswalk.Width = horizontal ? bounds.Height : bounds.Width;
-            _crosswalk.PointA = horizontal
-                ? new MapPathPointData(bounds.Left, bounds.Center.Y)
-                : new MapPathPointData(bounds.Center.X, bounds.Top);
-            _crosswalk.PointB = horizontal
-                ? new MapPathPointData(bounds.Right, bounds.Center.Y)
-                : new MapPathPointData(bounds.Center.X, bounds.Bottom);
-            FillCrosswalkForm();
-            ApplyChange(refreshLists: true);
-        });
-        pickGeometry.HorizontalAlignment = HorizontalAlignment.Stretch;
+                var bounds = item.Bounds;
+                var horizontal = bounds.Width >= bounds.Height;
+                crosswalk.Name = item.Name;
+                crosswalk.Direction = horizontal ? TrafficDirections.Horizontal : TrafficDirections.Vertical;
+                crosswalk.Width = horizontal ? bounds.Height : bounds.Width;
+                crosswalk.PointA = horizontal
+                    ? new MapPathPointData(bounds.Left, bounds.Center.Y)
+                    : new MapPathPointData(bounds.Center.X, bounds.Top);
+                crosswalk.PointB = horizontal
+                    ? new MapPathPointData(bounds.Right, bounds.Center.Y)
+                    : new MapPathPointData(bounds.Center.X, bounds.Bottom);
+                FillCrosswalkForm();
+            },
+            refreshLists: true);
 
         var select = ActionButton("在画布选中该物件", SelectCurrentOnCanvas);
-        select.HorizontalAlignment = HorizontalAlignment.Stretch;
 
         var body = new StackPanel
         {
@@ -613,53 +606,36 @@ public sealed partial class TrafficRulePanel : UserControl
         _actorRole = Combo(TrafficRoles.DisplayChoices.ToArray());
         _actorSpeed = Field();
         _actorMode = Combo("循环", "往返", "单程");
-        _actorLoop = new CheckBox { Content = "循环播放", FontSize = 11 };
+        _actorLoop = new CheckBox { Content = "循环播放", FontSize = UiMetrics.FontBody };
         _actorStopX = Field();
         _actorStopY = Field();
-        _actorYellowRed = new CheckBox { Content = "黄灯按红灯", FontSize = 11 };
+        _actorYellowRed = new CheckBox { Content = "黄灯按红灯", FontSize = UiMetrics.FontBody };
         ToolTip.SetTip(_actorYellowRed, "只对载具生效：黄灯也停，而不是抢灯");
         _actorPathText = Hint(string.Empty);
         _actorLightsPanel = new StackPanel { Spacing = 1 };
 
-        HookCommit(_actorSpeed, CommitActor);
-        HookCommit(_actorStopX, CommitActor);
-        HookCommit(_actorStopY, CommitActor);
+        HookCommit(CommitActor, _actorSpeed, _actorStopX, _actorStopY);
         _actorRole.SelectionChanged += (_, _) => CommitActor();
         _actorMode.SelectionChanged += (_, _) => CommitActor();
         _actorLoop.IsCheckedChanged += (_, _) => CommitActor();
         _actorYellowRed.IsCheckedChanged += (_, _) => CommitActor();
 
-        var clearStop = ActionButton("清除停止线", () =>
-        {
-            if (_actor is null)
+        var clearStop = ActorResetButton(
+            "清除停止线",
+            "先在列表里选中一个角色",
+            actor =>
             {
-                _notify("先在列表里选中一个角色");
-                return;
-            }
+                actor.StopLineX = 0;
+                actor.StopLineY = 0;
+            },
+            "停止线清零，改为按绑定灯的横道 / 灯位推算停点");
 
-            _actor.StopLineX = 0;
-            _actor.StopLineY = 0;
-            FillActorForm();
-            ApplyChange();
-        });
-        ToolTip.SetTip(clearStop, "停止线清零，改为按绑定灯的横道 / 灯位推算停点");
-        clearStop.HorizontalAlignment = HorizontalAlignment.Stretch;
-
-        var clearLights = ActionButton("清空绑定灯", () =>
-        {
-            if (_actor is null)
-            {
-                return;
-            }
-
-            _actor.BoundLightIds.Clear();
-            FillActorForm();
-            ApplyChange();
-        });
-        clearLights.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var clearLights = ActorResetButton(
+            "清空绑定灯",
+            "先在列表里选中一个角色",
+            actor => actor.BoundLightIds.Clear());
 
         var select = ActionButton("选中角色", SelectCurrentOnCanvas);
-        select.HorizontalAlignment = HorizontalAlignment.Stretch;
 
         var speedHint = Hint("预览速度 = 200 px/s（载具）或 80 px/s（行人）× 速度倍率");
 
@@ -753,7 +729,7 @@ public sealed partial class TrafficRulePanel : UserControl
                 {
                     Content = $"{light.Name} ({light.GridX},{light.GridY})",
                     IsChecked = item.BoundLightIds.Contains(id),
-                    FontSize = 11,
+                    FontSize = UiMetrics.FontBody,
                     Margin = new Thickness(0, 0, 0, 1),
                 };
                 box.IsCheckedChanged += (_, _) =>

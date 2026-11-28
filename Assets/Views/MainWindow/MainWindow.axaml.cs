@@ -48,6 +48,9 @@ public partial class MainWindow : Window
 
     private MapConfigData _config = new();
     private List<ObjectTemplate> _templates = new();
+
+    /// <summary>四方向出图索引：模板集合变化后重建，画布据此决定「换图」还是「转图」。</summary>
+    private FacingImageCatalog _facingImages = FacingImageCatalog.Empty;
     private MapObjectType _activeType = MapObjectType.Prop;
     private ObjectTemplate? _pendingTemplate;
 
@@ -189,6 +192,10 @@ public partial class MainWindow : Window
         var configDirectory = EditorPaths.Config;
         _templateStore = new TemplateStore(configDirectory);
         _templates = _templateStore.LoadOrCreate(() => TemplateCatalog.CreateBuiltIn());
+
+        // 四方向出图索引：模板一变就重建，画布只认「模板 + 朝向」不再摸模板集合
+        _facingImages = new FacingImageCatalog();
+        _facingImages.Rebuild(_templates);
         _config = TemplateCatalog.CreateEmptyMap();
 
         // 动画目录与地图数据分离：地图 JSON 只保存动画名 / Spine 资产名，帧路径和 Atlas 路径集中在 output\Config
@@ -217,6 +224,7 @@ public partial class MainWindow : Window
         }
 
         Canvas.Assets = _assets;
+        Canvas.FacingImages = _facingImages;
         // 画布按配置表把「未登记资源」框出来：先挂表，后续刷新 / 补齐时同步
         Canvas.ItemTable = _itemTable;
 
@@ -248,6 +256,11 @@ public partial class MainWindow : Window
         WireTrafficRulePanel();
         WireResourcePanel();
         WireStoryPanel();
+        WireTilePalette();
+        WireLevels();
+        WireRooms();
+        WireWallSnap();
+        WireSceneAttrScroll();
 
         RefreshSceneFields();
         RefreshStatus();
@@ -255,6 +268,13 @@ public partial class MainWindow : Window
 
         // --open-map <路径>：直接打开某张地图（可用于对照 Unity 工程里的真实数据）
         var args = Environment.GetCommandLineArgs();
+
+        // --grid-settings：启动即弹出网格设置，用于快速核对界面与实时预览
+        if (Array.IndexOf(args, "--grid-settings") >= 0)
+        {
+            Dispatcher.UIThread.Post(async () => await OpenGridSettingsAsync(), DispatcherPriority.Background);
+        }
+
         TraceStartup($"ctor args({args.Length}): {string.Join(" | ", args)}");
         for (var i = 0; i + 1 < args.Length; i++)
         {
@@ -264,7 +284,21 @@ public partial class MainWindow : Window
                 TraceStartup($"--open-map -> {target}");
                 LoadMapFile(target);
                 TraceStartup($"--open-map done, objects={_config.Objects.Count}, lights={_config.TrafficLights.Count}, path={_currentMapPath}");
-                break;
+                continue;   // 不再 break：--open-map 之后可能还跟着 --preview-room
+            }
+
+            // --preview-room <房间ID>：启动即进入「进屋预览」，用于核对 rooms[] 与 hideOnEnter 的落盘结果
+            if (args[i] == "--preview-room")
+            {
+                var roomId = args[i + 1];
+                if (_config.FindRoom(roomId) is { } room)
+                {
+                    Canvas.RoomPreviewId = room.Id;
+                    Canvas.Refresh();
+                    TraceStartup($"--preview-room -> {room.Id} ({room.DisplayName})");
+                }
+
+                continue;
             }
 
             if (args[i] == "--import-psd")
@@ -304,6 +338,15 @@ public partial class MainWindow : Window
 
         if (HandleUndoShortcut(e))
         {
+            e.Handled = true;
+            return;
+        }
+
+        // 楼层切换：PageUp 上楼 / PageDown 下楼（文本框里翻页时不抢键）
+        if (e.Key is Key.PageUp or Key.PageDown && e.KeyModifiers == KeyModifiers.None
+            && FocusManager?.GetFocusedElement() is not TextBox)
+        {
+            ChangeLevel(e.Key == Key.PageUp ? 1 : -1);
             e.Handled = true;
             return;
         }
@@ -405,15 +448,7 @@ public partial class MainWindow : Window
 
     private void BindText(TextBox box, Action<string> apply)
     {
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                apply(box.Text ?? string.Empty);
-                e.Handled = true;
-            }
-        };
-
+        UiFactory.CommitOnEnter(box, () => apply(box.Text ?? string.Empty));
         box.LostFocus += (_, _) => apply(box.Text ?? string.Empty);
     }
 
@@ -463,15 +498,7 @@ public partial class MainWindow : Window
             }
         };
 
-        combo.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                apply(combo.Text ?? string.Empty);
-                e.Handled = true;
-            }
-        };
-
+        UiFactory.CommitOnEnter(combo, () => apply(combo.Text ?? string.Empty));
         combo.LostFocus += (_, _) => apply(combo.Text ?? string.Empty);
     }
 
@@ -485,15 +512,7 @@ public partial class MainWindow : Window
             }
         }
 
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                Commit();
-                e.Handled = true;
-            }
-        };
-
+        UiFactory.CommitOnEnter(box, Commit);
         box.LostFocus += (_, _) => Commit();
     }
 
@@ -681,5 +700,23 @@ public partial class MainWindow : Window
         _ => Facings.Down,
     };
 
+    /// <summary>
+    /// 「场景属性」卡片的滚动条按需显示：内容装得下就整条收起，避免在窄卡片里常驻一条空轨道。
+    /// <para>换算走 ScrollViewer 的 Extent / Viewport：两者差 0.5px 以上才认为需要滚动，
+    /// 免得布局取整的亚像素误差让滚动条闪一下。</para>
+    /// </summary>
+    private void WireSceneAttrScroll()
+    {
+        void Sync() => SceneAttrScrollBar.IsVisible =
+            SceneAttrScroll.Extent.Height - SceneAttrScroll.Viewport.Height > 0.5;
+
+        SceneAttrScroll.ScrollChanged += (_, _) => Sync();
+        SceneAttrScroll.SizeChanged += (_, _) => Sync();
+        Dispatcher.UIThread.Post(Sync, DispatcherPriority.Background);
+    }
+
     #endregion
 }
+
+
+

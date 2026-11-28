@@ -50,7 +50,15 @@ public sealed partial class MapCanvas : Control
         // 选中框内容拆成本地函数：裁剪开/关只切换 PushClip，内容与碰撞/阴影逻辑只写一份。
         void DrawContent()
         {
-            context.DrawRectangle(null, new Pen(AccentBrush, 2.0 * Hairline), bounds);
+            // 选中框外扩 3px：占格框画在同一圈包围盒上，两条线重合会糊成一团。
+            // 让选择框退到外侧，绿色占格框在内、蓝色选择框在外，一眼分得清「占了哪几格」和「选中了谁」。
+            var outset = 3.0 * Hairline;
+            var frame = new Rect(
+                bounds.X - outset,
+                bounds.Y - outset,
+                bounds.Width + outset * 2,
+                bounds.Height + outset * 2);
+            context.DrawRectangle(null, new Pen(AccentBrush, 2.0 * Hairline), frame);
 
             // 绿化层的 collision/shadow 是 PSD 批量导入时统一带上的 true，画出来只会把
             // 整块 605×351 的草地压成灰暗色块；它不是可编辑的碰撞体，选中时只保留外框与占格。
@@ -79,7 +87,8 @@ public sealed partial class MapCanvas : Control
                     ShadowAreaStrokeBrush);
             }
 
-            foreach (var corner in new[] { bounds.TopLeft, bounds.TopRight, bounds.BottomRight, bounds.BottomLeft })
+            // 手柄跟着外扩后的框走，和框线保持成一组
+            foreach (var corner in new[] { frame.TopLeft, frame.TopRight, frame.BottomRight, frame.BottomLeft })
             {
                 context.FillRectangle(
                     HandleBrush,
@@ -90,14 +99,14 @@ public sealed partial class MapCanvas : Control
         if (ShowClipOutsideMap)
         {
             using (context.PushClip(mapClip))
-            using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, item.FlipX, bounds)))
+            using (context.PushTransform(SpriteLayout.ContentTransform(EffectiveRotationOf(item), item.FlipX, bounds)))
             {
                 DrawContent();
             }
         }
         else
         {
-            using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, item.FlipX, bounds)))
+            using (context.PushTransform(SpriteLayout.ContentTransform(EffectiveRotationOf(item), item.FlipX, bounds)))
             {
                 DrawContent();
             }
@@ -133,7 +142,7 @@ public sealed partial class MapCanvas : Control
 
         foreach (var item in OrderedObjects(config))
         {
-            if (ReferenceEquals(item, _selected) || Math.Abs(item.Rotation) < 0.01)
+            if (ReferenceEquals(item, _selected) || Math.Abs(EffectiveRotationOf(item)) < 0.01)
             {
                 continue;
             }
@@ -143,8 +152,9 @@ public sealed partial class MapCanvas : Control
     }
 
     /// <summary>
-    /// 实例的格子级占格（碰撞区域）：把「包围盒（含旋转）」压到的格子一格格画出来，
-    /// 摆放模式=矩形时画正方格、=菱形时画菱形格。强调态加深填充（可直接当碰撞区域核对）。
+    /// 实例的格子级占格：把「落位格 + 格数」铺成一格格游戏内落位格（半透明绿填充 + 亮绿描边 + 格内十字）。
+    /// 这一层画在所有贴图**之前**，整体沉在地面，看起来像物件站在格子上；贴图把格子盖住的部分由
+    /// <see cref="DrawSelectedOccupancyOutline"/> 在顶层补描边。
     /// </summary>
     /// <param name="context">绘制上下文（世界坐标）。</param>
     /// <param name="item">实例。</param>
@@ -165,40 +175,115 @@ public sealed partial class MapCanvas : Control
         }
 
         var thin = Hairline;
-        var diamond = IsDiamondMode;
-
-        // 注意：这里刻意不使用 PushClip —— 一旦用 PushClip 包住占格，Avalonia 会把这批图元
-        // 合成到贴图之上，占格又会浮在美术表面；越界格子改为逐格判断裁掉。
-
-        var cells = OccupiedCells(item, cell, diamond);
+        var cells = OccupiedCells(item, cell, config.DrawShape);
         if (cells.Count == 0)
         {
             return;
         }
 
+        // 注意：这里刻意不使用 PushClip —— 一旦用 PushClip 包住占格，Avalonia 会把这批图元
+        // 合成到贴图之上，占格又会浮在美术表面；越界格子改为逐格判断裁掉。
         var stroke = emphasized
             ? new Pen(OccupancyStrokeBrush, 2.0 * thin)
             : new Pen(OccupancyIdleStrokeBrush, thin);
         var fill = emphasized && !suppressFill ? OccupancyFillBrush : null;
-        var mapWidth = config.Width;
-        var mapHeight = config.Height;
+        DrawOccupancyLayer(context, cells, cell, config.DrawShape, fill, stroke, emphasized ? OccupancyCrossBrush : null);
+    }
+
+    /// <summary>
+    /// 选中实例占格的顶层描边：贴图盖住整格时（1 格大小的道具是常态）地面那层填充完全看不见，
+    /// 所以在所有图元之后再用细线补一遍格子边界与十字，保证任何尺寸都能看清它占了哪几格。
+    /// </summary>
+    /// <param name="context">绘制上下文（世界坐标）。</param>
+    private void DrawSelectedOccupancyOutline(DrawingContext context)
+    {
+        if (_selected is not { } item || _config is not { } config)
+        {
+            return;
+        }
+
+        var cell = (double)(config.GridSize > 0 ? config.GridSize : MapToolDefaults.GridSize);
+        if (cell <= 0)
+        {
+            return;
+        }
+
+        var cells = OccupiedCells(item, cell, config.DrawShape);
+        if (cells.Count == 0)
+        {
+            return;
+        }
+
+        // 顶层占格：只描边 + 十字，线宽比选中框细一档，不铺填充（填充会盖住美术本体）
+        var outline = new Pen(OccupancyOutlineBrush, 2.2 * Hairline);
+        DrawOccupancyLayer(context, cells, cell, config.DrawShape, null, outline, OccupancyCrossBrush);
+    }
+
+    /// <summary>
+    /// 按形状把一批格子画出来：矩形 / 菱形 / 六边形共用同一段填充 + 描边 + 格内十字逻辑，
+    /// 免得三种形状各写一套（原来矩形与菱形就是两套分支，颜色和十字因此走偏）。
+    /// 越界格子逐格裁掉（不 PushClip，原因见调用方）。
+    /// </summary>
+    /// <param name="context">绘制上下文（世界坐标）。</param>
+    /// <param name="cells">格子行列集合。</param>
+    /// <param name="cell">格子边长。</param>
+    /// <param name="drawShape">绘制形状。</param>
+    /// <param name="fill">填充画刷；null = 只描边。</param>
+    /// <param name="stroke">描边画笔。</param>
+    /// <param name="cross">格内十字画刷；null = 不画十字。</param>
+    private void DrawOccupancyLayer(
+        DrawingContext context,
+        List<(int Col, int Row)> cells,
+        double cell,
+        string? drawShape,
+        IBrush? fill,
+        IPen stroke,
+        IBrush? cross)
+    {
+        var config = _config;
+        if (config is null)
+        {
+            return;
+        }
+
+        var mapRect = new Rect(0, 0, config.Width, config.Height);
+        var crossPen = cross is null ? null : new Pen(cross, Hairline);
 
         foreach (var (col, row) in cells)
         {
-            if (diamond)
+            if (DrawShapes.IsDiamond(drawShape))
             {
                 var polygon = BuildPolygon(DiamondLattice.Vertices(col, row, (int)cell));
-                if (!polygon.Bounds.Intersects(new Rect(0, 0, mapWidth, mapHeight)))
+                if (!polygon.Bounds.Intersects(mapRect))
                 {
                     continue;
                 }
 
                 context.DrawGeometry(fill, stroke, polygon);
+                if (crossPen is not null)
+                {
+                    // 扁菱形高 half = cell/2：横贯整个 2×cell 宽、上下各半格高，正好把菱形分成四块
+                    var center = DiamondLattice.Center(col, row, (int)cell);
+                    context.DrawLine(crossPen, new Point(center.X - cell, center.Y), new Point(center.X + cell, center.Y));
+                    context.DrawLine(crossPen, new Point(center.X, center.Y - cell / 2.0), new Point(center.X, center.Y + cell / 2.0));
+                }
+
+                continue;
+            }
+
+            if (DrawShapes.IsHex(drawShape))
+            {
+                var polygon = BuildPolygon(HexLattice.Vertices(col, row, (int)cell));
+                if (polygon.Bounds.Intersects(mapRect))
+                {
+                    context.DrawGeometry(fill, stroke, polygon);
+                }
+
                 continue;
             }
 
             var rect = new Rect(col * cell, row * cell, cell, cell);
-            if (!rect.Intersects(new Rect(0, 0, mapWidth, mapHeight)))
+            if (!rect.Intersects(mapRect))
             {
                 continue;
             }
@@ -209,17 +294,24 @@ public sealed partial class MapCanvas : Control
             }
 
             context.DrawRectangle(null, stroke, rect);
+            if (crossPen is not null)
+            {
+                context.DrawLine(crossPen, new Point(rect.X, rect.Center.Y), new Point(rect.Right, rect.Center.Y));
+                context.DrawLine(crossPen, new Point(rect.Center.X, rect.Y), new Point(rect.Center.X, rect.Bottom));
+            }
         }
     }
 
     /// <summary>
-    /// 旋转后压到的格子集合：格子中心落在旋转矩形内即算占用，与导出占格（buildCells）判定口径一致。
+    /// 旋转后压到的格子集合：矩形按「落位格 + 格数」铺块（与导出 buildCells 同口径），
+    /// 菱形按脚底那一排，六边形按格心落在包围盒内取样 —— 三种形状各按自己的格心与步长算，
+    /// 共用一套行列数学会把六边形最下一排整排漏掉。
     /// </summary>
     /// <param name="item">实例。</param>
     /// <param name="cell">格子边长（像素）。</param>
-    /// <param name="diamond">是否菱形格。</param>
+    /// <param name="drawShape">绘制形状（矩形 / 菱形 / 六边形）。</param>
     /// <returns>格子行列集合（X = 列，Y = 行）。</returns>
-    private static List<(int Col, int Row)> OccupiedCells(PlacedObject item, double cell, bool diamond)
+    private List<(int Col, int Row)> OccupiedCells(PlacedObject item, double cell, string? drawShape)
     {
         var cells = new List<(int, int)>();
         var bounds = item.Bounds;
@@ -228,7 +320,74 @@ public sealed partial class MapCanvas : Control
             return cells;
         }
 
-        var quad = RotatedCorners(bounds, item.Rotation);
+        var quad = RotatedCorners(bounds, EffectiveRotationOf(item));
+
+        // 等距地图里的物件是「站在格子上」的：占格取脚底那一排，而不是格心落在包围盒里的所有格。
+        // 按格心判定会让一个 32×32 的贴图同时压住上下两条格心线，画出一堆互相交叉的菱形。
+        if (DrawShapes.IsDiamond(drawShape))
+        {
+            return DiamondFootprintCells(quad, bounds, (int)cell);
+        }
+
+        // 蜂窝是斜边网格，只能按格心落框判定；矩形按「落位格 + 格数」铺块，和导出完全对齐
+        return DrawShapes.IsHex(drawShape)
+            ? HexFootprintCells(quad, cell)
+            : RectFootprintCells(bounds, cell);
+    }
+
+    /// <summary>
+    /// 矩形地图的占格：落位格（包围盒左上角所在格）+ 格数（尺寸按格子边长向上取整）。
+    /// 与导出 buildCells 的「起点 + 导出格数」同一口径 —— 画布上看到几格，落盘就是几格；
+    /// 原来按格心判定，48×48 这类非整格尺寸会少算一格，导出与显示当场对不上。
+    /// </summary>
+    /// <param name="bounds">实例包围盒。</param>
+    /// <param name="cell">格子边长。</param>
+    /// <returns>占用的格子行列。</returns>
+    private static List<(int Col, int Row)> RectFootprintCells(Rect bounds, double cell)
+    {
+        var cells = new List<(int, int)>();
+        if (cell <= 0 || bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            return cells;
+        }
+
+        var cols = Math.Max(1, (int)Math.Ceiling(bounds.Width / cell - 1e-6));
+        var rows = Math.Max(1, (int)Math.Ceiling(bounds.Height / cell - 1e-6));
+
+        // 极端尺寸的安全阀：单实例占格超过 8000 直接不画，避免一次重绘卡住界面
+        if ((long)cols * rows > 8000)
+        {
+            return cells;
+        }
+
+        var firstCol = (int)Math.Floor(bounds.X / cell);
+        var firstRow = (int)Math.Floor(bounds.Y / cell);
+        for (var col = firstCol; col < firstCol + cols; col++)
+        {
+            for (var row = firstRow; row < firstRow + rows; row++)
+            {
+                cells.Add((col, row));
+            }
+        }
+
+        return cells;
+    }
+
+    /// <summary>
+    /// 蜂窝地图的占格：行距只有 0.866×cell、奇数行右移半格，只能按「格心落在包围盒内」取样，
+    /// 并按 HexLattice 的步长推开行列范围（用正方格的 step 会漏掉最下一排）。
+    /// </summary>
+    /// <param name="quad">实例包围盒绕自身中心旋转后的四个角。</param>
+    /// <param name="cell">格子边长。</param>
+    /// <returns>占用的格子行列。</returns>
+    private static List<(int Col, int Row)> HexFootprintCells(Point[] quad, double cell)
+    {
+        var cells = new List<(int, int)>();
+        var step = (int)cell;
+        if (step <= 0)
+        {
+            return cells;
+        }
 
         double left = double.MaxValue, top = double.MaxValue;
         double right = double.MinValue, bottom = double.MinValue;
@@ -240,25 +399,13 @@ public sealed partial class MapCanvas : Control
             bottom = Math.Max(bottom, corner.Y);
         }
 
-        int minCol, maxCol, minRow, maxRow;
-        if (diamond)
-        {
-            var start = DiamondLattice.IndexAt(left, top, (int)cell);
-            var end = DiamondLattice.IndexAt(right, bottom, (int)cell);
-            minCol = (int)Math.Min(start.X, end.X) - 2;
-            maxCol = (int)Math.Max(start.X, end.X) + 2;
-            minRow = (int)Math.Min(start.Y, end.Y) - 2;
-            maxRow = (int)Math.Max(start.Y, end.Y) + 2;
-        }
-        else
-        {
-            minCol = (int)Math.Floor(left / cell);
-            maxCol = (int)Math.Floor((right - 1e-6) / cell);
-            minRow = (int)Math.Floor(top / cell);
-            maxRow = (int)Math.Floor((bottom - 1e-6) / cell);
-        }
+        var rowStep = HexLattice.RowStep(step);
+        var minCol = (int)Math.Floor(left / cell);
+        // 奇数行右移半格，最右一列要多取一格才不漏
+        var maxCol = (int)Math.Floor((right - 1e-6) / cell) + 1;
+        var minRow = (int)Math.Floor(top / rowStep);
+        var maxRow = (int)Math.Floor((bottom - 1e-6) / rowStep);
 
-        // 极端尺寸的安全阀：单实例候选格超过 8000 直接不画，避免一次重绘卡住界面
         if ((maxCol - minCol + 1) * (maxRow - minRow + 1) > 8000)
         {
             return cells;
@@ -268,15 +415,48 @@ public sealed partial class MapCanvas : Control
         {
             for (var row = minRow; row <= maxRow; row++)
             {
-                var center = diamond
-                    ? DiamondLattice.Center(col, row, (int)cell)
-                    : new Point(col * cell + cell / 2.0, row * cell + cell / 2.0);
-
-                if (PointInQuad(center, quad))
+                if (PointInQuad(HexLattice.Center(col, row, step), quad))
                 {
                     cells.Add((col, row));
                 }
             }
+        }
+
+        return cells;
+    }
+
+    /// <summary>
+    /// 等距地图的占格：以物件「脚底中点」为锚取它站的那一格，再按物件宽度向左右扩展成排。
+    /// 一个格子大小（cell×cell）的贴图正好落在 1 个扁菱形上；更宽的物件按每 2×cell 多占一列。
+    /// </summary>
+    /// <param name="quad">实例包围盒绕自身中心旋转后的四个角（左上、右上、右下、左下）。</param>
+    /// <param name="bounds">实例包围盒。</param>
+    /// <param name="cell">格子边长。</param>
+    /// <returns>脚底那一排的格子行列。</returns>
+    private static List<(int Col, int Row)> DiamondFootprintCells(Point[] quad, Rect bounds, int cell)
+    {
+        var cells = new List<(int, int)>();
+        if (cell <= 0)
+        {
+            return cells;
+        }
+
+        // 底边（左下 → 右下）的中点就是脚底；旋转后同样取这两点的中点
+        var footX = (quad[3].X + quad[2].X) / 2.0;
+        var footY = (quad[3].Y + quad[2].Y) / 2.0;
+
+        // 菱形自身高 half = cell/2：把取样点再往下推半个格高，菱形「上顶点」正好落在脚底上，
+        // 看起来就是物件站在格子里（和游戏内落位格一致）。直接取脚底点会落到上一行，
+        // 行列相位换成奇数行，菱形会横向错开半格宽。
+        var anchor = DiamondLattice.IndexAt(footX, footY + cell / 2.0, cell);
+        var row = (int)anchor.Y;
+
+        // 一个菱形横向宽 2×cell：物件每多这么宽就多占一列，居中铺开
+        var span = Math.Max(1, (int)Math.Round(bounds.Width / (cell * 2.0), MidpointRounding.AwayFromZero));
+        var firstCol = (int)anchor.X - (span - 1) / 2;
+        for (var i = 0; i < span; i++)
+        {
+            cells.Add((firstCol + i, row));
         }
 
         return cells;
@@ -309,8 +489,9 @@ public sealed partial class MapCanvas : Control
     /// <summary>点是否落在凸四边形内（按同向叉积判定，顶点顺序无所谓）。</summary>
     /// <param name="p">待判定点。</param>
     /// <param name="quad">凸四边形顶点。</param>
-    /// <returns>落在内部或边上返回 true。</returns>
-    private static bool PointInQuad(Point p, Point[] quad)
+    /// <param name="inset">四边向内收缩的世界像素数；大于 0 时落在边上或贴边的点判为外部。</param>
+    /// <returns>落在内部（按 inset 收缩后）返回 true。</returns>
+    private static bool PointInQuad(Point p, Point[] quad, double inset = 0.0)
     {
         var sign = 0;
         for (var i = 0; i < quad.Length; i++)
@@ -318,8 +499,16 @@ public sealed partial class MapCanvas : Control
             var a = quad[i];
             var b = quad[(i + 1) % quad.Length];
             var cross = (b.X - a.X) * (p.Y - a.Y) - (b.Y - a.Y) * (p.X - a.X);
-            if (Math.Abs(cross) < 1e-6)
+            var length = Math.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
+
+            if (Math.Abs(cross) < 1e-6 || (inset > 0 && length > 0 && Math.Abs(cross) / length <= inset))
             {
+                // 正好压在边线上：要求严格内部时直接排除，否则按“无关”跳过
+                if (inset > 0)
+                {
+                    return false;
+                }
+
                 continue;
             }
 
@@ -357,7 +546,11 @@ public sealed partial class MapCanvas : Control
         context.DrawRectangle(null, new Pen(stroke, 1.5 * Hairline, DashStyle.Dash), area);
     }
 
-    /// <summary>绘制空白处点选的格子：按绘制形状填充半透明绿色并描边，随缩放保持 1.5 设备像素线宽。</summary>    /// <param name="context">绘制上下文。</param>
+    /// <summary>
+    /// 绘制空白处点选的格子：按当前绘制形状铺半透明绿色并描边（矩形 / 菱形 / 六边形各用各的几何），
+    /// 线宽随缩放保持 1.5 设备像素，缩放很小的时候也能看清点中了哪一格。
+    /// </summary>
+    /// <param name="context">绘制上下文。</param>
     private void DrawSelectedCell(DrawingContext context)
     {
         if (_selectedCell is not { } selected || _config is null)
@@ -371,26 +564,22 @@ public sealed partial class MapCanvas : Control
         // 边缘格子会探出地图半格，按地图矩形裁剪，保证高亮不画到青色底上
         using var clip = context.PushClip(new Rect(0, 0, _config.Width, _config.Height));
 
-        if (IsDiamondMode)
-        {
-            var center = CellCenter(selected);
-            var half = size / 2.0;
-            var vertices = new[]
-            {
-                new Point(center.X, center.Y - half),
-                new Point(center.X + half, center.Y),
-                new Point(center.X, center.Y + half),
-                new Point(center.X - half, center.Y),
-            };
+        var stroke = new Pen(SelectedCellStrokeBrush, thin, lineCap: PenLineCap.Round);
 
-            var geometry = BuildPolygon(vertices);
-            context.DrawGeometry(SelectedCellFillBrush, new Pen(SelectedCellStrokeBrush, thin, lineCap: PenLineCap.Round), geometry);
+        // 三种形状都由格行列反算几何，别在这里再写一套比例：
+        // 菱形 / 六边形点中的格如果是正方框，看上去就像「点到了旁边那格」。
+        if (IsLatticeMode)
+        {
+            var vertices = IsHexMode
+                ? HexLattice.Vertices((int)selected.X, (int)selected.Y, (int)size)
+                : DiamondLattice.Vertices((int)selected.X, (int)selected.Y, (int)size);
+            context.DrawGeometry(SelectedCellFillBrush, stroke, BuildPolygon(vertices));
             return;
         }
 
         var rect = new Rect(selected.X * size, selected.Y * size, size, size);
         context.FillRectangle(SelectedCellFillBrush, rect);
-        context.DrawRectangle(null, new Pen(SelectedCellStrokeBrush, thin), rect);
+        context.DrawRectangle(null, stroke, rect);
     }
 
     private void DrawEditingPath(DrawingContext context)
@@ -404,27 +593,49 @@ public sealed partial class MapCanvas : Control
         var thin = Hairline;
         var pen = new Pen(UiTheme.MapView.Path, thin * 2.0);
         var markerBrush = UiTheme.MapView.PathPoint;
+        var selectedBrush = UiTheme.MapView.PathPointSelected;
+        var selectedRing = new Pen(UiTheme.MapView.PathPointSelectedRing, thin * 2.0);
 
         // 与 Unity 原版一致：只画点与点之间的连线，不从角色中心额外拉一条「伪起点」，
         // 否则第一个路径点会被误读成已经走过的线段。
         Point? previous = null;
-        foreach (var point in item.PathPoints)
+        for (var index = 0; index < item.PathPoints.Count; index++)
         {
+            var point = item.PathPoints[index];
             var current = new Point(point.X, point.Y);
             if (previous is { } from)
             {
                 context.DrawLine(pen, from, current);
             }
 
-            context.FillRectangle(
-                markerBrush,
-                new Rect(current.X - thin * 4, current.Y - thin * 4, thin * 8, thin * 8));
+            if (index == _selectedPathPoint)
+            {
+                // 选中点画大一号 + 白圈 + 序号：列表行和画布上的点必须一眼能对上
+                var half = thin * 6;
+                var rect = new Rect(current.X - half, current.Y - half, half * 2, half * 2);
+                context.FillRectangle(selectedBrush, rect);
+                context.DrawRectangle(null, selectedRing, rect);
+
+                var formatted = CanvasText.Create($"P{index}", 10.0 * thin, selectedBrush);
+                context.DrawText(
+                    formatted,
+                    new Point(current.X + half + thin * 2, current.Y - half - formatted.Height));
+            }
+            else
+            {
+                context.FillRectangle(
+                    markerBrush,
+                    new Rect(current.X - thin * 4, current.Y - thin * 4, thin * 8, thin * 8));
+            }
+
             previous = current;
         }
     }
 
     #endregion
 }
+
+
 
 
 

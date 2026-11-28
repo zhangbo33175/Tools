@@ -114,6 +114,10 @@ public partial class MainWindow : Window
         };
         Canvas.PathPointRejected += (_, message) => SetMessage(message);
         Canvas.PathPointFeedback += (_, message) => SetMessage(message);
+
+        // 画布上选中 / 拖动路径点后，列表要跟着高亮同一行；点列表行也走同一条事件回到画布重绘。
+        // 画布上抓点 / 拖动改点只改选中态：这里刷新行配色而不是重建列表，正在输入的坐标框不会被踢掉焦点。
+        Canvas.PathPointSelectionChanged += (_, _) => RefreshPathPointSelection();
         Canvas.PointerWorldChanged += (_, world) =>
         {
             StatusMouseX.Text = ((int)Math.Round(world.X)).ToString(CultureInfo.InvariantCulture);
@@ -138,6 +142,11 @@ public partial class MainWindow : Window
     {
         LayerPlaceGrid.IsCheckedChanged += (_, _) =>
         {
+            if (_suppressSync)
+            {
+                return;
+            }
+
             Canvas.ShowGrid = LayerPlaceGrid.IsChecked == true;
             Canvas.Refresh();
         };
@@ -199,18 +208,8 @@ public partial class MainWindow : Window
     {
         BindText(SceneNameField, text => _config.SceneName = text.Trim());
         BindText(SceneIdField, text => _config.SceneId = text.Trim());
-        BindNumber(MapWidthField, value =>
-        {
-            _config.Width = (int)Math.Clamp(value, 256, 8192);
-            Canvas.Refresh();
-            RefreshStatus();
-        });
-        BindNumber(MapHeightField, value =>
-        {
-            _config.Height = (int)Math.Clamp(value, 256, 8192);
-            Canvas.Refresh();
-            RefreshStatus();
-        });
+        BindNumber(MapWidthField, value => ApplyMapSizeToCanvas((int)value, _config.Height));
+        BindNumber(MapHeightField, value => ApplyMapSizeToCanvas(_config.Width, (int)value));
 
         // 原 Unity 工具的「更新地图」是从磁盘 JSON 重新加载（外部脚本/配置表改过后能看到最新数据），
         // 不是只把视口 FitToView。这里按同口径重载，并保留当前缩放/平移。
@@ -310,9 +309,12 @@ public partial class MainWindow : Window
                 return;
             }
 
-            _config.DrawShape = DrawShapeField.SelectedIndex == 1 ? DrawShapes.Diamond : DrawShapes.Rect;
+            _config.DrawShape = ShapeAtIndex(DrawShapeField.SelectedIndex);
             Canvas.Refresh();
-            SetMessage($"绘制形状：{(_config.DrawShape == DrawShapes.Rect ? "矩形" : "菱形")}");
+
+            // 与「网格设置」窗口双向同步：这里一改，设置里的形状 / Cell Layout 跟着改并落盘
+            PersistGridShape(_config.DrawShape);
+            SetMessage($"绘制形状：{GridShapes.LabelOf(_config.DrawShape)}");
         };
 
         RegionTypeField.SelectionChanged += (_, _) =>
@@ -331,7 +333,9 @@ public partial class MainWindow : Window
         };
 
         DrawClearToggle.IsCheckedChanged += (_, _) =>
-            SetMessage($"DrawClear：{(DrawClearToggle.IsChecked == true ? "开启" : "关闭")}");
+            SetMessage(DrawClearToggle.IsChecked == true
+                ? "清空重绘：开启（落位前先清空该区域原有内容）"
+                : "清空重绘：关闭（落位时与原有内容叠加）");
 
         // 图片边框开关：只影响画布上的图元外框/占格描边，不改数据
         DrawBorderToggle.IsCheckedChanged += (_, _) =>

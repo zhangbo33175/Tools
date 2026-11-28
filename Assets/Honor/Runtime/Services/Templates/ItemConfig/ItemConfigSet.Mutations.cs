@@ -15,9 +15,10 @@ public sealed partial class ItemConfigSet
 {
     #region 增删改
 
-    /// <summary>新增或更新一行（按图片名匹配，跨表）；新行优先落到 <paramref name="preferredFile"/>（当前分类那张表），没有就落主表。</summary>
+    /// <summary>新增或更新一行（按图片名匹配，跨表）；新行优先落到 <paramref name="preferredFile"/>（当前分类那张表），
+    /// 其次按图片名前缀解析分类表，最后才落汇总表——避免同一张图在汇总表与分类表各登记一份。</summary>
     /// <param name="template">模板数据。</param>
-    /// <param name="preferredFile">新行要落到的表（分类表）；null 表示主表。</param>
+    /// <param name="preferredFile">新行要落到的表（分类表）；null 表示按图片名自动判定。</param>
     /// <returns>写入的行。</returns>
     public ItemElementRow Upsert(ObjectTemplate template, ItemTableFile? preferredFile = null)
     {
@@ -26,7 +27,7 @@ public sealed partial class ItemConfigSet
         ItemTableFile file;
         if (row is null)
         {
-            file = preferredFile ?? Primary ?? CreatePrimary();
+            file = preferredFile ?? TableForImage(template.ImagePath) ?? Primary ?? CreatePrimary();
             row = file.CreateRow();
             file.Rows.Add(row);
             file.Dirty = true;
@@ -41,6 +42,19 @@ public sealed partial class ItemConfigSet
         file.Dirty = true;
         RebuildIndex();
         return row;
+    }
+
+    /// <summary>
+    /// 按图片名前缀找它该归属的分类表（<c>prop_</c>→物件表、<c>building_</c>→建筑表…）。
+    /// 找不到对应分类（如 <c>bg_</c> 背景）时返回 null，由调用方回退到汇总表。
+    /// </summary>
+    /// <param name="imagePath">图片名或图片路径。</param>
+    /// <returns>分类表；无分类归属返回 null。</returns>
+    private ItemTableFile? TableForImage(string? imagePath)
+    {
+        var key = ResourceCategories.Classify(imagePath);
+        var definition = ResourceCategories.FindByKey(key);
+        return definition is null ? null : FileForCategory(definition.DisplayName);
     }
 
     /// <summary>按图片名删行（只删第一张命中的表）。</summary>

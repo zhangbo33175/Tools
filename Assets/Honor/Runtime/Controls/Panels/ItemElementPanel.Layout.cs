@@ -94,17 +94,12 @@ public sealed partial class ItemElementPanel : UserControl
 
         // 列表区与左侧「章节/物件列表」同款：1px 描边外框 + 右侧 14px 经典箭头滚动条
         _listHost.Margin = ListHostMargin;
-        var list = new ScrollViewer
-        {
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden,
-            Content = _listHost,
-        };
+        var list = UiFactory.VerticalScroll(_listHost, showScrollBar: false);
         var listFrame = UiFactory.ScrollListFrame(list);
         Grid.SetRow(listFrame, 2);
         stack.Children.Add(listFrame);
 
-        return CreatePanelCard(stack, true, PanelCornerRadius);
+        return CreatePanelCard(stack, true);
     }
 
     private Control BuildPropertyPanel()
@@ -130,11 +125,7 @@ public sealed partial class ItemElementPanel : UserControl
         _formHost.Children.Add(_emptyHint);
         _formHost.Children.Add(_groupsHost);
 
-        var scroll = new ScrollViewer
-        {
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            Content = _formHost,
-        };
+        var scroll = UiFactory.VerticalScroll(_formHost);
 
         BuildFormSkeleton();
 
@@ -142,24 +133,14 @@ public sealed partial class ItemElementPanel : UserControl
     }
 
     /// <summary>
-    /// 创建左右两栏共用的面板卡片外观：白底、细描边、8 圆角。
+    /// 创建左右两栏共用的面板卡片外观：交给 <see cref="UiFactory.PanelCard"/>，
+    /// 与资源整理、剧情各页保持同一份描边与圆角。
     /// </summary>
     /// <param name="child">卡片内容。</param>
     /// <param name="clipToBounds">是否裁剪超出圆角的内容，列表卡片需要。</param>
-    /// <param name="cornerRadius">圆角半径，默认 8 与全局卡片语言一致。</param>
     /// <returns>面板卡片边框。</returns>
-    private static Border CreatePanelCard(Control child, bool clipToBounds = false, double cornerRadius = 8)
-    {
-        return new Border
-        {
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.Divider,
-            BorderThickness = new Thickness(PanelBorderThickness),
-            Child = child,
-            ClipToBounds = clipToBounds,
-            CornerRadius = new CornerRadius(cornerRadius),
-        };
-    }
+    private static Border CreatePanelCard(Control child, bool clipToBounds = false) =>
+        UiFactory.PanelCard(child, clipToBounds: clipToBounds);
 
     #endregion
 }

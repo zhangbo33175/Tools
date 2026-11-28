@@ -51,6 +51,12 @@ public sealed class ItemElementRow : IResourceRowData
     /// <summary>模板名称。</summary>
     public string TemplateName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 中文显示名称。只供编辑器与策划表阅读，<b>不参与运行时索引</b>：
+    /// 游戏侧仍按 <see cref="Id"/> / <see cref="TemplateName"/> 找预制体，改这一列不会影响加载。
+    /// </summary>
+    public string DisplayName { get; set; } = string.Empty;
+
     /// <summary>默认动画。</summary>
     public string AnimName { get; set; } = "Idle";
 

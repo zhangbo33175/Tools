@@ -116,6 +116,36 @@ public sealed class PlacedObject
     /// <summary>渲染层级排序。</summary>
     public int SortOrder { get; set; }
 
+    /// <summary>
+    /// 所属楼层（0 = 地面层，1 = 二楼，依此类推）。
+    /// <para>剖面式等距场景用它切平面：界面只显示当前楼层 + 其它楼层半透明，
+    /// 排序按「遮挡带 → 楼层 → 脚底 Y」，上层永远压在下层之后，2F 楼板因此能盖住 1F 房间顶部。
+    /// 旧存档缺省 0，行为与之前的单层地图完全一致。</para>
+    /// </summary>
+    public int Level { get; set; }
+
+    /// <summary>
+    /// 跨层贯穿（楼梯 / 挑高中庭柱 / 贯通外墙）：不参与单层切片，按所属楼层抬升后一次性画在全部楼层切片之上。
+    /// <para>普通物件只在自己所属楼层这一刀里出现；楼梯要从 1F 爬到 2F，两刀都得看得见，
+    /// 否则切开楼板后楼梯会被切成上下两段。占格与命中仍按 <see cref="Level"/> 走，编辑手感不变。</para>
+    /// </summary>
+    public bool SpanLevels { get; set; }
+
+    /// <summary>
+    /// 所属房间 ID（对应 <see cref="MapConfigData.Rooms"/>）；空串表示独立件。
+    /// <para>房间决定「玩家进屋时要藏起哪些零件」：墙 / 屋顶 / 上层楼板挂到房间上，
+    /// 运行时按房间范围判定进出，不需要每个物件各存一份触发逻辑。</para>
+    /// </summary>
+    public string RoomId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 进屋隐藏：所属房间被进入时淡出这个物件。仅在 <see cref="RoomId"/> 非空时生效。
+    /// <para>默认 true，因为挂到房间上的多是墙 / 屋顶 / 楼板这类「挡视线」的零件；
+    /// 房间里的家具应取消勾选，否则进屋后人看到的是一屋子消失的家具。</para>
+    /// </summary>
+    public bool HideOnEnter { get; set; } = true;
+
+
     /// <summary>启用 Y 轴排序。</summary>
     public bool YSortEnabled { get; set; } = true;
 

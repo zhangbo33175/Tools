@@ -22,6 +22,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using MapEditorTool.Models;
 using MapEditorTool.Services;
+using MapEditorTool.Controls;
 namespace MapEditorTool.Controls;
 
 public sealed partial class ResourceOrganizePanel : UserControl
@@ -48,11 +49,38 @@ public sealed partial class ResourceOrganizePanel : UserControl
         _notify($"已创建 {file.Name}：{file.Path}。现在可在左侧选择收集物图片并添加到这张表。");
     }
 
+    /// <summary>打开命名体检窗：按图片名生成中文显示名建议，确认后写进各表的「显示名称」列。</summary>
+    private void OpenNamingAudit()
+    {
+        if (_itemTable is null)
+        {
+            _notify("配置表文件夹尚未加载，无法做命名体检");
+            return;
+        }
+
+        // 词表与 ObjectTemplates.json 同放在配置目录（output/Config）下
+        var glossary = NamingGlossary.Load(_store.OutputDirectory);
+        var window = new NamingAuditWindow(_itemTable, glossary, () =>
+        {
+            RefreshAfterTableChange();
+            _notify($"命名体检已写回：{_itemTable.Describe()}（原表已备份）");
+        });
+
+        if (TopLevel.GetTopLevel(this) is Window owner)
+        {
+            _ = window.ShowDialog(owner);
+        }
+        else
+        {
+            window.Show();
+        }
+    }
+
     private void SaveChanges()
     {
         if (!_store.TrySaveJson(_templates, out var error))
         {
-            _notify($"保存失败：{error}");
+            _notify(UiFeedback.Failed("保存", error));
             return;
         }
 
@@ -72,7 +100,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
             if (!_itemTable.TrySave(out var tableError))
             {
-                _notify($"配置表写入失败：{tableError}");
+                _notify(UiFeedback.Failed("配置表写入", tableError));
                 return;
             }
 
@@ -161,7 +189,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         }
         catch (Exception error)
         {
-            _notify($"打开失败：{error.Message}");
+            _notify(UiFeedback.Failed("打开", error));
         }
     }
 

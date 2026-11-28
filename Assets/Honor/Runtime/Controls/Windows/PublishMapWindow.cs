@@ -21,6 +21,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using MapEditorTool.Models;
 using MapEditorTool.Services;
+using MapEditorTool.Controls;
 
 namespace MapEditorTool.Controls;
 
@@ -130,7 +131,7 @@ public sealed class PublishMapWindow : Window
         {
             Text = $"章节 {ChapterText()} · 关卡 {LevelText()} · " +
                    $"{_config.Objects.Count} 个物件（建筑 {Count(MapObjectType.Building)} / 物件 {Count(MapObjectType.Prop)} / 角色 {Count(MapObjectType.Character)}）",
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             Foreground = UiTheme.PublishWindow.SubtitleText,
         };
         stack.Children.Add(title);
@@ -148,7 +149,7 @@ public sealed class PublishMapWindow : Window
             SelectedIndex = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             MinHeight = 32,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             Padding = new Thickness(8, 4),
             Background = UiTheme.PublishWindow.PreviewSurface,
             Foreground = UiTheme.PublishWindow.PreviewText,
@@ -157,35 +158,10 @@ public sealed class PublishMapWindow : Window
         };
         stack.Children.Add(LabeledRow("发布目标", targetBox));
 
-        var outputTextBox = new TextBox
-        {
-            PlaceholderText = "目标工程的接入目录",
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            TextWrapping = TextWrapping.NoWrap,
-            MinHeight = 32,
-            FontSize = 12,
-            Padding = new Thickness(8, 4),
-            CornerRadius = new CornerRadius(4),
-            Background = UiTheme.PublishWindow.PreviewSurface,
-            Foreground = UiTheme.PublishWindow.PreviewText,
-            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
-            BorderThickness = new Thickness(1),
-            VerticalContentAlignment = VerticalAlignment.Center,
-        };
-        var browseButton = new Button
-        {
-            Content = "浏览…",
-            Margin = new Thickness(8, 0, 0, 0),
-            MinWidth = 72,
-            MinHeight = 32,
-            Padding = new Thickness(10, 4, 10, 4),
-            FontSize = 12,
-            Background = UiTheme.PublishWindow.PreviewSurface,
-            Foreground = UiTheme.PublishWindow.PreviewText,
-            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-        };
+        var outputTextBox = InputBox("目标工程的接入目录");
+        var browseButton = DialogButton("浏览…", 10, primary: false);
+        browseButton.Margin = new Thickness(8, 0, 0, 0);
+        browseButton.MinWidth = 72;
         var outputGrid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
@@ -199,70 +175,30 @@ public sealed class PublishMapWindow : Window
         outputBox = outputTextBox;
         browseButton.Click += async (_, _) => await BrowseAsync(outputTextBox);
 
-        mapNameBox = new TextBox
-        {
-            PlaceholderText = "对应 Cocos 地图预制体名，默认 GameMainMap",
-            MinHeight = 32,
-            FontSize = 12,
-            Padding = new Thickness(8, 4),
-            CornerRadius = new CornerRadius(4),
-            Background = UiTheme.PublishWindow.PreviewSurface,
-            Foreground = UiTheme.PublishWindow.PreviewText,
-            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
-            BorderThickness = new Thickness(1),
-            VerticalContentAlignment = VerticalAlignment.Center,
-        };
+        mapNameBox = InputBox("对应 Cocos 地图预制体名，默认 GameMainMap");
         mapNameRow = LabeledRow("地图名（Cocos）", mapNameBox);
         stack.Children.Add(mapNameRow);
 
-        fogBox = new CheckBox
-        {
-            Content = "同时发布迷雾 sidecar（Map_*.fog.json）",
-            IsChecked = true,
-            Margin = new Thickness(0, 0, 0, 0),
-            FontSize = 12,
-            Foreground = UiTheme.PublishWindow.LabelText,
-        };
+        fogBox = OptionBox("同时发布迷雾 sidecar（Map_*.fog.json）");
         fogRow = LabeledRow("附加输出", fogBox);
         stack.Children.Add(fogRow);
 
-        indexBox = new CheckBox
-        {
-            Content = "同步更新 TableLevelData.lua.txt 章节索引",
-            IsChecked = true,
-            Margin = new Thickness(0, 0, 0, 0),
-            FontSize = 12,
-            Foreground = UiTheme.PublishWindow.LabelText,
-        };
+        indexBox = OptionBox("同步更新 TableLevelData.lua.txt 章节索引");
         indexRow = LabeledRow("章节索引", indexBox);
         stack.Children.Add(indexRow);
 
-        backupBox = new CheckBox
-        {
-            Content = "覆盖前备份同名关卡表与索引",
-            IsChecked = true,
-            Margin = new Thickness(0, 0, 0, 0),
-            FontSize = 12,
-            Foreground = UiTheme.PublishWindow.LabelText,
-        };
+        backupBox = OptionBox("覆盖前备份同名关卡表与索引");
         backupRow = LabeledRow("安全备份", backupBox);
         stack.Children.Add(backupRow);
 
-        syncAssetsBox = new CheckBox
-        {
-            Content = "同步 Unity 缺失的地图贴图（不覆盖已有文件）",
-            IsChecked = true,
-            Margin = new Thickness(0, 0, 0, 0),
-            FontSize = 12,
-            Foreground = UiTheme.PublishWindow.LabelText,
-        };
+        syncAssetsBox = OptionBox("同步 Unity 缺失的地图贴图（不覆盖已有文件）");
         syncAssetsRow = LabeledRow("资源同步", syncAssetsBox);
         stack.Children.Add(syncAssetsRow);
 
         var previewBorder = new Border
         {
             Padding = new Thickness(12, 10, 12, 10),
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
             Background = UiTheme.PublishWindow.PreviewSurface,
             BorderBrush = UiTheme.PublishWindow.PreviewBorder,
             BorderThickness = new Thickness(1),
@@ -270,7 +206,7 @@ public sealed class PublishMapWindow : Window
         previewText = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             Foreground = UiTheme.PublishWindow.PreviewText,
         };
         previewBorder.Child = previewText;
@@ -279,7 +215,7 @@ public sealed class PublishMapWindow : Window
         var note = new TextBlock
         {
             Text = "发布只写目标工程目录，不会修改编辑器源存档 docs\\MapJson；同名文件会原子覆盖。",
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             TextWrapping = TextWrapping.Wrap,
             Foreground = UiTheme.PublishWindow.NoteText,
         };
@@ -288,56 +224,22 @@ public sealed class PublishMapWindow : Window
         statusText = new TextBlock
         {
             Text = string.Empty,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             TextWrapping = TextWrapping.Wrap,
             Foreground = UiTheme.PublishWindow.ErrorText,
         };
         stack.Children.Add(statusText);
 
-        var cancel = new Button
-        {
-            Content = "取消",
-            Padding = new Thickness(20, 6, 20, 6),
-            Margin = new Thickness(0, 0, 8, 0),
-            MinHeight = 32,
-            FontSize = 12,
-            Background = UiTheme.PublishWindow.PreviewSurface,
-            Foreground = UiTheme.PublishWindow.PreviewText,
-            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-        };
+        var cancel = DialogButton("取消", 20, primary: false);
+        cancel.Margin = new Thickness(0, 0, 8, 0);
         cancel.Click += (_, _) => Close(null);
 
-        var open = new Button
-        {
-            Content = "打开输出目录",
-            Padding = new Thickness(16, 6, 16, 6),
-            Margin = new Thickness(0, 0, 8, 0),
-            MinHeight = 32,
-            FontSize = 12,
-            Background = UiTheme.PublishWindow.PreviewSurface,
-            Foreground = UiTheme.PublishWindow.PreviewText,
-            BorderBrush = UiTheme.PublishWindow.PreviewBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-        };
+        var open = DialogButton("打开输出目录", 16, primary: false);
+        open.Margin = new Thickness(0, 0, 8, 0);
         open.Click += (_, _) => OpenDirectory(outputTextBox.Text);
 
-        var publish = new Button
-        {
-            Content = "发布",
-            Padding = new Thickness(26, 6, 26, 6),
-            IsDefault = true,
-            MinHeight = 32,
-            FontSize = 12,
-            FontWeight = FontWeight.SemiBold,
-            Background = UiTheme.Accent,
-            Foreground = UiTheme.White,
-            BorderBrush = UiTheme.Accent,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-        };
+        var publish = DialogButton("发布", 26, primary: true);
+        publish.IsDefault = true;
         publish.Click += async (_, _) => await PublishAsync();
 
         var buttons = new StackPanel
@@ -355,27 +257,73 @@ public sealed class PublishMapWindow : Window
         return stack;
     }
 
-    private static Grid LabeledRow(string label, Control control)
+    /// <summary>发布窗标签列宽。</summary>
+    private const double LabelColumnWidth = 110;
+
+    /// <summary>发布窗字段行尺寸档：110 标签列、12 字号、标签左对齐（与紧凑排版一致）。</summary>
+    private static readonly UiFactory.FieldRowSkin PublishRowSkin =
+        new(LabelColumnWidth, 12, HorizontalAlignment.Left);
+
+    private static Grid LabeledRow(string label, Control control) =>
+        UiFactory.FieldRow(label, control, PublishRowSkin, UiTheme.PublishWindow.LabelText);
+
+    /// <summary>发布窗圆角：窗口本身按更紧的密度排版，统一取 4（卡片 8 那档在这里偏圆）。</summary>
+    private const double PublishCornerRadius = 4.0;
+
+    /// <summary>发布窗单行输入框：底色、描边、圆角一处定义，目录与地图名共用。</summary>
+    /// <param name="placeholder">占位提示。</param>
+    /// <returns>输入框。</summary>
+    private static TextBox InputBox(string placeholder) => new()
     {
-        var text = new TextBlock
-        {
-            Text = label,
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = UiTheme.PublishWindow.LabelText,
-            Margin = new Thickness(0, 0, 8, 0),
-        };
-        var grid = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("110,*"),
-        };
-        Grid.SetColumn(text, 0);
-        Grid.SetColumn(control, 1);
-        control.HorizontalAlignment = HorizontalAlignment.Stretch;
-        grid.Children.Add(text);
-        grid.Children.Add(control);
-        return grid;
-    }
+        PlaceholderText = placeholder,
+        HorizontalAlignment = HorizontalAlignment.Stretch,
+        TextWrapping = TextWrapping.NoWrap,
+        MinHeight = 32,
+        FontSize = UiMetrics.FontTitle,
+        Padding = new Thickness(8, 4),
+        CornerRadius = new CornerRadius(PublishCornerRadius),
+        Background = UiTheme.PublishWindow.PreviewSurface,
+        Foreground = UiTheme.PublishWindow.PreviewText,
+        BorderBrush = UiTheme.PublishWindow.PreviewBorder,
+        BorderThickness = new Thickness(1),
+        VerticalContentAlignment = VerticalAlignment.Center,
+    };
+
+    /// <summary>发布窗参数开关：四个勾选项同一套字号与配色。</summary>
+    /// <param name="text">开关文案。</param>
+    /// <returns>复选框。</param>
+    private static CheckBox OptionBox(string text) => new()
+    {
+        Content = text,
+        IsChecked = true,
+        FontSize = UiMetrics.FontTitle,
+        Foreground = UiTheme.PublishWindow.LabelText,
+    };
+
+    /// <summary>发布窗按钮尺寸档：32 高、4 圆角，左右内边距按文案长度在调用处给。</summary>
+    private static readonly UiFactory.ActionSkin PublishButtonSkin =
+        new(32, PublishCornerRadius, 12, FontSize: 12);
+
+    /// <summary>发布窗按钮配色：发布用实心强调色，取消/打开目录用浅底描边。</summary>
+    private static readonly UiFactory.ActionPalette PublishButtonPalette = new(
+        UiTheme.Accent,
+        UiTheme.White,
+        UiTheme.Accent,
+        UiTheme.PublishWindow.PreviewSurface,
+        UiTheme.PublishWindow.PreviewText,
+        UiTheme.PublishWindow.PreviewBorder);
+
+    /// <summary>发布窗按钮：取消/打开目录用白描边，发布用实心强调色。</summary>
+    /// <param name="text">按钮文案。</param>
+    /// <param name="paddingX">左右内边距，按文案长度给不同档。</param>
+    /// <param name="primary">是否主按钮。</param>
+    /// <returns>按钮。</returns>
+    private static Button DialogButton(string text, double paddingX, bool primary) =>
+        UiFactory.ActionButton(
+            text,
+            primary ? UiFactory.ActionTone.Primary : UiFactory.ActionTone.Secondary,
+            PublishButtonSkin with { PaddingX = paddingX },
+            PublishButtonPalette);
 
     #endregion
 
@@ -492,7 +440,7 @@ public sealed class PublishMapWindow : Window
         }
         catch (Exception error)
         {
-            _statusText.Text = $"发布失败：{error.Message}";
+            _statusText.Text = UiFeedback.Failed("发布", error);
         }
     }
 

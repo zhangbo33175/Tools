@@ -33,14 +33,20 @@ public sealed partial class MapCanvas : Control
     /// <param name="worldTopLeft">世界坐标左上角，已对齐格子。</param>
     /// <param name="isCollectible">true = 按收集物落位，写入 <see cref="PlacedObject.IsCollectible"/>。</param>
     /// <param name="collectibleLayer">收集物层级 under / over，非收集物忽略。</param>
-    public void PlaceObject(ObjectTemplate template, Point worldTopLeft, bool isCollectible = false, string? collectibleLayer = null)
+    /// <param name="rotationDegrees">落位时的朝向角度（斜边吸附给出 0 / 90 / 180 / 270，普通落位保持模板默认）。</param>
+    public void PlaceObject(
+        ObjectTemplate template,
+        Point worldTopLeft,
+        bool isCollectible = false,
+        string? collectibleLayer = null,
+        double rotationDegrees = 0)
     {
         if (_config is null)
         {
             return;
         }
 
-        var instance = CreateInstance(template, worldTopLeft, isCollectible, collectibleLayer);
+        var instance = CreateInstance(template, worldTopLeft, isCollectible, collectibleLayer, rotationDegrees);
         _config.AddObject(instance);
         Select(instance);
         InvalidateVisual();
@@ -52,12 +58,14 @@ public sealed partial class MapCanvas : Control
     /// <param name="worldTopLeft">世界坐标左上角。</param>
     /// <param name="isCollectible">是否收集物。</param>
     /// <param name="collectibleLayer">收集物层级。</param>
+    /// <param name="rotationDegrees">朝向角度（0 表示沿用模板 / 默认不旋转）。</param>
     /// <returns>新实例。</returns>
     private PlacedObject CreateInstance(
         ObjectTemplate template,
         Point worldTopLeft,
         bool isCollectible,
-        string? collectibleLayer)
+        string? collectibleLayer,
+        double rotationDegrees = 0)
     {
         var config = _config;
         var layerKey = LayerOrder.Normalize(template.LayerKey);
@@ -91,6 +99,7 @@ public sealed partial class MapCanvas : Control
             DialogBubble = template.DialogBubble,
             BubbleId = template.BubbleId,
             SortOrder = baseSort,
+            Level = CurrentLevel,
             YSortEnabled = template.YSortEnabled,
             YSortOffset = template.YSortOffset,
             CollisionEnabled = template.CollisionEnabled,
@@ -105,6 +114,7 @@ public sealed partial class MapCanvas : Control
             TeleportTargetScene = template.TeleportTargetScene,
             TeleportTargetX = template.TeleportTargetX,
             TeleportTargetY = template.TeleportTargetY,
+            Rotation = rotationDegrees,
         };
     }
 
@@ -145,11 +155,10 @@ public sealed partial class MapCanvas : Control
         var grid = Math.Max(1, config.GridSize);
         var cols = Math.Max(1, config.Width / grid);
         var rows = Math.Max(1, config.Height / grid);
-        var diamond = config.DrawShape == DrawShapes.Diamond;
         var occupied = new HashSet<(int Col, int Row)>();
         foreach (var item in config.Objects)
         {
-            foreach (var cell in OccupiedCells(item, grid, diamond))
+            foreach (var cell in OccupiedCells(item, grid, config.DrawShape))
             {
                 occupied.Add(cell);
             }
@@ -186,7 +195,8 @@ public sealed partial class MapCanvas : Control
                     continue;
                 }
 
-                var point = new Point(col * grid, row * grid);
+                // 落位统一走格心 → SnapToCell：菱形 / 六边形的行列角点在格子外面，直接乘 grid 会摆偏半格
+                var point = SnapToCell(CellCenter(new Point(col, row)));
                 config.AddObject(CreateInstance(template, point, true, layerMode));
                 for (var dx = 0; dx < width; dx++)
                 {
@@ -233,6 +243,7 @@ public sealed partial class MapCanvas : Control
         // 点到的最后一个候选就是当前画面最前面的图元。这样点击被大地块覆盖的道具时，
         // 不会再因为地块包围盒更小/更大而选错；只有整幅 backdrop 继续跳过。
         PlacedObject? best = null;
+        PlacedObject? bestOtherLevel = null;
         foreach (var item in OrderedObjects(_config))
         {
             // 不再按「背景层」整层跳过：自动提层的 bg_rock_1_550_867 虽然归属 background，
@@ -243,11 +254,24 @@ public sealed partial class MapCanvas : Control
                 continue;
             }
 
-            if (ObjectHitRules.Matches(item, world, kind, spriteProvider))
+            if (!ObjectHitRules.Matches(item, world, kind, spriteProvider))
+            {
+                continue;
+            }
+
+            // 楼层优先：当前楼层命中优先，其它楼层（半透明显示的楼上 / 楼下）只在当前层没点中时兜底，
+            // 否则点 1F 的桌子会选中压在它上面的 2F 吊灯。
+            if (item.Level == CurrentLevel)
             {
                 best = item;
             }
+            else
+            {
+                bestOtherLevel = item;
+            }
         }
+
+        best ??= bestOtherLevel;
 
         return best;
     }
@@ -303,7 +327,7 @@ public sealed partial class MapCanvas : Control
         PlacedObject? found = null;
         foreach (var item in OrderedObjects(_config))
         {
-            if (worldRect.Intersects(item.Bounds))
+            if (item.Level == CurrentLevel && worldRect.Intersects(item.Bounds))
             {
                 found = item;
             }
@@ -342,3 +366,5 @@ public sealed partial class MapCanvas : Control
 
     #endregion
 }
+
+

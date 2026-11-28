@@ -41,15 +41,15 @@ public sealed partial class MapCanvas : Control
         var thin = Math.Max(1.2 * Hairline, 0.8);
         var sidewalkPen = new Pen(UiTheme.MapView.Sidewalk, thin);
         var roadPen = new Pen(UiTheme.MapView.Road, thin);
-        var diamond = config.DrawShape == DrawShapes.Diamond;
+        var shape = config.DrawShape;
 
-        var sidewalkBoundary = BuildCellsBoundary(config.SidewalkCells, cell, diamond);
+        var sidewalkBoundary = BuildCellsBoundary(config.SidewalkCells, cell, shape);
         if (sidewalkBoundary is not null)
         {
             context.DrawGeometry(null, sidewalkPen, sidewalkBoundary);
         }
 
-        var roadBoundary = BuildCellsBoundary(config.RoadCells, cell, diamond);
+        var roadBoundary = BuildCellsBoundary(config.RoadCells, cell, shape);
         if (roadBoundary is not null)
         {
             context.DrawGeometry(null, roadPen, roadBoundary);
@@ -57,14 +57,15 @@ public sealed partial class MapCanvas : Control
     }
 
     /// <summary>
-    /// 求一组格子并集的外轮廓：每格的四条边登记一次，被相邻格共用的内部边成对抵消，
+    /// 求一组格子并集的外轮廓：每格的边登记一次，被相邻格共用的内部边成对抵消，
     /// 剩下的就是整块区域的边界线。逐条边渲染，不做路径拼接，避免自交导致奇偶填充异常。
+    /// 矩形 / 菱形 / 六边形按各自的顶点表取边，菱形与六边形都是共边铺满，抵消逻辑通用。
     /// </summary>
     /// <param name="cells">格子集合（X = 列，Y = 行）。</param>
     /// <param name="cell">格子边长（世界像素）。</param>
-    /// <param name="diamond">是否按菱形格计算边。</param>
+    /// <param name="shape">绘制形状值。</param>
     /// <returns>外轮廓几何；格子为空时返回 null。</returns>
-    private static StreamGeometry? BuildCellsBoundary(IReadOnlyList<MapGridCellData> cells, double cell, bool diamond)
+    private static StreamGeometry? BuildCellsBoundary(IReadOnlyList<MapGridCellData> cells, double cell, string shape)
     {
         if (cells.Count == 0)
         {
@@ -76,20 +77,30 @@ public sealed partial class MapCanvas : Control
 
         foreach (var item in cells)
         {
-            var corners = diamond
-                ? DiamondLattice.Vertices(item.X, item.Y, (int)cell)
-                : new[]
+            Point[] corners;
+            if (DrawShapes.IsHex(shape))
+            {
+                corners = HexLattice.Vertices(item.X, item.Y, (int)cell);
+            }
+            else if (DrawShapes.IsDiamond(shape))
+            {
+                corners = DiamondLattice.Vertices(item.X, item.Y, (int)cell);
+            }
+            else
+            {
+                corners = new[]
                 {
                     new Point(item.X * cell, item.Y * cell),
                     new Point((item.X + 1) * cell, item.Y * cell),
                     new Point((item.X + 1) * cell, (item.Y + 1) * cell),
                     new Point(item.X * cell, (item.Y + 1) * cell),
                 };
+            }
 
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < corners.Length; i++)
             {
                 var from = corners[i];
-                var to = corners[(i + 1) % 4];
+                var to = corners[(i + 1) % corners.Length];
                 var key = EdgeKey(from, to);
                 if (!edges.Remove(key))
                 {
@@ -136,22 +147,9 @@ public sealed partial class MapCanvas : Control
         var stripeBrush = UiTheme.MapView.Crosswalk;
         var crosswalkPen = new Pen(UiTheme.MapView.CrosswalkEdge, 2.0 * Hairline);
 
-        var objectIds = config.Objects
-            .Select(instance => instance.Id)
-            .Where(id => id.Length > 0)
-            .ToHashSet(StringComparer.Ordinal);
+        DrawCrosswalksExceptBaked(context, config, stripeBrush, crosswalkPen);
 
-        foreach (var crosswalk in config.Crosswalks)
-        {
-            // 横道已经是地图上的普通物件时，由物件贴图负责显示，不再叠画斑马条纹
-            if (objectIds.Contains(crosswalk.Id))
-            {
-                continue;
-            }
-
-            DrawCrosswalkStripes(context, crosswalk, cell, stripeBrush, crosswalkPen);
-        }
-
+        var objectIds = MapObjectIdSet(config);
         foreach (var light in config.TrafficLights)
         {
             var center = new Point(light.PosX, light.PosY);
@@ -159,7 +157,7 @@ public sealed partial class MapCanvas : Control
 
             // 灯体已经是地图上的普通物件时，由物件贴图负责显示，不再叠画三色假灯；
             // 但绑定引导线与时序文字仍要画，否则规则在画布上不可见
-            if (!objectIds.Contains(light.Id))
+            if (!IsBakedAsObject(objectIds, light.Id))
             {
                 context.FillRectangle(
                     UiTheme.MapView.TrafficBody,
@@ -214,20 +212,38 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
-        var cell = (double)config.GridSize;
-        var stripeBrush = UiTheme.MapView.Crosswalk;
-        var edgePen = new Pen(UiTheme.MapView.CrosswalkEdge, 1.2 * Hairline);
-        var objectIds = config.Objects
-            .Select(instance => instance.Id)
-            .Where(id => id.Length > 0)
-            .ToHashSet(StringComparer.Ordinal);
+        // 预览态条纹更细：缩到 38% 仍能看出横道方向，同时不压住车头
+        DrawCrosswalksExceptBaked(
+            context,
+            config,
+            UiTheme.MapView.Crosswalk,
+            new Pen(UiTheme.MapView.CrosswalkEdge, 1.2 * Hairline));
+    }
 
+    /// <summary>
+    /// 画所有「还没被地图物件承担显示」的横道条纹；笔宽由调用方按编辑态 / 预览态决定。
+    /// </summary>
+    /// <param name="context">绘图上下文。</param>
+    /// <param name="config">当前地图数据。</param>
+    /// <param name="stripeBrush">条纹画刷。</param>
+    /// <param name="edgePen">条纹描边笔。</param>
+    private void DrawCrosswalksExceptBaked(
+        DrawingContext context,
+        MapConfigData config,
+        IBrush stripeBrush,
+        Pen edgePen)
+    {
+        var cell = (double)config.GridSize;
+        var objectIds = MapObjectIdSet(config);
         foreach (var crosswalk in config.Crosswalks)
         {
-            if (!objectIds.Contains(crosswalk.Id))
+            // 横道已经是地图上的普通物件时，由物件贴图负责显示，不再叠画斑马条纹
+            if (IsBakedAsObject(objectIds, crosswalk.Id))
             {
-                DrawCrosswalkStripes(context, crosswalk, cell, stripeBrush, edgePen);
+                continue;
             }
+
+            DrawCrosswalkStripes(context, crosswalk, cell, stripeBrush, edgePen);
         }
     }
 

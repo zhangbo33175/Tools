@@ -96,6 +96,10 @@ public partial class MainWindow : Window
             ApplyProperty(item => item.IsCollectible = PropCollectible.IsChecked == true);
             UpdateAreaSectionVisibility();
         };
+
+        // 「跨层」只改绘制口径：属于哪层还归哪层，命中与占格不变
+        PropSpanLevels.IsCheckedChanged += (_, _) =>
+            ApplyProperty(item => item.SpanLevels = PropSpanLevels.IsChecked == true);
         PropTraffic.IsCheckedChanged += (_, _) =>
         {
             ApplyProperty(item => item.Interactable = PropTraffic.IsChecked == true);
@@ -175,8 +179,7 @@ public partial class MainWindow : Window
             TrafficMarkService.RemoveObjectTrafficMarks(_config, selected.Id);
             _config.Objects.Remove(selected);
             Canvas.Select(null);
-            Canvas.Refresh();
-            Canvas.NotifyDocumentChanged();
+            Canvas.CommitEdit();
         };
 
         SetPropertyPanelEnabled(false);
@@ -308,14 +311,7 @@ public partial class MainWindow : Window
         }
 
         box.LostFocus += (_, _) => Commit();
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                Commit();
-                e.Handled = true;
-            }
-        };
+        UiFactory.CommitOnEnter(box, Commit);
     }
 
     /// <summary>同带内层级微调：+1 上移、-1 下移（仅改 SortOrder，不跨遮挡带）。</summary>

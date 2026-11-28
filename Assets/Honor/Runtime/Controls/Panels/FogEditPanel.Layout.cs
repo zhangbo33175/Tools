@@ -102,15 +102,7 @@ public sealed partial class FogEditPanel : UserControl
         Grid.SetColumn(right, 2);
         grid.Children.Add(right);
 
-        return new Border
-        {
-            // 顶栏改成白底 + 底部细线，跟其它页面的页头统一，灰底会显脏
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.Divider,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = ToolbarPadding,
-            Child = grid,
-        };
+        return UiFactory.HeaderBand(grid, ToolbarPadding);
     }
 
     /// <summary>构建工具栏按钮；危险操作使用白底红字红描边，避免整条红块抢视觉。</summary>
@@ -135,7 +127,7 @@ public sealed partial class FogEditPanel : UserControl
     private Control BuildSettingsPanel()
     {
         var stack = new StackPanel { Margin = SettingsMargin, Spacing = SettingsSpacing };
-        stack.Children.Add(BuildSectionTitle(SettingsTitleText));
+        stack.Children.Add(UiFactory.SectionHead(SettingsTitleText, SettingLabelFontSize));
 
         var brushSlider = new Slider
         {
@@ -213,26 +205,10 @@ public sealed partial class FogEditPanel : UserControl
         return BuildPanelCard(stackHost, UiTheme.Card);
     }
 
-    /// <summary>构建设置区小标题：复用 <see cref="UiFactory.SectionHead"/>，字号取设置区标签档。</summary>
-    /// <param name="text">标题文案。</param>
-    private static Control BuildSectionTitle(string text) =>
-        UiFactory.SectionHead(text, SettingLabelFontSize);
-
-    /// <summary>白底圆角卡片装笔刷字段，和属性表单的分组卡保持同一套观感。</summary>
-    /// <param name="child">卡片内容。</param>
-    private static Border BuildSettingsCard(Control child)
-    {
-        // 与剧情页的分组块同一套：极浅青底 + 细描边，不再用「白卡套白卡」的双层边框
-        return new Border
-        {
-            Background = UiTheme.Form.GroupHeader,
-            BorderBrush = UiTheme.Form.GroupBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(SettingsCardCornerRadius),
-            Padding = SettingsCardPadding,
-            Child = child,
-        };
-    }
+    /// <summary>分组块：交给 <see cref="UiFactory.GroupBlock"/>，与剧情页小节保持同一份底色与描边。</summary>
+    /// <param name="child">分组内容。</param>
+    private static Border BuildSettingsCard(Control child) =>
+        UiFactory.GroupBlock(child, SettingsCardPadding);
 
     /// <summary>构建单个设置项：标签 + 数值胶囊在上，滑块独占一行，窄栏里也不会挤成一团。</summary>
     /// <param name="label">设置项名称。</param>
@@ -277,7 +253,7 @@ public sealed partial class FogEditPanel : UserControl
     private static Border BuildShortcutCard()
     {
         var panel = new StackPanel { Spacing = HintSpacing };
-        var title = BuildSectionTitle(ShortcutTitleText);
+        var title = UiFactory.SectionHead(ShortcutTitleText, SettingLabelFontSize);
         title.Margin = HintTitleMargin;
         panel.Children.Add(title);
 
@@ -337,23 +313,12 @@ public sealed partial class FogEditPanel : UserControl
         return BuildSettingsCard(panel);
     }
 
-    /// <summary>构建带统一描边的面板卡片。</summary>
+    /// <summary>构建面板卡片：交给 <see cref="UiFactory.PanelCard"/>，各页共用同一份描边与圆角。</summary>
     /// <param name="child">卡片内容。</param>
     /// <param name="background">卡片背景。</param>
     /// <param name="clipToBounds">是否裁剪溢出内容。</param>
-    private static Border BuildPanelCard(Control child, IBrush background, bool clipToBounds = false)
-    {
-        return new Border
-        {
-            Background = background,
-            BorderBrush = PanelBorderBrush,
-            BorderThickness = new Thickness(1),
-            // 圆角 8 与场景编辑 / 物品元件 / 剧情各页的卡片一致
-            CornerRadius = new CornerRadius(PanelCardCornerRadius),
-            Child = child,
-            ClipToBounds = clipToBounds,
-        };
-    }
+    private static Border BuildPanelCard(Control child, IBrush background, bool clipToBounds = false) =>
+        UiFactory.PanelCard(child, background, clipToBounds);
 
     private Control BuildRegionCard()
     {
@@ -365,11 +330,7 @@ public sealed partial class FogEditPanel : UserControl
         // 空列表时提示居中偏上，别吊在卡片左上角
         _regionHint.Margin = new Thickness(12, 30, 12, 0);
 
-        var scroll = new ScrollViewer
-        {
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            Content = _regionHost,
-        };
+        var scroll = UiFactory.VerticalScroll(_regionHost);
 
         _regionTitle.Text = RegionListTitle;
         _regionTitle.Foreground = UiTheme.AccentDark;

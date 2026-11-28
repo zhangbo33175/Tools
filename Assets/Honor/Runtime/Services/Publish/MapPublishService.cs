@@ -339,6 +339,224 @@ public static partial class MapPublishService
             files.Add(fogPath);
         }
 
+        return FinishPublish(
+            config,
+            options,
+            root,
+            chapter,
+            level,
+            MapPublishTarget.UnityJson,
+            files,
+            warnings,
+            $"Unity JSON 已发布：{fileName}");
+    }
+
+    private static bool LooksLikeUnityMapDirectory(string root)
+    {
+        return root.Replace('\\', '/').Contains("/GameData/MapDatas", StringComparison.OrdinalIgnoreCase)
+            || Directory.EnumerateFiles(root, MapFileNames.LevelPattern).Any();
+    }
+
+    #endregion
+
+    #region 拆分表落盘
+
+    /// <summary>
+    /// 主表 + 5 张子表的写盘口径。Cocos 出口用实例原始贴图路径与非紧凑格式；
+    /// Unity 出口用 Unity 贴图路径、内嵌路径点与 compact-v2 头。
+    /// </summary>
+    private sealed class SplitTableStyle
+    {
+        /// <summary>主表是否写 <c>Format = "compact-v2"</c>。</summary>
+        public bool Compact { get; init; }
+
+        /// <summary>主表 Meta.BgName 的覆盖值；null 表示用地图配置里的 BgName。</summary>
+        public string? BackgroundName { get; init; }
+
+        /// <summary>子表贴图路径解析器；null 表示沿用实例自带的 ImagePath。</summary>
+        public Func<PlacedObject, string>? ImageResolver { get; init; }
+
+        /// <summary>子表是否内嵌路径点。</summary>
+        public bool IncludePathPoints { get; init; }
+
+        /// <summary>内嵌路径点用的网格尺寸；不内嵌路径点时传 0。</summary>
+        public int GridSize { get; init; }
+    }
+
+    /// <summary>把一张子表写到章节目录，并登记进发布文件清单。</summary>
+    /// <param name="chapterDirectory">章节目录。</param>
+    /// <param name="baseName">关卡表基名。</param>
+    /// <param name="suffix">子表后缀；主表传空串。</param>
+    /// <param name="content">生成好的 Lua 文本。</param>
+    /// <param name="files">发布文件清单。</param>
+    private static void WriteSubTable(
+        string chapterDirectory,
+        string baseName,
+        string suffix,
+        string content,
+        List<string> files)
+    {
+        var path = SubTablePath(chapterDirectory, baseName, suffix);
+        WriteAtomic(path, content);
+        files.Add(path);
+    }
+
+    /// <summary>按选项写章节索引表并登记；未勾选更新索引时直接跳过。</summary>
+    /// <param name="root">输出根目录。</param>
+    /// <param name="chapter">章节 ID。</param>
+    /// <param name="level">关卡 ID。</param>
+    /// <param name="config">地图数据。</param>
+    /// <param name="enabled">是否更新索引。</param>
+    /// <param name="files">发布文件清单。</param>
+    private static void WriteLevelIndexIfEnabled(
+        string root,
+        string chapter,
+        string level,
+        MapConfigData config,
+        bool enabled,
+        List<string> files)
+    {
+        if (!enabled)
+        {
+            return;
+        }
+
+        var indexPath = Path.Combine(root, LevelIndexFileName);
+        WriteAtomic(indexPath, BuildCocosIndex(indexPath, chapter, config.ChapterName, level));
+        files.Add(indexPath);
+    }
+
+    /// <summary>
+    /// 主表 + 角色/建筑/物件/路径/交通子表 + 可选索引，按固定顺序一次写完。
+    /// Cocos Lua 与 Unity Lua 两个出口共用这份落盘顺序，差异全部收进 <see cref="SplitTableStyle"/>。
+    /// </summary>
+    /// <param name="chapterDirectory">章节目录。</param>
+    /// <param name="root">输出根目录（索引表写在这里）。</param>
+    /// <param name="baseName">关卡表基名。</param>
+    /// <param name="chapter">章节 ID。</param>
+    /// <param name="level">关卡 ID。</param>
+    /// <param name="config">地图数据。</param>
+    /// <param name="options">发布选项。</param>
+    /// <param name="style">写盘口径。</param>
+    /// <param name="characters">角色实例。</param>
+    /// <param name="buildings">建筑实例。</param>
+    /// <param name="objects">物件实例。</param>
+    /// <param name="files">发布文件清单。</param>
+    private static void WriteSplitTables(
+        string chapterDirectory,
+        string root,
+        string baseName,
+        string chapter,
+        string level,
+        MapConfigData config,
+        MapPublishOptions options,
+        SplitTableStyle style,
+        List<PlacedObject> characters,
+        List<PlacedObject> buildings,
+        List<PlacedObject> objects,
+        List<string> files)
+    {
+        WriteSubTable(
+            chapterDirectory,
+            baseName,
+            string.Empty,
+            BuildCocosMainFile(baseName, chapter, level, config, options.MapName, style.BackgroundName, style.Compact),
+            files);
+
+        WriteSubTable(
+            chapterDirectory,
+            baseName,
+            CharactersSuffix,
+            BuildCocosCharactersFile(
+                baseName,
+                characters,
+                style.ImageResolver,
+                compact: style.Compact),
+            files);
+
+        WriteSubTable(
+            chapterDirectory,
+            baseName,
+            BuildingsSuffix,
+            BuildCocosBuildingsFile(
+                baseName,
+                buildings,
+                style.ImageResolver,
+                style.IncludePathPoints,
+                style.GridSize,
+                style.Compact),
+            files);
+
+        WriteSubTable(
+            chapterDirectory,
+            baseName,
+            ObjectsSuffix,
+            BuildCocosObjectsFile(
+                baseName,
+                objects,
+                style.ImageResolver,
+                style.IncludePathPoints,
+                style.GridSize,
+                style.Compact),
+            files);
+
+        WriteSubTable(
+            chapterDirectory,
+            baseName,
+            PathsSuffix,
+            BuildCocosPathsFile(baseName, characters, config.GridSize),
+            files);
+
+        WriteSubTable(
+            chapterDirectory,
+            baseName,
+            TrafficSuffix,
+            BuildCocosTrafficFile(baseName, config),
+            files);
+
+        WriteLevelIndexIfEnabled(root, chapter, level, config, options.UpdateCocosIndex, files);
+    }
+
+    #endregion
+
+    #region 发布收尾
+
+    /// <summary>
+    /// 三个出口共用的收尾：Spine 实例提示、写清单并登记、组装发布结果。
+    /// </summary>
+    /// <param name="config">地图数据。</param>
+    /// <param name="options">发布选项。</param>
+    /// <param name="root">输出根目录。</param>
+    /// <param name="chapter">章节 ID。</param>
+    /// <param name="level">关卡 ID。</param>
+    /// <param name="previewTarget">写进结果摘要口径的发布目标。</param>
+    /// <param name="files">本次落盘的文件列表。</param>
+    /// <param name="warnings">发布警告集合，本方法会追加。</param>
+    /// <param name="headline">结果首句，如「Cocos Lua 已发布：Chapter1_Level1」。</param>
+    /// <param name="spineWarning">Spine 实例存在时的警告文案生成器；为 null 时该出口不提示。</param>
+    /// <returns>发布结果。</returns>
+    private static MapPublishResult FinishPublish(
+        MapConfigData config,
+        MapPublishOptions options,
+        string root,
+        string chapter,
+        string level,
+        MapPublishTarget previewTarget,
+        List<string> files,
+        List<string> warnings,
+        string headline,
+        Func<int, string>? spineWarning = null)
+    {
+        if (spineWarning is not null)
+        {
+            var spineCount = config.Objects.Count(item =>
+                string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase));
+            if (spineCount > 0)
+            {
+                warnings.Add(spineWarning(spineCount));
+            }
+        }
+
         var manifestPath = Path.Combine(root, MapFileNames.Manifest(chapter, level));
         WriteManifestAndRegister(
             manifestPath,
@@ -357,13 +575,7 @@ public static partial class MapPublishService
             files,
             manifestPath,
             warnings,
-            $"Unity JSON 已发布：{fileName}（{Preview(config, MapPublishTarget.UnityJson).Summary}）");
-    }
-
-    private static bool LooksLikeUnityMapDirectory(string root)
-    {
-        return root.Replace('\\', '/').Contains("/GameData/MapDatas", StringComparison.OrdinalIgnoreCase)
-            || Directory.EnumerateFiles(root, MapFileNames.LevelPattern).Any();
+            $"{headline}（{Preview(config, previewTarget).Summary}）");
     }
 
     #endregion

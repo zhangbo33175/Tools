@@ -101,9 +101,8 @@ internal static class ItemXlsmWriter
     /// <param name="file">表。</param>
     /// <param name="error">失败原因。</param>
     /// <returns>是否成功。</returns>
-    public static bool Write(ItemTableFile file, out string error)
-    {
-        try
+    public static bool Write(ItemTableFile file, out string error) =>
+        ServiceOutcome.Run(() =>
         {
             XDocument document;
             using (var archive = ZipFile.OpenRead(file.Path))
@@ -111,8 +110,7 @@ internal static class ItemXlsmWriter
                 var entry = archive.GetEntry(SheetEntry);
                 if (entry is null)
                 {
-                    error = "xlsm 内找不到 sheet1.xml";
-                    return false;
+                    return "xlsm 内找不到 sheet1.xml";
                 }
 
                 using var stream = entry.Open();
@@ -122,14 +120,22 @@ internal static class ItemXlsmWriter
             var sheetData = document.Descendants(Ns + "sheetData").FirstOrDefault();
             if (sheetData is null)
             {
-                error = "工作表缺少 sheetData";
-                return false;
+                return "工作表缺少 sheetData";
             }
 
             var fieldByIndex = new Dictionary<int, string>();
             foreach (var pair in file.ColumnIndex)
             {
                 fieldByIndex.TryAdd(pair.Value, pair.Key);
+            }
+
+            // 本次新追加的列（如「显示名称」）在原表里没有表头单元格，先补上列名
+            foreach (var column in file.AddedColumns)
+            {
+                if (column >= 0 && column < file.ColumnNames.Count)
+                {
+                    SetCell(sheetData, file.HeaderRowNumber, column + 1, file.ColumnNames[column], false);
+                }
             }
 
             foreach (var row in file.Rows)
@@ -154,15 +160,8 @@ internal static class ItemXlsmWriter
             }
 
             File.Move(temp, file.Path, true);
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-    }
+            return null;
+        }, out error);
 
     private static void SetCell(XElement sheetData, int rowNumber, int column, string value, bool numeric)
     {

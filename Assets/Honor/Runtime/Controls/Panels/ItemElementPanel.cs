@@ -55,14 +55,20 @@ public sealed partial class ItemElementPanel : UserControl
     /// <summary>勾选框方框与右侧文字之间留出的一个字的空隙（字号 12px，一字约 12px）。</summary>
     private const double CheckLabelGap = 12.0;
 
+    /// <summary>布尔字段开启时显示的状态词。</summary>
+    private const string BoolOnText = "已开启";
+
+    /// <summary>布尔字段关闭时显示的状态词。</summary>
+    private const string BoolOffText = "已关闭";
+
     /// <summary>表单正文与标签的统一下限字号，保证分组之间字号一致。</summary>
-    private const double FormFontSize = 12.0;
+    private const double FormFontSize = UiMetrics.FontTitle;
 
     /// <summary>字段标签右侧与控件之间的固定留白（Row 与 RowUnit 共用）。</summary>
     private const double LabelRightGap = 8.0;
 
     /// <summary>字段控件统一高度（输入框与下拉框对齐同一基线）。</summary>
-    private const double FieldHeight = 30.0;
+    private const double FieldHeight = UiMetrics.FieldHeight;
 
     /// <summary>输入框内边距：左右 6、上下 2。</summary>
     private static readonly Thickness FieldTextPadding = new(6, 2);
@@ -71,7 +77,7 @@ public sealed partial class ItemElementPanel : UserControl
     private static readonly Thickness FieldComboPadding = new(6, 1);
 
     /// <summary>输入框与下拉框统一的圆角。</summary>
-    private const double FieldCornerRadius = 6.0;
+    private const double FieldCornerRadius = UiMetrics.InputCornerRadius;
 
     /// <summary>输入框与下拉框统一的描边线宽。</summary>
     private const double FieldBorderThickness = 1.0;
@@ -82,14 +88,8 @@ public sealed partial class ItemElementPanel : UserControl
     /// <summary>分组标题条左侧箭头字号。</summary>
     private const double GroupArrowFontSize = 13.0;
 
-    /// <summary>分组标题条左侧竖条宽度。</summary>
-    private const double GroupAccentWidth = 3.0;
-
-    /// <summary>分组标题条左侧竖条高度。</summary>
+    /// <summary>分组标题条左侧竖条高度（宽度与倒角由 <see cref="UiFactory.AccentBar"/> 统一维护）。</summary>
     private const double GroupAccentHeight = 14.0;
-
-    /// <summary>分组标题条左侧竖条的圆角。</summary>
-    private const double GroupAccentRadius = 1.5;
 
     /// <summary>分组标题文字与左侧竖条之间的间距。</summary>
     private static readonly Thickness GroupTitleMargin = new(7, 0, 0, 0);
@@ -98,7 +98,7 @@ public sealed partial class ItemElementPanel : UserControl
     private static readonly Thickness GroupHeaderPadding = new(10, 7);
 
     /// <summary>分组内容区行间距：字段框 30 高，配 8 的行距让整组更紧凑、少留空。</summary>
-    private const double GroupContentSpacing = 8.0;
+    private const double GroupContentSpacing = UiMetrics.FieldGap;
 
     /// <summary>分组内容区四周留白：左 12、上 10、右 12、下 12。</summary>
     private static readonly Thickness GroupContentMargin = new(14, 12, 14, 14);
@@ -107,7 +107,7 @@ public sealed partial class ItemElementPanel : UserControl
     private const double GroupCardBorderThickness = 1.0;
 
     /// <summary>分组卡片圆角。</summary>
-    private const double GroupCardCornerRadius = 8.0;
+    private const double GroupCardCornerRadius = UiMetrics.CardCornerRadius;
 
     /// <summary>单位后缀与数字控件之间的间距。</summary>
     private static readonly Thickness UnitLabelMargin = new(6, 0, 0, 0);
@@ -122,7 +122,7 @@ public sealed partial class ItemElementPanel : UserControl
     private static readonly Thickness NineSlicePreviewMargin = new(0, 2, 0, 2);
 
     /// <summary>九宫格说明文字字号，略小于正文以示层级。</summary>
-    private const double FormHintFontSize = 11.0;
+    private const double FormHintFontSize = UiMetrics.FontBody;
 
     /// <summary>分组展开时的箭头字符。</summary>
     private const string ExpandGlyph = "▾";
@@ -163,7 +163,7 @@ public sealed partial class ItemElementPanel : UserControl
     private const double RowThumbnailSize = 52.0;
 
     /// <summary>元件列表行缩略图圆角。</summary>
-    private const double RowThumbnailCornerRadius = 3.0;
+    private const double RowThumbnailCornerRadius = UiMetrics.SmallCornerRadius;
 
     /// <summary>元件列表行上下留白。</summary>
     private const double RowVerticalPadding = 5.0;
@@ -181,16 +181,10 @@ public sealed partial class ItemElementPanel : UserControl
     private const double RowTextSpacing = 1.0;
 
     /// <summary>行描述文字字号。</summary>
-    private const double RowDescFontSize = 11.0;
+    private const double RowDescFontSize = UiMetrics.FontBody;
 
     /// <summary>空列表提示外边距。</summary>
     private static readonly Thickness EmptyListHintMargin = new(2, 6);
-
-    /// <summary>面板卡片描边线宽。</summary>
-    private const double PanelBorderThickness = 1.0;
-
-    /// <summary>左右两栏面板卡片的圆角半径，与全局卡片语言保持一致（卡片 8）。</summary>
-    private const double PanelCornerRadius = 8.0;
 
     /// <summary>属性表单宿主的外边距。</summary>
     private static readonly Thickness FormHostMargin = new(12, 10, 12, 12);

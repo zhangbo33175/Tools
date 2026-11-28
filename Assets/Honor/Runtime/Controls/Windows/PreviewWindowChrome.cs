@@ -32,14 +32,8 @@ public static class PreviewWindowChrome
     /// <summary>顶栏 / 底栏左右内边距。</summary>
     private const double HorizontalPadding = 16;
 
-    /// <summary>标题左侧强调竖条的宽度。</summary>
-    private const double AccentWidth = 3;
-
-    /// <summary>标题左侧强调竖条的高度。</summary>
-    private const double AccentHeight = 30;
-
-    /// <summary>强调竖条的圆角。</summary>
-    private const double AccentCornerRadius = 2;
+    /// <summary>标题左侧强调竖条的高度（宽度与倒角由 <see cref="UiFactory.AccentBar"/> 统一维护）。</summary>
+    private const double AccentBarHeight = 30;
 
     /// <summary>标题与强调竖条的间距。</summary>
     private const double TitleSpacing = 10;
@@ -48,7 +42,7 @@ public static class PreviewWindowChrome
     private const double TitleFontSize = 18;
 
     /// <summary>副标题与底栏字号。</summary>
-    private const double HintFontSize = 11;
+    private const double HintFontSize = UiMetrics.FontBody;
 
     /// <summary>副标题与主标题之间的紧凑间距。</summary>
     private const double SubtitleTopMargin = 1;
@@ -90,14 +84,7 @@ public static class PreviewWindowChrome
     /// <returns>标题面板。</returns>
     public static Control BuildTitlePanel(string title, string subtitle)
     {
-        var accent = new Border
-        {
-            Width = AccentWidth,
-            Height = AccentHeight,
-            CornerRadius = new CornerRadius(AccentCornerRadius),
-            Background = UiTheme.Accent,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
+        var accent = UiFactory.AccentBar(UiTheme.Accent, AccentBarHeight, marginRight: 0);
 
         var titleBlock = new TextBlock
         {
@@ -155,13 +142,7 @@ public static class PreviewWindowChrome
         Grid.SetColumn(right, 2);
         grid.Children.Add(right);
 
-        return new Border
-        {
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.Divider,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Child = grid,
-        };
+        return UiFactory.HeaderBand(grid);
     }
 
     #endregion
@@ -194,13 +175,7 @@ public static class PreviewWindowChrome
         };
         Grid.SetColumn(countText, 1);
 
-        return new Border
-        {
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.Divider,
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            Child = grid,
-        };
+        return UiFactory.FooterBand(grid);
     }
 
     #endregion

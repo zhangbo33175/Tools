@@ -49,7 +49,7 @@ public sealed class NineSlicePreview : Control
     private const double FooterTextBottomInset = 18.0;
 
     /// <summary>底部说明与空状态提示的字号。</summary>
-    private const double FooterFontSize = 11.0;
+    private const double FooterFontSize = UiMetrics.FontBody;
 
     /// <summary>透明棋盘格的单元边长（设备无关像素）。</summary>
     private const double CheckerCellSize = 14.0;

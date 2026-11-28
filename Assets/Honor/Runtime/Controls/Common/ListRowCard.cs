@@ -21,7 +21,7 @@ namespace MapEditorTool.Controls
     /// <summary>
     /// 列表条目的「卡片行」：1px 描边 + 6px 圆角 + 近白底 + 3px 行距，选中时蓝底蓝边、悬停时略提亮。
     /// 章节/物件列表（Button 行）与物品元件、未配置资源等面板（自定义内容行）共用同一套颜色与尺寸常量，
-    /// 避免各面板各写一份色值导致风格漂移。
+    /// 三态外观由 <see cref="RowState"/> 统一落笔，避免各面板各写一份色值导致风格漂移。
     /// </summary>
     internal sealed class ListRowCard : Border
     {
@@ -34,12 +34,6 @@ namespace MapEditorTool.Controls
 
         /// <summary>行左右内边距。</summary>
         public const double RowPaddingX = 6;
-
-        private static readonly IBrush NormalBack = UiTheme.RowBack;
-        private static readonly IBrush NormalBorder = UiTheme.RowBorder;
-        private static readonly IBrush HoverBack = UiTheme.RowHoverBack;
-        private static readonly IBrush SelectedBack = UiTheme.RowSelectedBack;
-        private static readonly IBrush SelectedBorder = UiTheme.RowSelectedBorder;
         #endregion
 
         #region 字段
@@ -60,22 +54,17 @@ namespace MapEditorTool.Controls
             Padding = new Thickness(RowPaddingX, 0);
             BorderThickness = new Thickness(1);
             // 圆角 6 与全局「输入框 6」那一档对齐，列表行不再用近似直角的 2
-            CornerRadius = new CornerRadius(6);
+            CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius);
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
             Cursor = new Cursor(StandardCursorType.Hand);
             _isSelected = isSelected;
-            ApplyState();
+            Refresh();
 
-            PointerEntered += (_, _) =>
+            RowState.AttachHover(this, hovered =>
             {
-                _isHovered = true;
-                ApplyState();
-            };
-            PointerExited += (_, _) =>
-            {
-                _isHovered = false;
-                ApplyState();
-            };
+                _isHovered = hovered;
+                Refresh();
+            });
         }
         #endregion
 
@@ -92,25 +81,14 @@ namespace MapEditorTool.Controls
                 }
 
                 _isSelected = value;
-                ApplyState();
+                Refresh();
             }
         }
         #endregion
 
         #region 内部方法
         /// <summary>按「选中 → 悬停 → 常态」的优先级刷新底色与描边。</summary>
-        private void ApplyState()
-        {
-            if (_isSelected)
-            {
-                Background = SelectedBack;
-                BorderBrush = SelectedBorder;
-                return;
-            }
-
-            Background = _isHovered ? HoverBack : NormalBack;
-            BorderBrush = NormalBorder;
-        }
+        private void Refresh() => RowState.Apply(this, _isSelected, _isHovered, UiTheme.EditorRow);
         #endregion
     }
     #endregion

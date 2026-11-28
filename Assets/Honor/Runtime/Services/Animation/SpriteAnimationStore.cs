@@ -162,9 +162,8 @@ public sealed class SpriteAnimationStore
     /// <param name="catalog">动画目录。</param>
     /// <param name="error">失败原因，成功为空串。</param>
     /// <returns>是否保存成功。</returns>
-    public bool TrySave(SpriteAnimationCatalog catalog, out string error)
-    {
-        try
+    public bool TrySave(SpriteAnimationCatalog catalog, out string error) =>
+        ServiceOutcome.Run(() =>
         {
             FileSystemIo.EnsureParentDirectory(Path);
 
@@ -187,15 +186,7 @@ public sealed class SpriteAnimationStore
             FileSystemIo.WriteText(
                 Path,
                 JsonSerializer.Serialize(payload, _options));
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-    }
+        }, out error);
 
     /// <summary>清理非法文件名字符。</summary>
     /// <param name="name">原始名字。</param>

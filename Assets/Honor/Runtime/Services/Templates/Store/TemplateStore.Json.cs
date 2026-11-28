@@ -150,6 +150,9 @@ public sealed partial class TemplateStore
         /// <summary>独立版扩展：类型（Unity 侧按 ResName 前缀推断）。</summary>
         [JsonPropertyName("ObjectType")] public string ObjectType { get; set; } = string.Empty;
 
+        /// <summary>独立版扩展：四方向出图（朝向键 → 图片路径）；空对象表示单图 + 旋转。</summary>
+        [JsonPropertyName("FacingImages")] public Dictionary<string, string>? FacingImages { get; set; }
+
         /// <summary>模型转传输对象。</summary>
         public static TemplatePayload FromModel(ObjectTemplate template) => new()
         {
@@ -192,6 +195,9 @@ public sealed partial class TemplateStore
             NineSliceTop = template.NineSlice.Top,
             NineSliceBottom = template.NineSlice.Bottom,
             NineSliceCenterMode = template.NineSlice.CenterMode,
+            FacingImages = template.HasFacingVariants
+                ? new Dictionary<string, string>(template.FacingImages, StringComparer.OrdinalIgnoreCase)
+                : null,
         };
 
         /// <summary>传输对象转模型。</summary>
@@ -238,6 +244,12 @@ public sealed partial class TemplateStore
                 NineSliceCenterMode),
             Type = ObjectTypeNames.ToType(ObjectType),
             IsBuiltIn = true,
+            FacingImages = (FacingImages ?? new Dictionary<string, string>())
+                .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))
+                .ToDictionary(
+                    pair => pair.Key.Trim().ToLowerInvariant(),
+                    pair => pair.Value,
+                    StringComparer.OrdinalIgnoreCase),
         };
     }
 

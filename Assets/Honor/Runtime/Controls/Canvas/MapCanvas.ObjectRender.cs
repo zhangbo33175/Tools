@@ -26,14 +26,61 @@ namespace MapEditorTool.Controls;
 /// <summary>画布物件绘制：精灵、九宫格、平铺、标签与对象层。</summary>
 public sealed partial class MapCanvas : Control
 {
+    #region 占位绘制透明度
+
+    // 「这块地有美术、但我们没像素」的那几种画法共用同一族透明度：以前散在绘制代码里是 0xC0/0x40/0x80/0xD0/0x70 五个魔数，
+    // 调浓一点要满文件找，现在集中在这里。
+    /// <summary>Spine 资产缺失时的图层色虚线框。</summary>
+    private const byte GhostDashedAlpha = 0xC0;
+
+    /// <summary>缺贴图的背景地块：图层色浅填充。</summary>
+    private const byte GhostFillAlpha = 0x40;
+
+    /// <summary>贴图包围盒虚线（勾选「显示图像边框」时）。</summary>
+    private const byte BoundsDashedAlpha = 0x80;
+
+    /// <summary>纯色占位块的主填充。</summary>
+    private const byte PlaceholderFillAlpha = 0xD0;
+
+    /// <summary>纯色占位块外圈黑描边。</summary>
+    private const byte PlaceholderEdgeAlpha = 0x70;
+
+    #endregion
+
     #region 物件与贴图绘制
+
+    /// <summary>
+    /// 画一个物件。屋里隐藏预览生效时整体压淡，其余情况直接交给 <see cref="DrawObjectCore"/>。
+    /// <para>压淡放在最外层而不是改每个绘制分支的 alpha：贴图、色块、描边、名字一起淡，
+    /// 视觉上才是「这面墙进屋后消失了」，也避免某条分支漏改导致半透明混色。</para>
+    /// </summary>
+    /// <param name="context">绘制上下文。</param>
+    /// <param name="item">地图实例。</param>
     private void DrawObject(DrawingContext context, PlacedObject item)
+    {
+        if (!ShouldFadeForRoomPreview(item))
+        {
+            DrawObjectCore(context, item);
+            return;
+        }
+
+        using (context.PushOpacity(RoomPreviewOpacity))
+        {
+            DrawObjectCore(context, item);
+        }
+    }
+
+    private void DrawObjectCore(DrawingContext context, PlacedObject item)
     {
         // 预览中的角色若带路径，按预览时钟把脚底插值到路径上；编辑器里始终用落盘坐标
         var bounds = PreviewRenderBounds(item);
         // 预览行走时按路径切向自动翻面；静态摆放仍按实例自身的 FlipX 绘制。
         // ---TODO 朝向：所有视觉源（Spine / 序列帧 / 静态图）共用同一镜像结果。
         var renderFlipX = ResolveRenderFlipX(item);
+
+        // 四方向出图：模板配了朝向变体就只换图、不转图（等距美术的四个透视是画好的，
+        // 再绕中心转会变成斜的）；没配变体的旧图元继续按实例角度旋转，行为完全不变。
+        var rotation = EffectiveRotationOf(item);
 
         // 占位色 / 背景特殊绘制都跟随「有效显示层」：手改到背景层的图元按背景画法走，
         // 顶部图层勾选时也能和画面一致（显示层优先，未设置才回落到归属层）。
@@ -67,7 +114,7 @@ public sealed partial class MapCanvas : Control
         // 用手改后的有效显示层判断：把道具层图元改成背景层后，也应该走背景画法。
         if (displayLayer == MapLayerKeys.Background)
         {
-            using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, renderFlipX, bounds)))
+            using (context.PushTransform(SpriteLayout.ContentTransform(rotation, renderFlipX, bounds)))
             {
                 if (spinePlayer is not null && spineAsset is not null)
                 {
@@ -92,7 +139,7 @@ public sealed partial class MapCanvas : Control
                     // Spine 资产缺失：只留虚线占位，不铺图层色块，避免看起来像旧背景图。
                     context.DrawRectangle(
                         null,
-                        new Pen(new SolidColorBrush(Color.FromArgb(0xC0, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
+                        new Pen(new SolidColorBrush(Color.FromArgb(GhostDashedAlpha, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
                         bounds);
                 }
                 else
@@ -100,7 +147,7 @@ public sealed partial class MapCanvas : Control
                     // 缺贴图的背景地块（Unity 侧烘焙进合成底图的那批）：色块稍重一点，
                     // 好让「这块地有美术、但我们没像素」一眼能看出来，又不是实心地块
                     context.FillRectangle(
-                        new SolidColorBrush(Color.FromArgb(0x40, color.R, color.G, color.B)),
+                        new SolidColorBrush(Color.FromArgb(GhostFillAlpha, color.R, color.G, color.B)),
                         bounds);
                 }
 
@@ -108,7 +155,7 @@ public sealed partial class MapCanvas : Control
                 {
                     context.DrawRectangle(
                         null,
-                        new Pen(new SolidColorBrush(Color.FromArgb(0x80, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
+                        new Pen(new SolidColorBrush(Color.FromArgb(BoundsDashedAlpha, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
                         bounds);
                 }
             }
@@ -116,15 +163,15 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
-        var fill = new SolidColorBrush(Color.FromArgb(0xD0, color.R, color.G, color.B));
-        var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(0x70, 0x00, 0x00, 0x00)), Hairline);
+        var fill = new SolidColorBrush(Color.FromArgb(PlaceholderFillAlpha, color.R, color.G, color.B));
+        var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(PlaceholderEdgeAlpha, 0x00, 0x00, 0x00)), Hairline);
         var band = LayerBands.Of(item);
 
         // 「是否缩放」勾选时贴图按包围盒铺满；取消勾选则等比缩放到包围盒内（contain），
         // 与 Unity 场景工具的 GUI.DrawTexture(ScaleMode.ScaleToFit) 一致：不溢出、不变形。
         // 旋转 90/270 复用的切片（宽高与物件框互换）先按「交换后的框」contain，再交给旋转矩阵摆正
         var drawBounds = sprite is not null && item.Stretch is false
-            ? SpriteLayout.FitForRotation(bounds, pixelSize, item.Rotation)
+            ? SpriteLayout.FitForRotation(bounds, pixelSize, rotation)
             : bounds;
 
         // 2D 立体物的脚底必须踩在包围盒底边：贴图比占格小时只做水平居中、底部对齐，
@@ -132,7 +179,7 @@ public sealed partial class MapCanvas : Control
         // 旋转过的图元交给旋转矩阵，不再二次偏移，避免斜放物件被拉离原位。
         if (sprite is not null
             && band == LayerBands.Standing
-            && Math.Abs(item.Rotation) < 0.01
+            && Math.Abs(rotation) < 0.01
             && drawBounds.Height < bounds.Height - 0.5)
         {
             drawBounds = new Rect(
@@ -143,7 +190,7 @@ public sealed partial class MapCanvas : Control
         }
 
         // 有贴图与没贴图（色块占位）都要吃旋转与水平镜像，保证改角度后画布上有明确反馈
-        using (context.PushTransform(SpriteLayout.ContentTransform(item.Rotation, renderFlipX, bounds)))
+        using (context.PushTransform(SpriteLayout.ContentTransform(rotation, renderFlipX, bounds)))
         {
             if (spinePlayer is not null && spineAsset is not null)
             {
@@ -172,7 +219,7 @@ public sealed partial class MapCanvas : Control
                 // Spine 资产缺失：虚线占位，绝不回退到旧静态图，避免动画位置又出现背景图。
                 context.DrawRectangle(
                     null,
-                    new Pen(new SolidColorBrush(Color.FromArgb(0xC0, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
+                    new Pen(new SolidColorBrush(Color.FromArgb(GhostDashedAlpha, color.R, color.G, color.B)), 1.5 * Hairline, DashStyle.Dash),
                     bounds);
             }
             else
@@ -191,16 +238,19 @@ public sealed partial class MapCanvas : Control
         // 拖动平移时也跳过：每帧 500+ 条 Pen 描边纯属无谓开销，松手后补画
         if (ShowImageBorder && !_isPanning && !PreviewMode)
         {
-            // 未旋转的图元：一条轴对齐格足迹描边，便于核对占格；旋转图元的格子级占格见 DrawSelectedOccupancy
-            var cell = MapToolDefaults.GridSize;
+            // 未旋转的图元：一条轴对齐格足迹描边，便于核对占格；旋转图元的格子级占格见 DrawSelectedOccupancy。
+            // 格数按当前地图的格子边长现算，和占格显示、导出同一口径（原来写死 32，换 16px 格宽就会算错一半）。
+            var cell = (double)(_config?.GridSize > 0 ? _config.GridSize : MapToolDefaults.GridSize);
             var footprintPen = new Pen(UiTheme.MapView.Footprint, Hairline);
 
-            if (Math.Abs(item.Rotation) < 0.01)
+            if (Math.Abs(rotation) < 0.01)
             {
+                var cols = Math.Max(1, (int)Math.Ceiling(item.Bounds.Width / cell));
+                var rows = Math.Max(1, (int)Math.Ceiling(item.Bounds.Height / cell));
                 context.DrawRectangle(
                     null,
                     footprintPen,
-                    new Rect(item.X, item.Y, item.ExportWidth * cell, item.ExportHeight * cell));
+                    new Rect(item.X, item.Y, cols * cell, rows * cell));
             }
         }
 
@@ -385,5 +435,6 @@ public sealed partial class MapCanvas : Control
     }
     #endregion
 }
+
 
 

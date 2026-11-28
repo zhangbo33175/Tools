@@ -229,7 +229,7 @@ namespace MapEditorTool.Controls
             {
                 Text = window.Title ?? string.Empty,
                 Foreground = palette.Text,
-                FontSize = 12,
+                FontSize = UiMetrics.FontTitle,
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis,
@@ -248,13 +248,13 @@ namespace MapEditorTool.Controls
             Grid.SetColumn(buttons, 2);
 
             buttons.Children.Add(CreateCaptionButton(
-                "─", "最小化", palette, () => window.WindowState = WindowState.Minimized));
+                CaptionGlyph.Minimize, "最小化", palette, () => window.WindowState = WindowState.Minimized));
 
             Button? maximizeButton = null;
             if (window.CanResize)
             {
                 maximizeButton = CreateCaptionButton(
-                    window.WindowState == WindowState.Maximized ? "❐" : "□",
+                    window.WindowState == WindowState.Maximized ? CaptionGlyph.Restore : CaptionGlyph.Maximize,
                     "最大化 / 还原",
                     palette,
                     () => window.WindowState = window.WindowState == WindowState.Maximized
@@ -263,7 +263,7 @@ namespace MapEditorTool.Controls
                 buttons.Children.Add(maximizeButton);
             }
 
-            buttons.Children.Add(CreateCaptionButton("✕", "关闭", palette, closeAction, isClose: true));
+            buttons.Children.Add(CreateCaptionButton(CaptionGlyph.Close, "关闭", palette, closeAction, isClose: true));
 
             if (maximizeButton is not null)
             {
@@ -272,7 +272,11 @@ namespace MapEditorTool.Controls
                 {
                     if (args.Property == Window.WindowStateProperty)
                     {
-                        maximizeButton.Content = window.WindowState == WindowState.Maximized ? "❐" : "□";
+                        var kind = window.WindowState == WindowState.Maximized
+                            ? CaptionGlyph.Restore
+                            : CaptionGlyph.Maximize;
+                        maximizeButton.Content = BuildCaptionGlyph(kind);
+                        ToolTip.SetTip(maximizeButton, kind == CaptionGlyph.Restore ? "还原" : "最大化");
                     }
                 };
             }
@@ -282,9 +286,54 @@ namespace MapEditorTool.Controls
             return bar;
         }
 
+        /// <summary>标题栏系统按钮的字形种类。</summary>
+        private enum CaptionGlyph
+        {
+            /// <summary>最小化：一根短横。</summary>
+            Minimize,
+
+            /// <summary>最大化：一个单框。</summary>
+            Maximize,
+
+            /// <summary>还原：两个错位的框。</summary>
+            Restore,
+
+            /// <summary>关闭：一个叉。</summary>
+            Close,
+        }
+
+        /// <summary>
+        /// 构造系统按钮用的矢量字形。
+        /// 不用 Segoe UI Symbol 字符：小字号符号在 ClearType 下会带彩边、笔画粗细也不一致；
+        /// 统一 1.4px 圆头描边的几何路径在任意 DPI 下都干净，且能与悬停色对齐。
+        /// </summary>
+        private static Control BuildCaptionGlyph(CaptionGlyph kind)
+        {
+            var geometry = kind switch
+            {
+                CaptionGlyph.Minimize => Geometry.Parse("M 0,0 L 10,0"),
+                CaptionGlyph.Maximize => Geometry.Parse("M 0,0 L 10,0 L 10,10 L 0,10 Z"),
+                CaptionGlyph.Restore => Geometry.Parse("M 0,3 L 7,3 L 7,10 L 0,10 Z M 3,0 L 10,0 L 10,7 L 7,7"),
+                _ => Geometry.Parse("M 0,0 L 10,10 M 10,0 L 0,10"),
+            };
+
+            return new Path
+            {
+                Data = geometry,
+                Stroke = new SolidColorBrush(UiTheme.TitleBarGlyph),
+                StrokeThickness = 1.4,
+                StrokeLineCap = PenLineCap.Round,
+                StrokeJoin = PenLineJoin.Round,
+                Stretch = Stretch.None,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                IsHitTestVisible = false,
+            };
+        }
+
         /// <summary>构造一个贴边系统按钮；交互仍由 Avalonia 按钮处理。</summary>
         private static Button CreateCaptionButton(
-            string glyph,
+            CaptionGlyph kind,
             string tooltip,
             Palette palette,
             Action action,
@@ -292,7 +341,7 @@ namespace MapEditorTool.Controls
         {
             var button = new Button
             {
-                Content = glyph,
+                Content = BuildCaptionGlyph(kind),
                 Width = 46,
                 Height = TitleBarHeight,
                 MinWidth = 46,
@@ -301,8 +350,6 @@ namespace MapEditorTool.Controls
                 BorderThickness = new Thickness(0),
                 CornerRadius = new CornerRadius(0),
                 Background = Brushes.Transparent,
-                FontFamily = new FontFamily("Segoe UI Symbol"),
-                FontSize = 12,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Focusable = false,

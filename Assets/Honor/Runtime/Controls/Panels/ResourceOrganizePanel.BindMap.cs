@@ -11,6 +11,7 @@ using System;
 using System.Linq;
 using MapEditorTool.Models;
 using MapEditorTool.Services;
+using MapEditorTool.Controls;
 
 namespace MapEditorTool.Controls;
 
@@ -45,7 +46,7 @@ public sealed partial class ResourceOrganizePanel
         {
             if (!_itemTable.TrySave(out var error))
             {
-                _notify($"地图资源已对号，但配置表保存失败：{error}");
+                _notify(UiFeedback.Failed("地图资源已对号，但配置表保存", error));
                 return;
             }
 

@@ -176,13 +176,19 @@ public sealed partial class MapCanvas : Control
                 DrawEditingPath(context);
                 DrawFog(context, config);
                 DrawFogBrush(context);
+                // 房间触发区：虚线框 + 名字，编辑态辅助；预览与运行时不画
+                DrawRooms(context, config);
+                // 层高标尺：勾选「楼层参考」时在地图左侧标出本层与下层的落差
+                DrawLevelElevationGuide(context, config);
+                // 占格的填充沉在贴图下，但整格大小的贴图会把它盖严，这里在顶层补一遍格线
+                DrawSelectedOccupancyOutline(context);
                 DrawSelection(context);
                 DrawSelectedCell(context);
             }
 
             // 地图外框：始终 1 设备像素宽，让画布边界在青色底上仍清晰可见
             context.DrawRectangle(
-                new Pen(new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)), Hairline),
+                new Pen(UiTheme.MapView.Border, Hairline),
                 new Rect(0, 0, config.Width, config.Height));
         }
 
@@ -214,31 +220,108 @@ public sealed partial class MapCanvas : Control
         IReadOnlyList<PlacedObject> groundItems,
         IReadOnlyList<PlacedObject> upperItems)
     {
-        DrawSelectedOccupancy(context);
+        // 按楼层切片绘制：一层里先地板瓦片、再地表带、再立体带。
+        // 楼层升序 + 上层后画，2F 楼板才能压在 1F 房间的上半部分之上（参考图的剖面观感）；
+        // 同一楼层内仍沿用「带 → 脚底 Y」的画家算法，与单层地图行为完全一致。
+        var levels = VisibleLevels(config);
+        var currentElevation = CurrentLevelElevation;
+        foreach (var level in levels)
+        {
+            var opacity = LevelOpacity(level);
 
-        foreach (var item in groundItems)
-        {
-            DrawObject(context, item);
+            // 像素抬升：当前楼层贴在基准平面（切层时画面不跳），其它层按「本层 - 该层」下移。
+            // 偏移为 0 时压的是单位矩阵，等价于不压，旧图（各层 elevation=0）表现完全不变。
+            using var levelPush = context.PushTransform(
+                Matrix.CreateTranslation(0, currentElevation - config.LevelElevation(level)));
+            using (context.PushOpacity(opacity))
+            {
+                // 地板瓦片属于本层地面：垫在占格提示与所有物件之下
+                DrawTileCells(context, config, level);
+
+                if (level == levels[0])
+                {
+                    DrawSelectedOccupancy(context);
+                }
+
+                foreach (var item in groundItems)
+                {
+                    if (item.Level == level && !item.SpanLevels)
+                    {
+                        DrawObject(context, item);
+                    }
+                }
+
+                if (level == levels[0])
+                {
+                    if (!PreviewMode)
+                    {
+                        DrawTrafficGround(context, config);
+                    }
+                    else if (_trafficPreviewEnabled)
+                    {
+                        // 预览交通时把斑马线画出来：否则看不出车停在停止线前还是压进横道
+                        DrawPreviewCrosswalks(context, config);
+                    }
+                }
+
+                foreach (var item in upperItems)
+                {
+                    if (item.Level == level && !item.SpanLevels)
+                    {
+                        DrawObject(context, item);
+                    }
+                }
+            }
         }
 
-        if (!PreviewMode)
-        {
-            DrawTrafficGround(context, config);
-        }
-        else if (_trafficPreviewEnabled)
-        {
-            // 预览交通时把斑马线画出来：否则看不出车停在停止线前还是压进横道
-            DrawPreviewCrosswalks(context, config);
-        }
-
-        foreach (var item in upperItems)
-        {
-            DrawObject(context, item);
-        }
+        // 跨层贯穿件（楼梯 / 通高柱）：所有楼层切片画完之后再画一遍实心，
+        // 它属于哪层就按那层的层高抬升，因此在 1F / 2F 视角下都保持同一位置、不被楼板切断。
+        DrawSpanLevelItems(context, config, groundItems, upperItems);
 
         if (!PreviewMode)
         {
             DrawTrafficMarkers(context, config);
+        }
+    }
+
+    /// <summary>
+    /// 画跨层贯穿件：按各自所属楼层的层高抬升，实心绘制在全部楼层切片之上。
+    /// 地表带先画、其余带后画，各自沿用图层排序后的列表，跨层件内部的前后关系不丢。
+    /// </summary>
+    /// <param name="context">绘制上下文（世界坐标）。</param>
+    /// <param name="config">地图配置，用它的楼层层高换算抬升量。</param>
+    /// <param name="groundItems">地表带实例。</param>
+    /// <param name="upperItems">立体带 + 叠加带实例。</param>
+    private void DrawSpanLevelItems(
+        DrawingContext context,
+        MapConfigData config,
+        IReadOnlyList<PlacedObject> groundItems,
+        IReadOnlyList<PlacedObject> upperItems)
+    {
+        DrawSpanBand(context, config, groundItems);
+        DrawSpanBand(context, config, upperItems);
+    }
+
+    /// <summary>画同一遮挡带里的跨层贯穿件；没有贯穿件时立刻返回，不压栈。</summary>
+    /// <param name="context">绘制上下文（世界坐标）。</param>
+    /// <param name="config">地图配置，用它的楼层层高换算抬升量。</param>
+    /// <param name="items">同一遮挡带内已排序的实例。</param>
+    private void DrawSpanBand(
+        DrawingContext context,
+        MapConfigData config,
+        IReadOnlyList<PlacedObject> items)
+    {
+        var currentElevation = CurrentLevelElevation;
+        foreach (var item in items)
+        {
+            if (!item.SpanLevels)
+            {
+                continue;
+            }
+
+            using var spanPush = context.PushTransform(
+                Matrix.CreateTranslation(0, currentElevation - config.LevelElevation(item.Level)));
+            DrawObject(context, item);
         }
     }
 
@@ -282,6 +365,21 @@ public sealed partial class MapCanvas : Control
         }
     }
 
+    /// <summary>
+    /// 四方向出图索引。配置了变体的模板按 <see cref="PlacedObject.FacingDirection"/> 换图且不再旋转，
+    /// 未配置的仍按 <see cref="PlacedObject.Rotation"/> 转图（斜边吸附的墙段保持原行为）。
+    /// </summary>
+    public FacingImageCatalog? FacingImages { get; set; }
+
+    /// <summary>
+    /// 实例的「有效旋转」：模板配置了朝向变体时为 0（只换图），否则取实例自身的 <see cref="PlacedObject.Rotation"/>。
+    /// 命中测试、选框与绘制共用这一个口径，保证「只换图不改几何」。
+    /// </summary>
+    /// <param name="item">地图实例。</param>
+    /// <returns>绘制与选框使用的角度（度）。</returns>
+    public double EffectiveRotationOf(PlacedObject item) =>
+        FacingImages?.HasVariants(item.TemplateId) == true ? 0 : item.Rotation;
+
     private IEnumerable<PlacedObject> OrderedObjects(MapConfigData config)
     {
         // 遮挡关系统一走 LayerBands：地表带在最底，立体带跨图层按脚底 Y，叠加带永远最上。
@@ -310,6 +408,9 @@ public sealed partial class MapCanvas : Control
             return;
         }
 
+        // 底图属于地面（0 层）：当前在 2F 编辑时整体下移一个层高，才和切开后的房间对得上
+        using var levelPush = context.PushTransform(Matrix.CreateTranslation(0, CurrentLevelElevation));
+
         var rect = new Rect(0, 0, config.Width, config.Height);
 
         // bgName 指向 Unity 工程内的底图（如 bg_1.png），命中就按地图尺寸铺满；
@@ -324,7 +425,7 @@ public sealed partial class MapCanvas : Control
         }
         else
         {
-            context.FillRectangle(new SolidColorBrush(MapLayerBrushColor), rect);
+            context.FillRectangle(MapLayerBrush, rect);
         }
 
         if (_zoom < 0.16 || string.IsNullOrWhiteSpace(config.BgName))

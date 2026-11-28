@@ -52,8 +52,7 @@ public partial class MainWindow : Window
             if (Canvas.Selected?.PathPoints is { Count: > 0 } points)
             {
                 points.RemoveAt(points.Count - 1);
-                Canvas.Refresh();
-                Canvas.NotifyDocumentChanged();
+                Canvas.CommitEdit();
             }
         };
 
@@ -65,8 +64,7 @@ public partial class MainWindow : Window
             }
 
             item.PathPoints.Clear();
-            Canvas.Refresh();
-            Canvas.NotifyDocumentChanged();
+            Canvas.CommitEdit();
         };
 
         BtnClearTarget.Click += (_, _) =>
@@ -323,7 +321,7 @@ public partial class MainWindow : Window
 
         if (!_spriteAnimationStore.TrySave(_spriteAnimations, out var saveError))
         {
-            SetMessage($"序列帧已载入内存，但写盘失败：{saveError}");
+            SetMessage(UiFeedback.Failed("序列帧已载入内存，但写盘", saveError));
         }
         else
         {
@@ -387,7 +385,7 @@ public partial class MainWindow : Window
         var asset = _spineAnimationStore.Import(local, atlas, assetName, string.Empty, out var error);
         if (asset is null)
         {
-            SetMessage($"Spine 导入失败：{error}");
+            SetMessage(UiFeedback.Failed("Spine 导入", error));
             return;
         }
 
@@ -398,7 +396,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            SetMessage($"Spine 已载入内存，但写盘失败：{exception.Message}");
+            SetMessage(UiFeedback.Failed("Spine 已载入内存，但写盘", exception));
         }
 
         RefreshAnimationOptions();

@@ -116,52 +116,30 @@ public static partial class MapPublishService
             BackupUnityLevelFiles(root, chapter, level, baseName);
         }
 
-        var mainPath = SubTablePath(chapterDirectory, baseName, string.Empty);
-        WriteAtomic(mainPath, BuildCocosMainFile(baseName, chapter, level, config, options.MapName, backgroundName, compact: true));
-        files.Add(mainPath);
-
         var characters = config.Objects.Where(item => item.Type == MapObjectType.Character).ToList();
         var buildings = config.Objects.Where(item => item.Type == MapObjectType.Building).ToList();
         var objects = config.Objects.Where(item => item.Type == MapObjectType.Prop).ToList();
 
-        var charactersPath = SubTablePath(chapterDirectory, baseName, CharactersSuffix);
-        WriteAtomic(charactersPath, BuildCocosCharactersFile(baseName, characters, ResolveImage, compact: true));
-        files.Add(charactersPath);
-
-        var buildingsPath = SubTablePath(chapterDirectory, baseName, BuildingsSuffix);
-        WriteAtomic(buildingsPath, BuildCocosBuildingsFile(
+        WriteSplitTables(
+            chapterDirectory,
+            root,
             baseName,
+            chapter,
+            level,
+            config,
+            options,
+            new SplitTableStyle
+            {
+                Compact = true,
+                BackgroundName = backgroundName,
+                ImageResolver = ResolveImage,
+                IncludePathPoints = true,
+                GridSize = config.GridSize,
+            },
+            characters,
             buildings,
-            ResolveImage,
-            includePathPoints: true,
-            gridSize: config.GridSize,
-            compact: true));
-        files.Add(buildingsPath);
-
-        var objectsPath = SubTablePath(chapterDirectory, baseName, ObjectsSuffix);
-        WriteAtomic(objectsPath, BuildCocosObjectsFile(
-            baseName,
             objects,
-            ResolveImage,
-            includePathPoints: true,
-            gridSize: config.GridSize,
-            compact: true));
-        files.Add(objectsPath);
-
-        var pathsPath = SubTablePath(chapterDirectory, baseName, PathsSuffix);
-        WriteAtomic(pathsPath, BuildCocosPathsFile(baseName, characters, config.GridSize));
-        files.Add(pathsPath);
-
-        var trafficPath = SubTablePath(chapterDirectory, baseName, TrafficSuffix);
-        WriteAtomic(trafficPath, BuildCocosTrafficFile(baseName, config));
-        files.Add(trafficPath);
-
-        if (options.UpdateCocosIndex)
-        {
-            var indexPath = Path.Combine(root, LevelIndexFileName);
-            WriteAtomic(indexPath, BuildCocosIndex(indexPath, chapter, config.ChapterName, level));
-            files.Add(indexPath);
-        }
+            files);
 
         if (options.GenerateUnityBridgeFiles)
         {
@@ -191,32 +169,17 @@ public static partial class MapPublishService
             warnings.Add($"Unity 缺失 {missingImages.Count} 张地图贴图，已按选项跳过同步。");
         }
 
-        var spineCount = config.Objects.Count(item =>
-            string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase));
-        if (spineCount > 0)
-        {
-            warnings.Add($"有 {spineCount} 个 Spine 实例：Lua 表已写出 animationKind/spineAsset/spineAnimation，Unity 角色/物件生成链仍需按实际模板确认 Spine 分支。");
-        }
-
-        var manifestPath = Path.Combine(root, MapFileNames.Manifest(chapter, level));
-        WriteManifestAndRegister(
-            manifestPath,
-            options.Target,
+        return FinishPublish(
             config,
-            chapter,
-            level,
-            options.MapName,
-            files,
-            root,
-            warnings);
-
-        return CreatePublishResult(
             options,
             root,
+            chapter,
+            level,
+            MapPublishTarget.UnityLua,
             files,
-            manifestPath,
             warnings,
-            $"Unity Lua 已发布：{baseName}（{Preview(config, MapPublishTarget.UnityLua).Summary}）");
+            $"Unity Lua 已发布：{baseName}",
+            count => $"有 {count} 个 Spine 实例：Lua 表已写出 animationKind/spineAsset/spineAnimation，Unity 角色/物件生成链仍需按实际模板确认 Spine 分支。");
     }
 
     #endregion

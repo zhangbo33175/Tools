@@ -66,6 +66,10 @@ public partial class MainWindow : Window
             _templates.Clear();
             _templates.AddRange(loaded);
 
+            // 模板重读后重建朝向索引：新配的 facingImages 立刻生效，不用重启编辑器
+            _facingImages.Rebuild(_templates);
+            Canvas.FacingImages = _facingImages;
+
             // 配置表也一起重读，场景资源列表 / 物品元件编辑都按表最新内容刷新
             _itemTable = LoadItemElementTable();
             _itemPanel?.SetItemTable(_itemTable);
@@ -84,6 +88,8 @@ public partial class MainWindow : Window
         };
 
         BtnConfig.Click += async (_, _) => await OpenMapConfigAsync();
+
+        BtnGrid.Click += async (_, _) => await OpenGridSettingsAsync();
 
         BtnDelete.Click += (_, _) =>
         {
@@ -211,7 +217,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            SetMessage($"迷雾保存失败：{ex.Message}");
+            SetMessage(UiFeedback.Failed("迷雾保存", ex));
         }
     }
 

@@ -12,9 +12,11 @@ using System;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using MapEditorTool.Models;
 
 namespace MapEditorTool.Controls;
@@ -56,30 +58,22 @@ public sealed partial class StoryEditorPanel
         };
     }
 
-    /// <summary>把控件放到指定行。</summary>
+    /// <summary>把控件放到指定行（单列网格）——直接委托 <see cref="UiFactory.InCell"/>，不再自己写附加属性。</summary>
     /// <param name="child">控件。</param>
     /// <param name="row">行号。</param>
     /// <returns>同一个控件。</returns>
-    private static Control Row(Control child, int row)
-    {
-        Grid.SetRow(child, row);
-        return child;
-    }
+    private static Control Row(Control child, int row) => UiFactory.InCell(child, row, 0);
 
-    /// <summary>带白底、1px 描边与 8 圆角的面板容器。</summary>
+    /// <summary>带白底、1px 描边与卡片圆角的面板容器，交给 <see cref="UiFactory.PanelCard"/>。</summary>
     /// <param name="child">内容。</param>
     /// <param name="padding">内边距。</param>
     /// <returns>面板容器。</returns>
-    private static Border Pane(Control child, double padding) => new()
+    private static Border Pane(Control child, double padding)
     {
-        Background = UiTheme.Card,
-        BorderBrush = UiTheme.Form.GroupBorder,
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(8),
-        Padding = new Thickness(padding),
-        Child = child,
-        ClipToBounds = true,
-    };
+        var pane = UiFactory.PanelCard(child, clipToBounds: true, padding: new Thickness(padding));
+        pane.BorderBrush = UiTheme.Form.GroupBorder;
+        return pane;
+    }
 
     #endregion
 
@@ -136,14 +130,7 @@ public sealed partial class StoryEditorPanel
         Grid.SetColumn(buttons, 1);
         head.Children.Add(buttons);
 
-        return new Border
-        {
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.PanelBorder,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = new Thickness(10, 8, 10, 8),
-            Child = head,
-        };
+        return UiFactory.HeaderBand(head, new Thickness(10, 8, 10, 8), UiTheme.PanelBorder);
     }
 
     #endregion
@@ -162,13 +149,18 @@ public sealed partial class StoryEditorPanel
         };
         _list.ItemTemplate = new FuncDataTemplate<StoryNode>((node, _) => BuildNodeRow(node));
         _list.SelectionChanged += (_, _) => OnNodeSelected();
-
-        var scroll = new ScrollViewer
+        // 节点行是 ListBox 模板行，选中底色由主题的 ContentPresenter 决定，这里用剧情页专用色覆盖
+        _list.Styles.Add(new Style(x => x.OfType<ListBoxItem>().Class(":selected").Template().Name("PART_ContentPresenter"))
         {
-            Content = _list,
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-        };
+            Setters =
+            {
+                new Setter(TemplatedControl.BackgroundProperty, UiTheme.Story.NodeSelectedSurface),
+                new Setter(TemplatedControl.BorderBrushProperty, UiTheme.Story.NodeSelectedBorder),
+                new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(1)),
+            },
+        });
+
+        var scroll = UiFactory.VerticalScroll(_list);
 
         _nodeCountText = new TextBlock
         {
@@ -203,7 +195,7 @@ public sealed partial class StoryEditorPanel
         {
             Orientation = Orientation.Horizontal,
             Margin = new Thickness(10, 9, 10, 5),
-            Children = { SectionTitle("节点"), _nodeCountText },
+            Children = { UiFactory.SectionHead("节点"), _nodeCountText },
         };
 
         var host = new Grid
@@ -271,30 +263,16 @@ public sealed partial class StoryEditorPanel
         Grid.SetColumn(right, 2);
         line.Children.Add(right);
 
-        return new Border
-        {
-            Padding = new Thickness(8, 7, 8, 7),
-            BorderBrush = UiTheme.Divider,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Child = line,
-        };
+        return UiFactory.ListDividerRow(line, new Thickness(8, 7, 8, 7));
     }
 
     /// <summary>「起点」小徽标。</summary>
     /// <returns>徽标。</returns>
-    private static Control StartBadge() => new Border
-    {
-        Background = UiTheme.Story.StartSurface,
-        CornerRadius = new CornerRadius(5),
-        Padding = new Thickness(5, 1),
-        VerticalAlignment = VerticalAlignment.Center,
-        Child = new TextBlock
-        {
-            Text = "起点",
-            FontSize = 9,
-            Foreground = UiTheme.Story.StartText,
-        },
-    };
+    private static Control StartBadge() => UiFactory.TagChip(
+        "起点",
+        UiTheme.Story.StartSurface,
+        UiTheme.Story.StartText,
+        new UiFactory.ChipSkin(9, 5, 1, 5));
 
     /// <summary>按节点类型取色点画笔。</summary>
     /// <param name="kind">节点类型。</param>
@@ -323,40 +301,57 @@ public sealed partial class StoryEditorPanel
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
-        return new Border
-        {
-            // 状态栏与页头同色：白底 + 顶部细线，避免页脚再压一块浅蓝
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.Divider,
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            Padding = new Thickness(10, 6, 10, 6),
-            Margin = new Thickness(0, 8, 0, 0),
-            Child = _footerText,
-        };
+        var footer = UiFactory.FooterBand(_footerText, new Thickness(10, 6, 10, 6));
+        footer.Margin = new Thickness(0, 8, 0, 0);
+        return footer;
     }
 
     #endregion
 
     #region 控件工厂
 
-    /// <summary>头部工具按钮：5 圆角、白描边，主按钮直接给实心底。</summary>
+    /// <summary>头部工具按钮：白描边，主按钮直接给实心底。</summary>
     /// <param name="text">文案。</param>
     /// <param name="background">底色；null 为白底描边。</param>
     /// <param name="foreground">文字色。</param>
     /// <param name="onClick">点击回调。</param>
     /// <returns>按钮。</returns>
-    private static Button ToolButton(string text, IBrush? background, IBrush foreground, Action onClick)
+    private static Button ToolButton(string text, IBrush? background, IBrush foreground, Action onClick) =>
+        ActionButton(text, background, foreground, onClick, compact: false);
+
+    /// <summary>列表底部的小按钮，与工具按钮同源，只缩一号尺寸。</summary>
+    /// <param name="text">文案。</param>
+    /// <param name="background">底色；null 为白底描边。</param>
+    /// <param name="foreground">文字色。</param>
+    /// <param name="onClick">点击回调。</param>
+    /// <returns>按钮。</returns>
+    private static Button SmallButton(string text, IBrush? background, IBrush foreground, Action onClick) =>
+        ActionButton(text, background, foreground, onClick, compact: true);
+
+    /// <summary>剧情页唯一的按钮工厂：尺寸两档，配色与圆角共用一套规则。</summary>
+    /// <param name="text">文案。</param>
+    /// <param name="background">底色；null 为白底描边。</param>
+    /// <param name="foreground">文字色。</param>
+    /// <param name="onClick">点击回调。</param>
+    /// <param name="compact">是否紧凑档。</param>
+    /// <returns>按钮。</returns>
+    private static Button ActionButton(
+        string text,
+        IBrush? background,
+        IBrush foreground,
+        Action onClick,
+        bool compact)
     {
         var button = new Button
         {
             Content = text,
-            FontSize = 11.5,
-            Padding = new Thickness(11, 5),
-            MinHeight = 28,
-            CornerRadius = new CornerRadius(5),
+            FontSize = compact ? 10.5 : 11.5,
+            Padding = compact ? new Thickness(8, 3) : new Thickness(11, 5),
+            MinHeight = compact ? 25 : 28,
+            CornerRadius = new CornerRadius(UiMetrics.ButtonCornerRadius),
             Foreground = foreground,
             Background = background ?? UiTheme.Card,
-            BorderBrush = background is null ? UiTheme.Form.FieldBorder : background,
+            BorderBrush = background ?? UiTheme.Form.FieldBorder,
             BorderThickness = new Thickness(1),
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -364,45 +359,11 @@ public sealed partial class StoryEditorPanel
         return button;
     }
 
-    /// <summary>列表底部的小按钮。</summary>
-    /// <param name="text">文案。</param>
-    /// <param name="background">底色；null 为白底描边。</param>
-    /// <param name="foreground">文字色。</param>
-    /// <param name="onClick">点击回调。</param>
-    /// <returns>按钮。</returns>
-    private static Button SmallButton(string text, IBrush? background, IBrush foreground, Action onClick)
-    {
-        var button = new Button
-        {
-            Content = text,
-            FontSize = 10.5,
-            Padding = new Thickness(8, 3),
-            MinHeight = 25,
-            CornerRadius = new CornerRadius(5),
-            Foreground = foreground,
-            Background = background ?? UiTheme.Card,
-            BorderBrush = background is null ? UiTheme.Form.FieldBorder : background,
-            BorderThickness = new Thickness(1),
-        };
-        button.Click += (_, _) => onClick();
-        return button;
-    }
-
-    /// <summary>分区标题：左侧一根短竖条 + 文字。</summary>
-    /// <param name="text">标题。</param>
-    /// <returns>标题行。</returns>
-    private static Control SectionTitle(string text) => UiFactory.SectionHead(text);
-
     /// <summary>表单字段标签。</summary>
     /// <param name="text">标签文字。</param>
     /// <returns>标签。</returns>
-    private static Control FieldLabel(string text) => new TextBlock
-    {
-        Text = text,
-        FontSize = 10.5,
-        Foreground = UiTheme.ResourcePanel.FieldLabel,
-        Margin = new Thickness(1, 0, 0, 3),
-    };
+    private static Control FieldLabel(string text) =>
+        UiFactory.FieldLabel(text, 10.5, UiTheme.ResourcePanel.FieldLabel, margin: new Thickness(1, 0, 0, 3));
 
     /// <summary>输入框：6 圆角，与其它面板同一口径。</summary>
     /// <param name="multiline">是否多行。</param>
@@ -410,11 +371,11 @@ public sealed partial class StoryEditorPanel
     /// <returns>输入框。</param>
     private static TextBox Field(bool multiline = false, double height = double.NaN) => new()
     {
-        FontSize = 12,
-        MinHeight = multiline ? height : 30,
+        FontSize = UiMetrics.FontTitle,
+        MinHeight = multiline ? height : UiMetrics.FieldHeight,
         Height = height,
         Padding = new Thickness(8, 5),
-        CornerRadius = new CornerRadius(6),
+        CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
         BorderBrush = UiTheme.Form.FieldBorder,
         BorderThickness = new Thickness(1),
         AcceptsReturn = multiline,
@@ -429,10 +390,10 @@ public sealed partial class StoryEditorPanel
     {
         var box = new ComboBox
         {
-            FontSize = 12,
-            MinHeight = 30,
+            FontSize = UiMetrics.FontTitle,
+            MinHeight = UiMetrics.FieldHeight,
             Padding = new Thickness(8, 3),
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
             BorderBrush = UiTheme.Form.FieldBorder,
             BorderThickness = new Thickness(1),
             HorizontalAlignment = HorizontalAlignment.Stretch,

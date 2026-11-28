@@ -5,7 +5,7 @@
             <!-- 冷蓝色板：浅蓝面板 + 白色输入区 + 深青蓝强调，统一走 Light 主题 -->
 
     <Application.Resources>
-        <!-- 统一配色：取自地图画布的深蓝 / 青蓝 / 冰蓝体系，所有控件只引用语义资源。 -->
+        <!-- 统一配色：低饱和墨青 + 冷白面板，只有一处强调青蓝；所有控件只引用语义资源，不写裸色值。 -->
         <SolidColorBrush x:Key="Theme.Window" Color="#E8F4F8" />
         <SolidColorBrush x:Key="Theme.Panel" Color="#F0F8FB" />
         <SolidColorBrush x:Key="Theme.PanelAlt" Color="#F6FBFD" />
@@ -26,6 +26,12 @@
         <SolidColorBrush x:Key="Theme.DisabledText" Color="#91A9B4" />
         <SolidColorBrush x:Key="Theme.Danger" Color="#C0504D" />
         <SolidColorBrush x:Key="Theme.DangerDark" Color="#A8463F" />
+        <SolidColorBrush x:Key="Theme.DangerBorder" Color="#E6C9C7" />
+        <SolidColorBrush x:Key="Theme.OverlaySurface" Color="#F4FAFD" />
+        <SolidColorBrush x:Key="Theme.OverlayTitle" Color="#E4F4FB" />
+        <SolidColorBrush x:Key="Theme.StatusLabel" Color="#9FC0D0" />
+        <SolidColorBrush x:Key="Theme.StatusValue" Color="#EAF8FE" />
+        <SolidColorBrush x:Key="Theme.StatusHint" Color="#AECBDA" />
         <SolidColorBrush x:Key="Theme.Teal" Color="#1E9E86" />
         <SolidColorBrush x:Key="Theme.TealDark" Color="#147A69" />
         <SolidColorBrush x:Key="Theme.Cyan" Color="#42B8D2" />
@@ -38,6 +44,14 @@
         <SolidColorBrush x:Key="Theme.ScrollThumbBorder" Color="#5FA6BF" />
         <SolidColorBrush x:Key="Theme.ScrollArrow" Color="#355663" />
         <SolidColorBrush x:Key="Theme.Selection" Color="#330D8CB6" />
+
+        <!-- 窗口与浮层：投影、标题栏交通灯、图层标识条 -->
+        <SolidColorBrush x:Key="Theme.WindowDotClose" Color="#F1736F" />
+        <SolidColorBrush x:Key="Theme.WindowDotMinimize" Color="#F3C75F" />
+        <SolidColorBrush x:Key="Theme.WindowDotMaximize" Color="#56C88A" />
+        <SolidColorBrush x:Key="Theme.LayerTagDot" Color="#E8A23F" />
+        <BoxShadows x:Key="Theme.FloatingShadow">0 8 24 0 #55000000</BoxShadows>
+        <BoxShadows x:Key="Theme.DialogShadow">0 14 36 0 #66000000</BoxShadows>
 
         <!-- 滑块沿用同一套冷蓝：Fluent 默认轨道是暖灰，放在青蓝界面里显得脏 -->
         <SolidColorBrush x:Key="SliderTrackFill" Color="#D8E9F0" />
@@ -79,7 +93,7 @@
             </Setter>
         </ControlTheme>
 
-        <!-- 标题底色：取自地图空态立方体顶面的冰青渐变，用于面板 / 卡片标题条 -->
+        <!-- 卡片标题条：极浅的冷白渐变（靠 1px 收口线分层），不再用高饱和冰青 -->
         <LinearGradientBrush x:Key="Theme.TitleBackground" StartPoint="0%,0%" EndPoint="100%,0%">
             <GradientStop Color="#EEF8FC" Offset="0" />
             <GradientStop Color="#DDF0F8" Offset="0.55" />
@@ -87,9 +101,14 @@
         </LinearGradientBrush>
         <SolidColorBrush x:Key="Theme.TitleBorder" Color="#AAD3E1" />
         <SolidColorBrush x:Key="Theme.TitleText" Color="#0B4256" />
+        <SolidColorBrush x:Key="Theme.TitleGlyph" Color="#0B4256" />
+        <SolidColorBrush x:Key="Theme.TitleGlyphHot" Color="#042530" />
         <SolidColorBrush x:Key="Theme.TitleChip" Color="#FFFFFF" />
         <SolidColorBrush x:Key="Theme.TitleHover" Color="#33FFFFFF" />
         <SolidColorBrush x:Key="Theme.TitlePressed" Color="#55000000" />
+
+        <!-- 卡片投影：1px 冷灰底影 + 6px 柔散，浅到不抢注意力，只负责把卡片从底色上托起来 -->
+        <BoxShadows x:Key="Theme.CardShadow">0 1 2 0 #120E2A36, 0 4 12 0 #0A0E2A36</BoxShadows>
 
         <!-- 经典竖向滚动条：14px 宽，上下箭头常显，中间蓝灰滑块 -->
         <ControlTheme x:Key="ClassicVScrollBar" TargetType="ScrollBar">
@@ -250,6 +269,90 @@
             <Setter Property="Foreground" Value="{StaticResource Theme.DisabledText}" />
         </Style>
 
+        <!-- 按钮只有一个主操作：实心青底白字。其余动作一律走默认的白底细边，权重由颜色而不是尺寸区分 -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{StaticResource Theme.Primary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.PrimaryDark}" />
+        </Style>
+        <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.PrimaryDark}" />
+        </Style>
+
+        <!-- 危险动作：白底红字，悬停才浮出浅红底；不做实心红，避免和主操作抢视觉 -->
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.DangerBorder}" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.DangerDark}" />
+        </Style>
+        <Style Selector="Button.danger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#14B85C58" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Danger}" />
+        </Style>
+        <Style Selector="Button.danger:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#26B85C58" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Danger}" />
+        </Style>
+
+        <!-- 幽灵动作：无底无边，只有文字与悬停蒙层，用于工具条里最次要的入口 -->
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TextMuted}" />
+        </Style>
+        <Style Selector="Button.ghost:pointerover">
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
+        </Style>
+
+        <!-- 带下拉的按钮：展开期间铺一层主色浅底 + 主色描边，明确「这个菜单是开着的」 -->
+        <Style Selector="Button:flyout-open /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimarySoft}" />
+        </Style>
+        <Style Selector="Button:flyout-open">
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.PrimaryDark}" />
+        </Style>
+
+        <!-- 下拉菜单行：白卡内的一行一动，左字右箭头，悬停整行浅浅抬起（对齐 Unity 菜单的观感） -->        <Style Selector="Button.menuRow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.Text}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.menuRow:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryHover}" />
+        </Style>
+        <Style Selector="Button.menuRow:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryPressed}" />
+        </Style>
+        <!-- 破坏性动作：常态红字，悬停给一层淡红，避免和普通行混为一谈 -->
+        <Style Selector="Button.menuRow.dangerRow">
+            <Setter Property="Foreground" Value="{StaticResource Theme.Danger}" />
+        </Style>
+        <Style Selector="Button.menuRow.dangerRow:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#14C0524E" />
+        </Style>
+
+        <!-- 菜单分组分隔线：不顶满边，两侧留白，读起来是「组」而不是「表格线」 -->
+        <Style Selector="Border.menuDivider">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="8,4" />
+            <Setter Property="Background" Value="{StaticResource Theme.Divider}" />
+        </Style>
+
         <!-- 步进器箭头：贴合输入框的上下三角按钮，常态透明、悬停浅青、按下加深 -->
         <Style Selector="Button.spin">
             <Setter Property="Background" Value="Transparent" />
@@ -276,7 +379,8 @@
             <Setter Property="Background" Value="{StaticResource Theme.PrimaryPressed}" />
         </Style>
 
-        <!-- 自绘标题栏的系统按钮：透明贴边，悬停用白色叠光，关闭按钮单独转红 -->
+        <!-- 自绘标题栏的系统按钮：透明贴边，悬停用白色叠光，关闭按钮单独转红。
+             标题栏是浅青底，字形必须走深墨（Theme.TitleGlyph），否则和底同色看不见 -->
         <Style Selector="Button.caption">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -286,25 +390,36 @@
             <Setter Property="MinWidth" Value="46" />
             <Setter Property="Height" Value="32" />
             <Setter Property="MinHeight" Value="32" />
-            <Setter Property="Foreground" Value="{StaticResource Theme.TitleText}" />
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TitleGlyph}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Focusable" Value="False" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
+        <Style Selector="Button.caption:pointerover">
+            <Setter Property="Foreground" Value="{StaticResource Theme.TitleGlyphHot}" />
+        </Style>
+        <!-- 字形是矢量 Path（不再吃 Foreground），悬停要单独提亮到纯白 -->
+        <Style Selector="Button.caption:pointerover Path">
+            <Setter Property="Stroke" Value="{StaticResource Theme.TitleGlyphHot}" />
+        </Style>
+        <Style Selector="Button.caption.close:pointerover Path">
+            <Setter Property="Stroke" Value="White" />
+        </Style>
         <Style Selector="Button.caption:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#33FFFFFF" />
+            <Setter Property="Background" Value="#1A0A2E3A" />
             <Setter Property="BorderBrush" Value="Transparent" />
         </Style>
         <Style Selector="Button.caption:pressed /template/ ContentPresenter">
-            <Setter Property="Background" Value="#55000000" />
+            <Setter Property="Background" Value="#290A2E3A" />
         </Style>
         <Style Selector="Button.caption.dark">
-            <Setter Property="Foreground" Value="#D6ECF5" />
+            <Setter Property="Foreground" Value="{StaticResource Theme.TitleGlyph}" />
         </Style>
         <Style Selector="Button.caption.dark:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#22FFFFFF" />
+            <Setter Property="Background" Value="#140A2E3A" />
         </Style>
         <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Theme.Danger}" />
@@ -346,9 +461,10 @@
             <Setter Property="Foreground" Value="{StaticResource Theme.Card}" />
         </Style>
 
-        <!-- 输入框：白底 + 蓝灰边 + 圆角 6（与卡片 8 / 按钮 5 成一套） -->
+        <!-- 输入框：内凹一档的青白底 + 蓝灰边 + 圆角 6（与卡片 8 / 按钮 5 成一套），
+             白卡上靠这点底色差读出「这里可以填」 -->
         <Style Selector="TextBox">
-            <Setter Property="Background" Value="{StaticResource Theme.Card}" />
+            <Setter Property="Background" Value="{StaticResource Theme.ButtonSurface}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="6" />
@@ -394,9 +510,9 @@
             <Setter Property="Margin" Value="0,2,0,0" />
         </Style>
 
-        <!-- 下拉框：冷白底 + 蓝灰边，与整体色板一致 -->
+        <!-- 下拉框：与文本框同一档内凹底色 + 蓝灰边，白卡上才有「可填」的层次 -->
         <Style Selector="ComboBox">
-            <Setter Property="Background" Value="{StaticResource Theme.PanelAlt}" />
+            <Setter Property="Background" Value="{StaticResource Theme.ButtonSurface}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.ButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="6" />
@@ -462,12 +578,13 @@
             <Setter Property="Background" Value="{StaticResource Theme.Selection}" />
         </Style>
 
-        <!-- 卡片：底部三栏统一的白底 + 1px 蓝灰边 + 圆角 8 -->
+        <!-- 卡片：底部三栏统一的白底 + 1px 蓝灰边 + 圆角 8 + 极浅投影 -->
         <Style Selector="Border.card">
             <Setter Property="Background" Value="{StaticResource Theme.Card}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.Border}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BoxShadow" Value="{StaticResource Theme.CardShadow}" />
         </Style>
 
         <!-- 外层分区框：比卡片重一级的描边，用来把「左侧栏 / 工具条 / 画布」这些大区块框出来；圆角与卡片统一 8 -->
@@ -495,13 +612,13 @@
             <Setter Property="Margin" Value="0,0,6,0" />
         </Style>
 
-        <!-- 卡片标题条：冰青渐变打底，底边用深一档的青蓝收口；标题文字改为深墨青保证对比度 -->
+        <!-- 卡片标题条：极浅冷白打底，底边 1px 收口；标题文字深墨青，左侧再配 3px 强调竖条（见各卡片标题行） -->
         <Style Selector="Border.titleBar">
             <Setter Property="Background" Value="{StaticResource Theme.TitleBackground}" />
             <Setter Property="BorderBrush" Value="{StaticResource Theme.TitleBorder}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="CornerRadius" Value="8,8,0,0" />
-            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Padding" Value="9,6" />
         </Style>
         <Style Selector="TextBlock.cardTitle">
             <Setter Property="Foreground" Value="{StaticResource Theme.TitleText}" />
@@ -636,6 +753,21 @@
         <Style Selector="ScrollBar:horizontal">
             <Setter Property="AllowAutoHide" Value="False"/>
             <Setter Property="Theme" Value="{StaticResource ClassicHScrollBar}"/>
+        </Style>
+
+        <!-- 「楼层参考」默认就是勾选态：该开关在模板套用前就带了 IsChecked=True，
+             通用 :checked 的底色不会刷到这个模板子件上（表现为勾了却没填充），
+             这里按 ID 落一条同色覆盖，保证默认勾选一眼可见。 -->
+        <Style Selector="CheckBox#ShowOtherLevelsToggle:checked /template/ Border#CheckBoxBox">
+            <Setter Property="Background" Value="{StaticResource Theme.Primary}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.Primary}" />
+        </Style>
+        <Style Selector="CheckBox#ShowOtherLevelsToggle:checked:pointerover /template/ Border#CheckBoxBox">
+            <Setter Property="Background" Value="{StaticResource Theme.PrimaryDark}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Theme.PrimaryDark}" />
+        </Style>
+        <Style Selector="CheckBox#ShowOtherLevelsToggle:checked /template/ Path#CheckBoxGlyph">
+            <Setter Property="Opacity" Value="1" />
         </Style>
     </Application.Styles>
 </Application>

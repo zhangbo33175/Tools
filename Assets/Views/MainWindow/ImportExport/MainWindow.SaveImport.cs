@@ -210,8 +210,10 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessage($"保存失败：{error.Message}");
-            SetSaveHint($"保存失败：{error.Message}", ok: false);
+            // 状态栏与保存按钮提示共用同一句，避免两处拼接出细微不同的文案
+            var message = UiFeedback.Failed("保存", error);
+            SetMessage(message);
+            SetSaveHint(message, ok: false);
             FlashSaveButton(false);
             return false;
         }
@@ -295,8 +297,9 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessage($"发布失败：{error.Message}");
-            SetSaveHint($"发布失败：{error.Message}", ok: false);
+            var message = UiFeedback.Failed("发布", error);
+            SetMessage(message);
+            SetSaveHint(message, ok: false);
         }
     }
 
@@ -338,6 +341,11 @@ public partial class MainWindow : Window
             _fogPanel?.Attach(_config, _fogDoc, Canvas);
             _trafficPanel?.Attach(_config, Canvas);
             _resourcePanel?.Attach(_templates, _config);
+
+            // 瓦片层挂在当前地图上：换图后清缓存与撤销栈，面板若开着同步换内容
+            Canvas.ClearTileSpriteCache();
+            Canvas.ClearTileHistory();
+            RefreshTilePalette();
             RefreshSceneFields();
             RefreshStatus();
             RefreshLightBindList();
@@ -352,7 +360,7 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessageError($"载入失败：{error.Message}");
+            SetMessageError(UiFeedback.Failed("载入", error));
             TraceStartup($"LoadMapFile FAILED: {error}");
         }
     }
@@ -457,7 +465,7 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessage($"迷雾数据读取失败：{error.Message}");
+            SetMessage(UiFeedback.Failed("迷雾数据读取", error));
         }
 
         Canvas.Refresh();
@@ -500,7 +508,7 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessage($"导出切片失败：{error.Message}");
+            SetMessage(UiFeedback.Failed("导出切片", error));
             return;
         }
 

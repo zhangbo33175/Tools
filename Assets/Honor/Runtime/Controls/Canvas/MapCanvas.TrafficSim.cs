@@ -47,24 +47,11 @@ public sealed partial class MapCanvas : Control
     private const double SimPedHeadWidth = 20.0;
     private const double SimPedHeadHeight = 40.0;
 
-    private static readonly IBrush PhaseRedBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0xE5, 0x39, 0x35));
-    private static readonly IBrush PhaseYellowBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xB3, 0x00));
-    private static readonly IBrush PhaseGreenBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x2E, 0x7D, 0x32));
 
     /// <summary>
     /// 灭灯不能画成纯黑：深色灯箱上的纯黑圆点等于看不见，缩小后整盏灯只剩一个亮点，
     /// 远看就像「只有一个红绿灯」。灭灯保留同色暗档，三个灯位始终可辨。
     /// </summary>
-    private static readonly IBrush PhaseRedDimBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x4A, 0x1E, 0x20));
-    private static readonly IBrush PhaseYellowDimBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x4C, 0x38, 0x12));
-    private static readonly IBrush PhaseGreenDimBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x1C, 0x38, 0x22));
-    private static readonly IBrush PhaseRingBrush = new SolidColorBrush(Color.FromArgb(0xE6, 0x0B, 0x0F, 0x13));
-    private static readonly IBrush PhaseHousingBrush = new SolidColorBrush(Color.FromArgb(0xF0, 0x16, 0x1C, 0x22));
-    private static readonly IBrush PhaseHousingEdgeBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x55, 0x62, 0x6E));
-    private static readonly IBrush PhasePoleBrush = new SolidColorBrush(Color.FromArgb(0xD0, 0x3A, 0x44, 0x4E));
-    private static readonly IBrush SimWaitingBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xD5, 0x4F));
-    private static readonly IBrush SimWaitingBackBrush = new SolidColorBrush(Color.FromArgb(0xE6, 0x33, 0x2A, 0x00));
-    private static readonly IBrush SimStopLineBrush = new SolidColorBrush(Color.FromArgb(0x8C, 0xFF, 0xFF, 0xFF));
 
     #endregion
 
@@ -72,6 +59,7 @@ public sealed partial class MapCanvas : Control
 
     private TrafficSimulation? _trafficSim;
     private bool _trafficPreviewEnabled;
+    private bool _previewShowTrafficPlan = true;
 
     /// <summary>诊断用：上一次打印覆盖层参数的时间戳（毫秒），避免逐帧刷日志。</summary>
     private long _trafficOverlayTraceTick;
@@ -106,6 +94,25 @@ public sealed partial class MapCanvas : Control
 
     /// <summary>当前仿真器；未开启或没建过时为 null。</summary>
     public TrafficSimulation? TrafficSim => _trafficSim;
+
+    /// <summary>
+    /// 预览里是否把「交通规划」本身画出来：每个仿真角色的停点（车实线、人虚线）与停点来源。
+    /// 默认开；关掉后只保留灯头与等待标签，方便对照纯画面。
+    /// </summary>
+    public bool PreviewShowTrafficPlan
+    {
+        get => _previewShowTrafficPlan;
+        set
+        {
+            if (_previewShowTrafficPlan == value)
+            {
+                return;
+            }
+
+            _previewShowTrafficPlan = value;
+            InvalidateVisual();
+        }
+    }
 
     /// <summary>仿真状态摘要，供预览窗 HUD 显示。</summary>
     public string TrafficSimulationStatus =>
@@ -184,7 +191,7 @@ public sealed partial class MapCanvas : Control
         }
 
         var h = Hairline;
-        DrawVehicleStopLines(context, h);
+        DrawStopMarks(context, h);
 
         // 灯头按缩放分档：缩放到 55% 及以上用满尺寸，干脆缩到全图后一路缩到 55%，四盏灯才能各自分开。
         var headScale = Math.Clamp(_zoom / SimHeadMinScale, SimHeadMinScale, 1.0);
@@ -236,7 +243,12 @@ public sealed partial class MapCanvas : Control
             var foot = agent.Position;
             var lightId = agent.WaitingLightId;
             var remain = string.IsNullOrEmpty(lightId) ? 0 : _trafficSim.PhaseRemaining(lightId);
-            var tag = CanvasText.Create($"等灯 {remain:0.0}s", 9.0 * h, SimWaitingBrush);
+            // 标签带上停点来源（停止线 / 横道 / 灯位），预览里能直接对上是哪条规划在拦这个角色
+            var source = agent.Stops.Count > 0 ? agent.Stops[0].Source : string.Empty;
+            var text = string.IsNullOrEmpty(source)
+                ? $"等灯 {remain:0.0}s"
+                : $"等灯 {remain:0.0}s · {source}";
+            var tag = CanvasText.Create(text, 9.0 * h, UiTheme.Sim.Waiting);
             var width = tag.Width * h;
             // 行人标签抬到头顶上方，否则站在路缘时会盖在前面的车上；
             // 载具标签留在车顶前，贴近停止线更好认
@@ -244,7 +256,7 @@ public sealed partial class MapCanvas : Control
                 ? 28 * h
                 : Math.Max(90.0, (agent.Source?.PixelHeight ?? 0) + 14);
             var pill = new Rect(foot.X - width * 0.5 - 6 * h, foot.Y - lift, width + 12 * h, 15 * h);
-            context.DrawRectangle(SimWaitingBackBrush, null, pill, 7.5 * h, 7.5 * h);
+            context.DrawRectangle(UiTheme.Sim.WaitingBack, null, pill, 7.5 * h, 7.5 * h);
             context.DrawText(tag, new Point(pill.X + 6 * h, pill.Y + 2 * h));
         }
     }
@@ -334,7 +346,7 @@ public sealed partial class MapCanvas : Control
 
         // 灯杆：锚点与灯箱之间那一段，南北两侧灯都是"杆从锚点伸向灯箱"
         context.FillRectangle(
-            PhasePoleBrush,
+            UiTheme.Sim.PhasePole,
             new Rect(
                 center.X - 1.8 * headScale * h,
                 hangBelow ? center.Y : head.Bottom,
@@ -342,16 +354,16 @@ public sealed partial class MapCanvas : Control
                 gap + 1 * headScale * h));
         // 杆脚底座：让灯"立在路缘上"，而不是从地面凭空长出一根灯箱
         context.FillRectangle(
-            PhasePoleBrush,
+            UiTheme.Sim.PhasePole,
             new Rect(
                 center.X - 5 * headScale * h,
                 center.Y - 2.5 * headScale * h,
                 10 * headScale * h,
                 5 * headScale * h));
-        context.DrawRectangle(PhaseHousingBrush, null, head, 4 * headScale * h, 4 * headScale * h);
+        context.DrawRectangle(UiTheme.Sim.PhaseHousing, null, head, 4 * headScale * h, 4 * headScale * h);
         context.DrawRectangle(
             null,
-            new Pen(PhaseHousingEdgeBrush, Math.Max(0.8, 1.0 * headScale * h)),
+            new Pen(UiTheme.Sim.PhaseHousingEdge, Math.Max(0.8, 1.0 * headScale * h)),
             head,
             4 * headScale * h,
             4 * headScale * h);
@@ -359,14 +371,14 @@ public sealed partial class MapCanvas : Control
         if (pedestrian)
         {
             // 行人灯只有红 / 绿：黄灯对行人没有意义，多一个灯位只会让灯箱更像车行灯
-            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.30), phase == TrafficPhase.Red, PhaseRedBrush, PhaseRedDimBrush, h, headScale);
-            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.72), phase == TrafficPhase.Green, PhaseGreenBrush, PhaseGreenDimBrush, h, headScale);
+            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.30), phase == TrafficPhase.Red, UiTheme.Sim.PhaseRed, UiTheme.Sim.PhaseRedDim, h, headScale);
+            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.72), phase == TrafficPhase.Green, UiTheme.Sim.PhaseGreen, UiTheme.Sim.PhaseGreenDim, h, headScale);
         }
         else
         {
-            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.20), phase == TrafficPhase.Red, PhaseRedBrush, PhaseRedDimBrush, h, headScale);
-            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.50), phase == TrafficPhase.Yellow, PhaseYellowBrush, PhaseYellowDimBrush, h, headScale);
-            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.80), phase == TrafficPhase.Green, PhaseGreenBrush, PhaseGreenDimBrush, h, headScale);
+            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.20), phase == TrafficPhase.Red, UiTheme.Sim.PhaseRed, UiTheme.Sim.PhaseRedDim, h, headScale);
+            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.50), phase == TrafficPhase.Yellow, UiTheme.Sim.PhaseYellow, UiTheme.Sim.PhaseYellowDim, h, headScale);
+            DrawLamp(context, new Point(center.X, head.Y + head.Height * 0.80), phase == TrafficPhase.Green, UiTheme.Sim.PhaseGreen, UiTheme.Sim.PhaseGreenDim, h, headScale);
         }
 
         if (!showPhaseLabel)
@@ -384,7 +396,7 @@ public sealed partial class MapCanvas : Control
             head.Y + head.Height * 0.30,
             labelWidth + 9 * h,
             17 * h);
-        context.DrawRectangle(PhaseHousingBrush, null, labelBox, 4 * h, 4 * h);
+        context.DrawRectangle(UiTheme.Sim.PhaseHousing, null, labelBox, 4 * h, 4 * h);
         context.DrawText(label, new Point(labelBox.X + 4.5 * h, labelBox.Y + 2.5 * h));
     }
 
@@ -401,11 +413,11 @@ public sealed partial class MapCanvas : Control
         double lampScale)
     {
         var radius = SimLampRadius * lampScale * h;
-        var ring = new Pen(PhaseRingBrush, Math.Max(0.6, 0.8 * lampScale * h));
+        var ring = new Pen(UiTheme.Sim.PhaseRing, Math.Max(0.6, 0.8 * lampScale * h));
         if (active)
         {
             context.DrawEllipse(
-                new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF)),
+                UiTheme.Sim.LampGlow,
                 null,
                 center,
                 radius * 1.7,
@@ -417,18 +429,27 @@ public sealed partial class MapCanvas : Control
         context.DrawEllipse(dimBrush, ring, center, radius, radius);
     }
 
-    /// <summary>载具停止线：以停点为中心画一条垂直于路径的短白线，红灯时能直接看出「停在哪」。</summary>
-    private void DrawVehicleStopLines(DrawingContext context, double h)
+    /// <summary>
+    /// 交通规划里的停点：以停点为中心画一条垂直于路径的短线。
+    /// 载具用实线（白），行人用虚线（黄），来源（停止线 / 横道 / 灯位）在等待标签上标出，
+    /// 这样路径点一改，就能在预览里直接看出停点被交通规划挪到了哪里。
+    /// </summary>
+    private void DrawStopMarks(DrawingContext context, double h)
     {
-        if (_trafficSim is null || _zoom < 0.12)
+        if (!_previewShowTrafficPlan || _trafficSim is null || _zoom < 0.12)
         {
             return;
         }
 
-        var pen = new Pen(SimStopLineBrush, Math.Max(0.7, 1.4 * h));
+        var vehiclePen = new Pen(UiTheme.Sim.StopLine, Math.Max(0.7, 1.4 * h));
+        var pedestrianPen = new Pen(
+            UiTheme.Sim.Waiting,
+            Math.Max(0.6, 1.1 * h),
+            new DashStyle(new[] { 4.0, 3.0 }, 0));
+
         foreach (var agent in _trafficSim.Agents)
         {
-            if (!agent.IsVehicle || agent.Stops.Count == 0)
+            if (agent.Stops.Count == 0)
             {
                 continue;
             }
@@ -449,17 +470,20 @@ public sealed partial class MapCanvas : Control
                 continue;
             }
 
-            var nx = -dy / length * 16 * h;
-            var ny = dx / length * 16 * h;
-            // 停点记的是车身中心，停止线要画在车头外侧，否则线会从车身穿过去
-            var foot = PathMath.PointAtDistance(agent.Points, stop + agent.BodyHalfLength);
+            // 载具的停点记的是车身中心，线要画在车头外侧，否则会从车身穿过去；行人按脚底算。
+            var half = agent.IsVehicle ? 16.0 : 9.0;
+            var foot = PathMath.PointAtDistance(
+                agent.Points,
+                stop + (agent.IsVehicle ? agent.BodyHalfLength : 0));
             if (foot is null)
             {
                 continue;
             }
 
+            var nx = -dy / length * half * h;
+            var ny = dx / length * half * h;
             context.DrawLine(
-                pen,
+                agent.IsVehicle ? vehiclePen : pedestrianPen,
                 new Point(foot.Value.X - nx, foot.Value.Y - ny),
                 new Point(foot.Value.X + nx, foot.Value.Y + ny));
         }

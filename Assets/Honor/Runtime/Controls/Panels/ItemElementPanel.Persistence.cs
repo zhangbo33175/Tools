@@ -23,6 +23,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using MapEditorTool.Models;
 using MapEditorTool.Services;
+using MapEditorTool.Controls;
 namespace MapEditorTool.Controls;
 
 public sealed partial class ItemElementPanel : UserControl
@@ -95,9 +96,16 @@ public sealed partial class ItemElementPanel : UserControl
 
         CommitPendingEdits();
 
+        var duplicates = TemplateSyncService.FindDuplicateIds(_templates);
+        if (duplicates.Count > 0)
+        {
+            _notify($"模板 ID 重复：{string.Join("、", duplicates)}。请先删除重复行再保存，否则实例同步只会取靠后那一行。");
+            return Task.CompletedTask;
+        }
+
         if (!_store.TrySaveJson(_templates, out var error))
         {
-            _notify($"保存失败：{error}");
+            _notify(UiFeedback.Failed("保存", error));
             return Task.CompletedTask;
         }
 
@@ -144,7 +152,7 @@ public sealed partial class ItemElementPanel : UserControl
         _itemTable.RefreshIndexes();
         if (!_itemTable.TrySave(out var tableError))
         {
-            _notify($"元件模板已保存，但配置表写回失败：{tableError}");
+            _notify(UiFeedback.Failed("元件模板已保存，但配置表写回", tableError));
             return null;
         }
 
@@ -160,7 +168,7 @@ public sealed partial class ItemElementPanel : UserControl
         var nineSliceTemplates = _templates.Concat(_rowTemplates.Values).ToList();
         if (!_store.TrySaveNineSlices(nineSliceTemplates, out var nineSliceError))
         {
-            _notify($"元件模板已保存，但九宫格配置写入失败：{nineSliceError}");
+            _notify(UiFeedback.Failed("元件模板已保存，但九宫格配置写入", nineSliceError));
             return;
         }
 
@@ -223,7 +231,7 @@ public sealed partial class ItemElementPanel : UserControl
 
         if (!_store.TryExportCsv(path, _templates, out var error))
         {
-            _notify($"导出失败：{error}");
+            _notify(UiFeedback.Failed("导出", error));
             return;
         }
 

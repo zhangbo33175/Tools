@@ -133,7 +133,7 @@ public sealed partial class AnimationPreviewWindow : Window
         var title = new TextBlock
         {
             Text = item.Name,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.PreviewText,
             TextTrimming = TextTrimming.CharacterEllipsis,
@@ -150,7 +150,7 @@ public sealed partial class AnimationPreviewWindow : Window
         var meta = new TextBlock
         {
             Text = $"{ObjectTypeNames.Of(item.Type)} · {LayerName(item.LayerType)} · {item.Id}",
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             Foreground = UiTheme.PreviewHint,
             Margin = new Thickness(12, 2, 0, 0),
             TextTrimming = TextTrimming.CharacterEllipsis,
@@ -165,16 +165,16 @@ public sealed partial class AnimationPreviewWindow : Window
         };
         if (ResolveSpine(item) is not null)
         {
-            tags.Children.Add(MakeTag("Spine", UiTheme.Accent));
+            tags.Children.Add(UiFactory.TagChip("Spine", UiTheme.Accent));
         }
         else if (ResolveSprite(item) is not null)
         {
-            tags.Children.Add(MakeTag("序列帧", UiTheme.AnimationTag.Sequence));
+            tags.Children.Add(UiFactory.TagChip("序列帧", UiTheme.AnimationTag.Sequence));
         }
 
         if (PathMath.HasPath(item.PathPoints))
         {
-            tags.Children.Add(MakeTag($"{item.PathPoints.Count}P", UiTheme.AnimationTag.PathPoint));
+            tags.Children.Add(UiFactory.TagChip($"{item.PathPoints.Count}P", UiTheme.AnimationTag.PathPoint));
         }
 
         if (tags.Children.Count > 0)
@@ -185,41 +185,21 @@ public sealed partial class AnimationPreviewWindow : Window
         return row;
     }
 
-    /// <summary>小标签。</summary>
-    private static Control MakeTag(string text, IBrush brush)
-    {
-        return new Border
-        {
-            Background = brush,
-            CornerRadius = new CornerRadius(3),
-            Padding = new Thickness(5, 1),
-            Child = new TextBlock
-            {
-                Text = text,
-                FontSize = 9,
-                Foreground = UiTheme.White,
-            },
-        };
-    }
+
 
     /// <summary>给当前选中行加底色和左侧强调线，避免主题选中态过淡。</summary>
     private void HighlightRow(ListBoxItem? row)
     {
         if (_selectedRow is not null && !ReferenceEquals(_selectedRow, row))
         {
-            _selectedRow.Background = UiTheme.Transparent;
-            _selectedRow.BorderThickness = new Thickness(0);
+            RowState.Clear(_selectedRow);
         }
 
         _selectedRow = row;
-        if (row is null)
+        if (row is not null)
         {
-            return;
+            RowState.Apply(row, true, UiTheme.PreviewRow);
         }
-
-        row.Background = UiTheme.PreviewAccentSoft;
-        row.BorderBrush = UiTheme.Accent;
-        row.BorderThickness = new Thickness(3, 0, 0, 0);
     }
 
     /// <summary>选中初始目标；没有显式目标时优先选第一个动画对象。</summary>

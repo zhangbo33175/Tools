@@ -302,18 +302,27 @@ public sealed partial class MapCanvas : Control
             return null;
         }
 
-        // 同一个物件（同 id / 同路径 / 同名字 / 同层 / 同章节关卡）只解析一次：
+        // 同一个物件（同 id / 同路径 / 同名字 / 同层 / 同章节关卡 / 同朝向）只解析一次：
         // 拖动时每帧都会重画 500+ 物件，之前每次都要走 File.Exists + 三级目录查找，帧率被磁盘拖死
+        // 朝向必须进 key：四方向出图的实例换朝向后要立刻拿到另一张图，否则缓存会挡住重绘
+        var facingPath = FacingImages?.ImageFor(item.TemplateId, item.FacingDirection);
         var key = string.Concat(
             item.Id, "|", item.ImagePath, "|", item.Name, "|", item.LayerType, "|", item.DisplayLayer,
-            "|", _config?.ChapterId, "|", _config?.SceneId);
+            "|", _config?.ChapterId, "|", _config?.SceneId, "|", facingPath ?? string.Empty);
         if (_spriteCache.TryGetValue(key, out var cachedSprite))
         {
             return cachedSprite;
         }
 
         Bitmap? sprite = null;
-        if (!string.IsNullOrWhiteSpace(item.ImagePath))
+
+        // 四方向出图优先：模板配了该方向的图就直取，取不到才回落到 image 字段
+        if (!string.IsNullOrWhiteSpace(facingPath))
+        {
+            sprite = _assets.Load(facingPath);
+        }
+
+        if (sprite is null && !string.IsNullOrWhiteSpace(item.ImagePath))
         {
             sprite = _assets.Load(item.ImagePath);
         }

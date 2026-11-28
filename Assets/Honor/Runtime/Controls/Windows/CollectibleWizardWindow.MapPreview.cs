@@ -108,7 +108,7 @@ public sealed partial class CollectibleWizardWindow : Window
             {
                 Text = "仍可继续设置收集物；进入地图后会在这里显示场景预览。",
                 Foreground = UiTheme.WizardMapPreview.EmptyHint,
-                FontSize = 11,
+                FontSize = UiMetrics.FontBody,
                 TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -138,7 +138,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "场景预览",
             Foreground = UiTheme.White,
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             FontWeight = FontWeight.SemiBold,
         });
         previewTag.Child = tagRow;
@@ -189,7 +189,7 @@ public sealed partial class CollectibleWizardWindow : Window
             {
                 Text = text,
                 Foreground = UiTheme.WizardMapPreview.StatChipText,
-                FontSize = 10,
+                FontSize = UiMetrics.FontCaption,
             },
         });
     }

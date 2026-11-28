@@ -54,17 +54,17 @@ internal sealed record TrafficRuleRow(
     /// <returns>列表行模型。</returns>
     public static TrafficRuleRow ForLight(MapTrafficLightData light, string boundName)
     {
-        var title = string.IsNullOrWhiteSpace(light.Name) ? light.Id : light.Name;
-        var direction = light.Direction == TrafficDirections.Vertical ? "纵向" : "横向";
+        var title = NameOrId(light.Name, light.Id);
         var side = string.IsNullOrWhiteSpace(light.Side) ? "—" : MapSide(light.Side);
         var bound = !string.IsNullOrEmpty(light.BoundCrosswalkId);
+        var badge = BindBadge(bound);
         return new TrafficRuleRow(
             title,
-            $"{direction}·{side}  ({light.PosX:0},{light.PosY:0})",
+            $"{DirectionText(light.Direction)}·{side}  ({light.PosX:0},{light.PosY:0})",
             bound ? $"↳ {boundName}" : "↳ 未绑横道",
-            bound ? "已绑" : "未绑",
-            bound ? UiTheme.Traffic.BoundText : UiTheme.Traffic.UnboundText,
-            bound ? UiTheme.Traffic.BoundSurface : UiTheme.Traffic.UnboundSurface,
+            badge.Tag,
+            badge.Text,
+            badge.Surface,
             UiTheme.Error,
             Math.Max(0, light.RedDuration),
             Math.Max(0, light.GreenDuration),
@@ -79,21 +79,21 @@ internal sealed record TrafficRuleRow(
     public static TrafficRuleRow ForCrosswalk(MapCrosswalkData crosswalk, string boundName, string? displayName = null)
     {
         var title = string.IsNullOrWhiteSpace(displayName)
-            ? string.IsNullOrWhiteSpace(crosswalk.Name) ? crosswalk.Id : crosswalk.Name
+            ? NameOrId(crosswalk.Name, crosswalk.Id)
             : displayName;
         var vertical = crosswalk.Direction == TrafficDirections.Vertical;
-        var direction = vertical ? "纵向" : "横向";
         var span = vertical
             ? $"y {Math.Min(crosswalk.PointA.Y, crosswalk.PointB.Y):0}→{Math.Max(crosswalk.PointA.Y, crosswalk.PointB.Y):0}"
             : $"x {Math.Min(crosswalk.PointA.X, crosswalk.PointB.X):0}→{Math.Max(crosswalk.PointA.X, crosswalk.PointB.X):0}";
         var bound = !string.IsNullOrEmpty(crosswalk.BoundLightId);
+        var badge = BindBadge(bound);
         return new TrafficRuleRow(
             title,
-            $"{direction} · 宽 {crosswalk.Width:0} · {span}",
+            $"{DirectionText(crosswalk.Direction)} · 宽 {crosswalk.Width:0} · {span}",
             bound ? $"↳ {boundName}" : "↳ 未绑灯",
-            bound ? "已绑" : "未绑",
-            bound ? UiTheme.Traffic.BoundText : UiTheme.Traffic.UnboundText,
-            bound ? UiTheme.Traffic.BoundSurface : UiTheme.Traffic.UnboundSurface,
+            badge.Tag,
+            badge.Text,
+            badge.Surface,
             UiTheme.ObjectTag.Prop);
     }
 
@@ -105,9 +105,7 @@ internal sealed record TrafficRuleRow(
         var role = TrafficRoles.ToDisplay(item.TrafficRole);
         var isVehicle = item.IsVehicle || item.TrafficRole == TrafficRoles.Vehicle;
         var lights = item.BoundLightIds.Count;
-        var (tag, text, surface) = isVehicle
-            ? VehicleDirection(item)
-            : ("步行", UiTheme.InfoText, UiTheme.PreviewAccentSoft);
+        var (tag, text, surface) = isVehicle ? VehicleDirection(item) : ActorBadge("步行");
         return new TrafficRuleRow(
             item.Name,
             $"{role} · 路径 {item.PathPoints.Count} 点 · ×{item.Speed:0.##}",
@@ -115,6 +113,37 @@ internal sealed record TrafficRuleRow(
             tag, text, surface,
             UiTheme.AnimationTag.Sequence);
     }
+
+    #endregion
+
+    #region 共用取值
+
+    /// <summary>有名字就用名字，没有就退回 ID；两者都空时返回空串。</summary>
+    /// <param name="name">数据里的名字。</param>
+    /// <param name="id">稳定 ID，作为名字缺失时的兜底。</param>
+    /// <returns>列表显示名。</returns>
+    private static string NameOrId(string? name, string id) =>
+        string.IsNullOrWhiteSpace(name) ? id : name;
+
+    /// <summary>方向枚举转中文：纵向 / 横向，灯行与横道行共用同一口径。</summary>
+    /// <param name="direction">方向取值。</param>
+    /// <returns>中文方向。</returns>
+    private static string DirectionText(string direction) =>
+        direction == TrafficDirections.Vertical ? "纵向" : "横向";
+
+    /// <summary>绑定徽标：已绑 / 未绑 的文案与配色只在这里声明一次。</summary>
+    /// <param name="bound">是否已绑定对侧对象。</param>
+    /// <returns>徽标文字、文字色与底色。</returns>
+    private static (string Tag, IBrush Text, IBrush Surface) BindBadge(bool bound) =>
+        bound
+            ? ("已绑", UiTheme.Traffic.BoundText, UiTheme.Traffic.BoundSurface)
+            : ("未绑", UiTheme.Traffic.UnboundText, UiTheme.Traffic.UnboundSurface);
+
+    /// <summary>车 / 行人徽标皮肤：「步行」与四个行进方向共用同一套文字色与底色。</summary>
+    /// <param name="tag">徽标文字。</param>
+    /// <returns>徽标文字、文字色与底色。</returns>
+    private static (string Tag, IBrush Text, IBrush Surface) ActorBadge(string tag) =>
+        (tag, UiTheme.InfoText, UiTheme.PreviewAccentSoft);
 
     #endregion
 
@@ -134,7 +163,7 @@ internal sealed record TrafficRuleRow(
         var title = new TextBlock
         {
             Text = row.Title,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.TextPrimary,
             TextTrimming = TextTrimming.CharacterEllipsis,
@@ -145,19 +174,11 @@ internal sealed record TrafficRuleRow(
 
         if (!string.IsNullOrEmpty(row.Tag))
         {
-            var badge = new Border
-            {
-                Background = row.TagSurface,
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(6, 1),
-                VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock
-                {
-                    Text = row.Tag,
-                    FontSize = 9.5,
-                    Foreground = row.TagText,
-                },
-            };
+            var badge = UiFactory.TagChip(
+                row.Tag,
+                row.TagSurface,
+                row.TagText,
+                new UiFactory.ChipSkin(9.5, 6, 1, 8));
             Grid.SetColumn(badge, 1);
             head.Children.Add(badge);
         }
@@ -177,7 +198,7 @@ internal sealed record TrafficRuleRow(
             stack.Children.Add(new TextBlock
             {
                 Text = row.Bind,
-                FontSize = 10,
+                FontSize = UiMetrics.FontCaption,
                 Foreground = row.TagText,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 LineHeight = 14,
@@ -207,15 +228,7 @@ internal sealed record TrafficRuleRow(
         Grid.SetColumn(stack, 1);
         body.Children.Add(stack);
 
-        var card = new Border
-        {
-            Margin = new Thickness(0),
-            Padding = new Thickness(7, 8, 7, 8),
-            Background = UiTheme.Transparent,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            BorderBrush = UiTheme.Divider,
-            Child = body,
-        };
+        var card = UiFactory.ListDividerRow(body, new Thickness(7, 8, 7, 8));
 
         // 行卡片对自动化 / 读屏只报名称，不要把整条行模型（含画刷色值）当名字扔出去
         AutomationProperties.SetName(card, row.Title);
@@ -301,12 +314,10 @@ internal sealed record TrafficRuleRow(
         var dy = to.Y - from.Y;
         if (Math.Abs(dx) >= Math.Abs(dy))
         {
-            return dx >= 0 ? ("向东", UiTheme.InfoText, UiTheme.PreviewAccentSoft)
-                : ("向西", UiTheme.InfoText, UiTheme.PreviewAccentSoft);
+            return ActorBadge(dx >= 0 ? "向东" : "向西");
         }
 
-        return dy >= 0 ? ("向南", UiTheme.InfoText, UiTheme.PreviewAccentSoft)
-            : ("向北", UiTheme.InfoText, UiTheme.PreviewAccentSoft);
+        return ActorBadge(dy >= 0 ? "向南" : "向北");
     }
 
     #endregion

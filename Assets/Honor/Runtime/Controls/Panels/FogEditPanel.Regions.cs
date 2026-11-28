@@ -212,15 +212,7 @@ public sealed partial class FogEditPanel : UserControl
             AfterFogChange(repaintCanvas: false);
         }
 
-        editor.KeyDown += (_, e) =>
-        {
-            if (e.Key == Avalonia.Input.Key.Enter)
-            {
-                Commit();
-                e.Handled = true;
-            }
-        };
-
+        UiFactory.CommitOnEnter(editor, Commit);
         editor.LostFocus += (_, _) => Commit();
         host.Children.Clear();
         host.Children.Add(editor);

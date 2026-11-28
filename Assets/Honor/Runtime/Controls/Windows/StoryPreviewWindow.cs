@@ -128,12 +128,12 @@ public sealed partial class StoryPreviewWindow : Window
         };
 
         _progressText.Text = "第 0 / 0 句";
-        _progressText.FontSize = 11;
+        _progressText.FontSize = UiMetrics.FontBody;
         _progressText.Foreground = UiTheme.InfoText;
         _progressText.VerticalAlignment = VerticalAlignment.Center;
 
         var restart = UiFactory.CompactButton("重新播放", UiTheme.PreviewAccentSoft, UiTheme.InfoText);
-        restart.CornerRadius = new CornerRadius(5);
+        restart.CornerRadius = new CornerRadius(UiMetrics.ButtonCornerRadius);
         restart.BorderBrush = UiTheme.Form.FieldBorder;
         restart.BorderThickness = new Thickness(1);
         restart.Margin = new Thickness(8, 0, 0, 0);
@@ -181,7 +181,7 @@ public sealed partial class StoryPreviewWindow : Window
         _dialogText.MaxHeight = 150;
 
         _hintText.Text = "点击对话框 / 空格 继续";
-        _hintText.FontSize = 10;
+        _hintText.FontSize = UiMetrics.FontCaption;
         _hintText.Foreground = UiTheme.Story.ProgressText;
         _hintText.HorizontalAlignment = HorizontalAlignment.Right;
         _hintText.Margin = new Thickness(0, 8, 0, 0);
@@ -195,7 +195,7 @@ public sealed partial class StoryPreviewWindow : Window
             Background = UiTheme.Story.DialogSurface,
             BorderBrush = UiTheme.Story.DialogBorder,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Thickness(22, 16, 22, 12),
             Child = new StackPanel
             {
@@ -220,7 +220,7 @@ public sealed partial class StoryPreviewWindow : Window
 
         return new Border
         {
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
             ClipToBounds = true,
             Margin = new Thickness(10, 0, 10, 8),
             BorderBrush = UiTheme.Form.GroupBorder,
@@ -247,7 +247,7 @@ public sealed partial class StoryPreviewWindow : Window
     private Control BuildFooter() => new TextBlock
     {
         Text = "空格 / 回车：下一句　　数字键 1-9：选分支　　Esc：关闭",
-        FontSize = 10,
+        FontSize = UiMetrics.FontCaption,
         Foreground = UiTheme.PreviewHint,
         Margin = new Thickness(12, 4, 12, 0),
     };

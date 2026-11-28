@@ -31,7 +31,7 @@ public sealed partial class StoryEditorPanel
 
         _statText = new TextBlock
         {
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             Foreground = UiTheme.PreviewMuted,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
@@ -42,7 +42,7 @@ public sealed partial class StoryEditorPanel
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
             Margin = new Thickness(12, 10, 12, 6),
         };
-        headRow.Children.Add(SectionTitle("节点详情"));
+        headRow.Children.Add(UiFactory.SectionHead("节点详情"));
         Grid.SetColumn(_statText, 1);
         headRow.Children.Add(_statText);
 
@@ -100,12 +100,7 @@ public sealed partial class StoryEditorPanel
             Children =
             {
                 headRow,
-                Row(new ScrollViewer
-                {
-                    Content = stack,
-                    HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-                    VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-                }, 1),
+                Row(UiFactory.VerticalScroll(stack), 1),
             },
         };
         return root;
@@ -184,7 +179,7 @@ public sealed partial class StoryEditorPanel
         {
             Spacing = 8,
             // 卡片标题统一成「3px 竖条 + 加粗文字」，与左右两栏的栏标题同款
-            Children = { SectionTitle(title), content },
+            Children = { UiFactory.SectionHead(title), content },
         };
 
         if (!string.IsNullOrEmpty(hint))
@@ -198,15 +193,7 @@ public sealed partial class StoryEditorPanel
             });
         }
 
-        return new Border
-        {
-            Background = UiTheme.Form.GroupHeader,
-            BorderBrush = UiTheme.Form.GroupBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(11, 9, 11, 10),
-            Child = inner,
-        };
+        return UiFactory.GroupBlock(inner);
     }
 
     #endregion

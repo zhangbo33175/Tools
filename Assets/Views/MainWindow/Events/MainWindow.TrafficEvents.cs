@@ -184,14 +184,7 @@ public partial class MainWindow : Window
         }
 
         PropStopLine.LostFocus += (_, _) => Commit();
-        PropStopLine.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                Commit();
-                e.Handled = true;
-            }
-        };
+        UiFactory.CommitOnEnter(PropStopLine, Commit);
     }
 
     /// <summary>把当前选中物件标记 / 取消标记为人行道。</summary>
@@ -325,8 +318,7 @@ public partial class MainWindow : Window
     /// <summary>交通标记变更后的统一收尾：重绘画布、标记文档已改、刷新全部交通 UI。</summary>
     private void CommitTrafficMarkChange()
     {
-        Canvas.Refresh();
-        Canvas.NotifyDocumentChanged();
+        Canvas.CommitEdit();
         RefreshTrafficUi();
     }
 
@@ -385,7 +377,7 @@ public partial class MainWindow : Window
             {
                 Content = $"{light.Name}  ({light.GridX},{light.GridY})",
                 IsChecked = selected?.BoundLightIds.Contains(light.Id) == true,
-                FontSize = 11,
+                FontSize = UiMetrics.FontBody,
                 Margin = new Avalonia.Thickness(0, 0, 0, 1),
             };
 

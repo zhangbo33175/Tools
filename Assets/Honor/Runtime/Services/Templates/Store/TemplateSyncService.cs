@@ -8,6 +8,7 @@
  * descrip:   把元件模板的最新属性同步到已摆放实例
  ***************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using MapEditorTool.Models;
@@ -28,7 +29,7 @@ public static class TemplateSyncService
     /// <returns>被更新的实例数量。</returns>
     public static int Apply(MapConfigData config, IReadOnlyList<ObjectTemplate> templates)
     {
-        var index = templates.ToDictionary(template => template.TemplateId, template => template);
+        var index = BuildIndex(templates);
         var updated = 0;
 
         foreach (var instance in config.Objects)
@@ -67,6 +68,45 @@ public static class TemplateSyncService
         }
 
         return updated;
+    }
+
+    /// <summary>找出模板集合里重复出现的模板 ID（同一 ID 多行时保存前提示，避免静默覆盖）。</summary>
+    /// <param name="templates">模板集合。</param>
+    /// <returns>重复 ID 列表，按首次重复顺序排列；无重复时为空。</summary>
+    public static IReadOnlyList<string> FindDuplicateIds(IReadOnlyList<ObjectTemplate> templates)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var duplicates = new List<string>();
+        foreach (var template in templates)
+        {
+            if (!seen.Add(template.TemplateId) && !duplicates.Contains(template.TemplateId, StringComparer.Ordinal))
+            {
+                duplicates.Add(template.TemplateId);
+            }
+        }
+
+        return duplicates;
+    }
+
+    #endregion
+
+    #region 内部实现
+
+    /// <summary>
+    /// 建立「模板 ID → 模板」索引。同一 ID 出现多行时以靠后的模板为准，
+    /// 不抛异常——历史配置里存在重复 ID，同步不应因此中断整个保存流程。
+    /// </summary>
+    /// <param name="templates">模板集合。</param>
+    /// <returns>索引字典。</returns>
+    private static Dictionary<string, ObjectTemplate> BuildIndex(IReadOnlyList<ObjectTemplate> templates)
+    {
+        var index = new Dictionary<string, ObjectTemplate>(templates.Count, StringComparer.Ordinal);
+        foreach (var template in templates)
+        {
+            index[template.TemplateId] = template;
+        }
+
+        return index;
     }
 
     #endregion

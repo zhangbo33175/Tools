@@ -62,6 +62,60 @@ public static class EditorSettingsDefaults
 
 #endregion
 
+#region 网格默认值
+
+/// <summary>
+/// 网格设置默认值。分两组：
+/// <list type="bullet">
+/// <item><description>编辑口径（<see cref="GridSize"/> / <see cref="Shape"/> / <see cref="ShowGridLines"/>）直接决定画布怎么切格；</description></item>
+/// <item><description>导出口径（Cell Size / Cell Gap / Cell Layout / Cell Swizzle / Tile Anchor）与 Unity 的 Grid 组件字段一一对应，发布时按它生成 Grid 与 Tilemap。</description></item>
+/// </list>
+/// 编辑口径的默认值与 <c>MapToolDefaults</c> 保持一致（32px 正方形格）。
+/// </summary>
+public static class GridSettingsDefaults
+{
+    /// <summary>格子边长（像素）。</summary>
+    public const int GridSize = 32;
+
+    /// <summary>格子边长下限：小于 8px 画布网格线会糊成一片。</summary>
+    public const int GridSizeMin = 8;
+
+    /// <summary>格子边长上限：大于 256px 一张 4096 地图只剩十来格，失去参考意义。</summary>
+    public const int GridSizeMax = 256;
+
+    /// <summary>网格形状默认值：正交矩形格。</summary>
+    public const string Shape = "rect";
+
+    /// <summary>是否默认显示画布网格线。</summary>
+    public const bool ShowGridLines = true;
+
+    /// <summary>Unity Cell Size X（像素）。</summary>
+    public const int CellSizeX = 32;
+
+    /// <summary>Unity Cell Size Y（像素）。</summary>
+    public const int CellSizeY = 32;
+
+    /// <summary>Unity Cell Gap X（像素）。</summary>
+    public const int CellGapX = 0;
+
+    /// <summary>Unity Cell Gap Y（像素）。</summary>
+    public const int CellGapY = 0;
+
+    /// <summary>Unity Cell Layout：Rectangle / Hexagon / Isometric / IsometricZ。</summary>
+    public const string CellLayout = "Rectangle";
+
+    /// <summary>Unity Cell Swizzle：XYZ。</summary>
+    public const string CellSwizzle = "XYZ";
+
+    /// <summary>Unity Tile Anchor X（格比例，0.5 表示格子中心）。</summary>
+    public const double TileAnchorX = 0.5;
+
+    /// <summary>Unity Tile Anchor Y。</summary>
+    public const double TileAnchorY = 0.5;
+}
+
+#endregion
+
 #region 设置模型
 
 /// <summary>地图配置窗口的一屏设置：六条路径 + 基线步长。</summary>
@@ -94,6 +148,43 @@ public sealed class EditorSettingsData
     /// <summary>相邻显示层基线步长。</summary>
     public int BaselineStep { get; set; } = EditorSettingsDefaults.BaselineStep;
 
+    // ---网格设置：编辑口径------------------------------------------------
+
+    /// <summary>格子边长（像素），画布切格与坐标换算都用它。</summary>
+    public int GridSize { get; set; } = GridSettingsDefaults.GridSize;
+
+    /// <summary>网格形状：<c>rect</c> 正交矩形 / <c>diamond</c> 菱形（等距）。</summary>
+    public string GridShape { get; set; } = GridSettingsDefaults.Shape;
+
+    /// <summary>画布是否默认显示网格线。</summary>
+    public bool ShowGridLines { get; set; } = GridSettingsDefaults.ShowGridLines;
+
+    // ---网格设置：Unity 导出口径-----------------------------------------
+
+    /// <summary>Unity Grid.Cell Size X（像素）。</summary>
+    public int CellSizeX { get; set; } = GridSettingsDefaults.CellSizeX;
+
+    /// <summary>Unity Grid.Cell Size Y（像素）。</summary>
+    public int CellSizeY { get; set; } = GridSettingsDefaults.CellSizeY;
+
+    /// <summary>Unity Grid.Cell Gap X（像素）。</summary>
+    public int CellGapX { get; set; } = GridSettingsDefaults.CellGapX;
+
+    /// <summary>Unity Grid.Cell Gap Y（像素）。</summary>
+    public int CellGapY { get; set; } = GridSettingsDefaults.CellGapY;
+
+    /// <summary>Unity Grid.Cell Layout：Rectangle / Hexagon / Isometric / IsometricZ。</summary>
+    public string CellLayout { get; set; } = GridSettingsDefaults.CellLayout;
+
+    /// <summary>Unity Grid.Cell Swizzle：XYZ / XZY / YXZ / YZX / ZXY / ZYX。</summary>
+    public string CellSwizzle { get; set; } = GridSettingsDefaults.CellSwizzle;
+
+    /// <summary>Unity Tilemap.Tile Anchor X（格比例）。</summary>
+    public double TileAnchorX { get; set; } = GridSettingsDefaults.TileAnchorX;
+
+    /// <summary>Unity Tilemap.Tile Anchor Y（格比例）。</summary>
+    public double TileAnchorY { get; set; } = GridSettingsDefaults.TileAnchorY;
+
     // ---TODO 重构：设置字段均为不可变值，浅拷贝即可，不再逐字段抄一遍。
     /// <summary>复制一份，避免窗口里的编辑直接改到全局设置。</summary>
     /// <returns>新实例。</returns>
@@ -119,6 +210,25 @@ public sealed class EditorSettingsData
         LevelBackgroundDirectory = Fallback(LevelBackgroundDirectory, EditorSettingsDefaults.LevelBackgroundDirectory);
         MapSaveDirectory = Fallback(MapSaveDirectory, EditorSettingsDefaults.MapSaveDirectory);
         BaselineStep = EditorSettings.ClampBaselineStep(BaselineStep);
+        NormalizeGrid();
+    }
+
+    /// <summary>
+    /// 网格字段取值收敛：边长钳到上下限，形状 / 布局 / 轴序收敛到合法档，
+    /// 间距与锚点按 Unity 口径夹到有效区间。
+    /// </summary>
+    private void NormalizeGrid()
+    {
+        GridSize = EditorSettings.ClampGridSize(GridSize);
+        GridShape = GridShapes.Normalize(GridShape);
+        CellSizeX = Math.Max(1, CellSizeX);
+        CellSizeY = Math.Max(1, CellSizeY);
+        CellGapX = Math.Max(0, CellGapX);
+        CellGapY = Math.Max(0, CellGapY);
+        CellLayout = GridLayouts.Normalize(CellLayout);
+        CellSwizzle = GridSwizzles.Normalize(CellSwizzle);
+        TileAnchorX = Math.Clamp(TileAnchorX, 0d, 1d);
+        TileAnchorY = Math.Clamp(TileAnchorY, 0d, 1d);
     }
 
     /// <summary>旧存档只写了汇总 CSV 路径时，从它的目录推导配置表文件夹。</summary>
@@ -156,6 +266,12 @@ public static class EditorSettings
     /// <returns>钳制后的步长。</param>
     public static int ClampBaselineStep(int value) =>
         Math.Clamp(value, EditorSettingsDefaults.BaselineStepMin, EditorSettingsDefaults.BaselineStepMax);
+
+    /// <summary>把格子边长钳到合法区间。</summary>
+    /// <param name="value">原始值。</param>
+    /// <returns>钳制后的边长（像素）。</returns>
+    public static int ClampGridSize(int value) =>
+        Math.Clamp(value, GridSettingsDefaults.GridSizeMin, GridSettingsDefaults.GridSizeMax);
 
     /// <summary>把 Unity 口径的相对路径解析成绝对路径。</summary>
     /// <param name="path">路径，<c>Assets/…</c> 相对工程根，其余相对 Assets 目录；空值返回 null。</param>

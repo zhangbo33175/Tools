@@ -66,6 +66,18 @@ public static partial class MapJsonService
 
         [JsonPropertyName("roadCells")] public List<CellPayload> RoadCells { get; set; } = new();
 
+        /// <summary>地表瓦片格：一格一张图，画在所有物体之下。</summary>
+        [JsonPropertyName("tileCells")] public List<TileCellPayload> TileCells { get; set; } = new();
+
+        /// <summary>瓦片邻接规则：九宫格三态图案 + 输出贴图。</summary>
+        [JsonPropertyName("tileRules")] public List<TileRulePayload> TileRules { get; set; } = new();
+
+        /// <summary>楼层表：剖面式等距场景的层名与可见性。</summary>
+        [JsonPropertyName("levels")] public List<LevelPayload> Levels { get; set; } = new();
+
+        /// <summary>房间表：进屋隐藏的触发范围与策略（旧档没有该字段时为空表）。</summary>
+        [JsonPropertyName("rooms")] public List<RoomPayload> Rooms { get; set; } = new();
+
         /// <summary>收集物目标总数（编辑器生成计划，运行时可用于关卡目标）。</summary>
         [JsonPropertyName("collectibleTotal")] public int CollectibleTotal { get; set; }
 
@@ -160,6 +172,18 @@ public static partial class MapJsonService
         [JsonPropertyName("interactType")] public string InteractType { get; set; } = string.Empty;
 
         [JsonPropertyName("sortOrder")] public int SortOrder { get; set; }
+
+        /// <summary>楼层号：剖面式等距场景按它切平面（旧档缺省 0）。</summary>
+        [JsonPropertyName("level")] public int Level { get; set; }
+
+        /// <summary>跨层贯穿：不参与单层切片，按所属楼层抬升后画在全部楼层之上（楼梯 / 通高柱）。</summary>
+        [JsonPropertyName("spanLevels")] public bool SpanLevels { get; set; }
+
+        /// <summary>所属房间 ID；空串表示独立件（旧档缺省空串，行为不变）。</summary>
+        [JsonPropertyName("roomId")] public string RoomId { get; set; } = string.Empty;
+
+        /// <summary>进屋隐藏：所属房间被进入时淡出这个物件（仅 roomId 非空时有效）。</summary>
+        [JsonPropertyName("hideOnEnter")] public bool HideOnEnter { get; set; }
 
         [JsonPropertyName("ySortEnabled")] public bool YSortEnabled { get; set; }
 
@@ -328,6 +352,67 @@ public static partial class MapJsonService
         [JsonPropertyName("y")] public int Y { get; set; }
     }
 
+    /// <summary>瓦片格载荷：楼层 + 格坐标 + 贴图路径。</summary>
+    private sealed class TileCellPayload
+    {
+        [JsonPropertyName("x")] public int X { get; set; }
+
+        [JsonPropertyName("y")] public int Y { get; set; }
+
+        /// <summary>楼层号（旧档缺省 0）。</summary>
+        [JsonPropertyName("level")] public int Level { get; set; }
+
+        [JsonPropertyName("image")] public string Image { get; set; } = string.Empty;
+    }
+
+    /// <summary>楼层载荷：编号 + 显示名 + 可见性 + 像素抬升。</summary>
+    private sealed class LevelPayload
+    {
+        [JsonPropertyName("index")] public int Index { get; set; }
+
+        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("visible")] public bool Visible { get; set; } = true;
+
+        /// <summary>本层相对地面向上的像素抬升（运行时按同一数值抬楼层根节点）。</summary>
+        [JsonPropertyName("elevation")] public int Elevation { get; set; }
+    }
+
+    /// <summary>房间载荷：触发区（格坐标）+ 进屋隐藏策略 + 淡出时长。</summary>
+    private sealed class RoomPayload
+    {
+        [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("level")] public int Level { get; set; }
+
+        [JsonPropertyName("cellX")] public int CellX { get; set; }
+
+        [JsonPropertyName("cellY")] public int CellY { get; set; }
+
+        [JsonPropertyName("cellWidth")] public int CellWidth { get; set; } = 1;
+
+        [JsonPropertyName("cellHeight")] public int CellHeight { get; set; } = 1;
+
+        [JsonPropertyName("hideRoof")] public bool HideRoof { get; set; } = true;
+
+        [JsonPropertyName("hideFrontWall")] public bool HideFrontWall { get; set; } = true;
+
+        [JsonPropertyName("hideFloorUnder")] public bool HideFloorUnder { get; set; } = true;
+
+        [JsonPropertyName("fadeSeconds")] public double FadeSeconds { get; set; } = MapRoomData.DefaultFadeSeconds;
+    }
+
+    /// <summary>瓦片规则载荷：九宫格三态按行优先存 9 个整数（0 任意 / 1 必须有 / 2 必须没有）。</summary>
+    private sealed class TileRulePayload    {
+        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("image")] public string Image { get; set; } = string.Empty;
+
+        [JsonPropertyName("pattern")] public List<int> Pattern { get; set; } = new();
+    }
+
     private sealed class RegionPayload
     {
         [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
@@ -345,3 +430,4 @@ public static partial class MapJsonService
 
     #endregion
 }
+

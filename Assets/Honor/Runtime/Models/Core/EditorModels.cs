@@ -22,6 +22,12 @@ public static class MapToolDefaults
     /// <summary>关卡像素边长，4096。</summary>
     public const int LevelPixelSize = 4096;
 
+    /// <summary>地图宽高下限：小于 256px 只剩十来个格子，没有编辑意义。</summary>
+    public const int MapPixelMin = 256;
+
+    /// <summary>地图宽高上限：场景属性、网格设置窗、PSD 导入统一按这一档约束。</summary>
+    public const int MapPixelMax = 8192;
+
     /// <summary>格子像素边长，32。</summary>
     public const int GridSize = 32;
 
@@ -124,6 +130,25 @@ public static class DrawShapes
 
     /// <summary>菱形格子，与本项目 45° 斜角地图对齐。</summary>
     public const string Diamond = "diamond";
+
+    /// <summary>菱形格子，导出到 Unity 时按 Isometric Z as Y（多层高度）认格。</summary>
+    public const string DiamondZ = "diamondz";
+
+    /// <summary>六边形格子，对应 Unity 的 Hexagonal Cell Layout。</summary>
+    public const string Hex = "hex";
+
+    /// <summary>是否菱形几何：Isometric Z as Y 的画布几何与等距菱形完全一致，只差导出布局。</summary>
+    /// <param name="shape">绘制形状值。</param>
+    /// <returns>菱形几何返回 true。</returns>
+    public static bool IsDiamond(string? shape) =>
+        string.Equals(shape, Diamond, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(shape, DiamondZ, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>是否六边形几何。</summary>
+    /// <param name="shape">绘制形状值。</param>
+    /// <returns>六边形返回 true。</returns>
+    public static bool IsHex(string? shape) =>
+        string.Equals(shape, Hex, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>刷选区域类型。</summary>

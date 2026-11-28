@@ -95,22 +95,13 @@ public sealed partial class TemplateStore
     /// <param name="templates">模板集合。</param>
     /// <param name="error">失败原因，成功为空串。</param>
     /// <returns>是否保存成功。</returns>
-    public bool TrySaveJson(IReadOnlyList<ObjectTemplate> templates, out string error)
-    {
-        try
+    public bool TrySaveJson(IReadOnlyList<ObjectTemplate> templates, out string error) =>
+        ServiceOutcome.Run(() =>
         {
             FileSystemIo.EnsureDirectory(OutputDirectory);
             var payload = templates.Select(TemplatePayload.FromModel).ToList();
             FileSystemIo.WriteText(JsonPath, JsonSerializer.Serialize(payload, JsonFileOptions.Indented));
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-    }
+        }, out error);
 
     /// <summary>读取九宫格旁路配置；文件缺失或损坏时返回空目录，不阻塞编辑器启动。</summary>
     /// <returns>九宫格目录。</returns>
@@ -158,9 +149,8 @@ public sealed partial class TemplateStore
     /// <param name="templates">模板集合。</param>
     /// <param name="error">失败原因，成功为空串。</param>
     /// <returns>是否保存成功。</returns>
-    public bool TrySaveNineSlices(IReadOnlyList<ObjectTemplate> templates, out string error)
-    {
-        try
+    public bool TrySaveNineSlices(IReadOnlyList<ObjectTemplate> templates, out string error) =>
+        ServiceOutcome.Run(() =>
         {
             FileSystemIo.EnsureDirectory(OutputDirectory);
             var entries = new List<NineSliceEntryPayload>();
@@ -191,24 +181,15 @@ public sealed partial class TemplateStore
             FileSystemIo.WriteText(
                 NineSlicePath,
                 JsonSerializer.Serialize(new NineSliceFilePayload { Entries = entries }, JsonFileOptions.Indented));
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-    }
+        }, out error);
 
     /// <summary>导出 CSV（4 行表头 + 数据行，列口径与 Unity 配置表一致）。</summary>
     /// <param name="path">目标路径。</param>
     /// <param name="templates">模板集合。</param>
     /// <param name="error">失败原因，成功为空串。</param>
     /// <returns>是否导出成功。</returns>
-    public bool TryExportCsv(string path, IReadOnlyList<ObjectTemplate> templates, out string error)
-    {
-        try
+    public bool TryExportCsv(string path, IReadOnlyList<ObjectTemplate> templates, out string error) =>
+        ServiceOutcome.Run(() =>
         {
             var builder = new StringBuilder();
             builder.AppendLine("物品元件配置表");
@@ -224,15 +205,7 @@ public sealed partial class TemplateStore
             FileSystemIo.EnsureParentDirectory(path);
 
             FileSystemIo.WriteText(path, builder.ToString());
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-    }
+        }, out error);
 
     /// <summary>导入 CSV，兼容 4 行表头与单行表头两种布局。</summary>
     /// <param name="path">文件路径。</param>

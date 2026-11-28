@@ -30,6 +30,8 @@ public sealed partial class MapCanvas
         {
             _config = value;
             _selected = null;
+            _selectedPathPoint = -1;
+            _pathPointDrag = -1;
             _spriteCache.Clear();
             _runtimeSprites.Clear();
             _runtimeBackground = null;

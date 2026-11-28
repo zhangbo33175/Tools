@@ -25,6 +25,17 @@ public static class MapJsonLoader
 {
     #region 公开方法
 
+    /// <summary>把存档里的绘制形状收敛到四个合法值（rect / hex / diamond / diamondz）。</summary>
+    /// <param name="value">存档值。</param>
+    /// <returns>合法形状值。</returns>
+    private static string NormalizeDrawShape(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        DrawShapes.Hex => DrawShapes.Hex,
+        DrawShapes.Diamond => DrawShapes.Diamond,
+        DrawShapes.DiamondZ => DrawShapes.DiamondZ,
+        _ => DrawShapes.Rect,
+    };
+
     /// <summary>读取地图 JSON。</summary>
     /// <param name="path">地图 JSON 绝对路径。</param>
     /// <returns>地图配置。</returns>
@@ -44,8 +55,8 @@ public static class MapJsonLoader
             Width = ReadInt(root, "width", MapToolDefaults.LevelPixelSize),
             Height = ReadInt(root, "height", MapToolDefaults.LevelPixelSize),
             GridSize = ReadInt(root, "gridSize", MapToolDefaults.GridSize),
-            // 老存档没有 drawShape 字段：默认按矩形口径读（新工程默认矩形），显式写 diamond 的仍按菱形
-            DrawShape = ReadString(root, "drawShape") == DrawShapes.Diamond ? DrawShapes.Diamond : DrawShapes.Rect,
+            // 老存档没有 drawShape 字段：默认按矩形口径读；四种显式值（rect / hex / diamond / diamondz）原样认
+            DrawShape = NormalizeDrawShape(ReadString(root, "drawShape")),
             RegionType = ReadString(root, "regionType") is { Length: > 0 } region ? region : RegionTypes.Place,
         };
 
@@ -69,6 +80,91 @@ public static class MapJsonLoader
                 X = ReadInt(element, "x", 0),
                 Y = ReadInt(element, "y", 0),
             });
+        }
+
+        foreach (var element in ReadArray(root, "tileCells"))
+        {
+            config.TileCells.Add(new TileCellData
+            {
+                X = ReadInt(element, "x", 0),
+                Y = ReadInt(element, "y", 0),
+                Level = Math.Max(0, ReadInt(element, "level", 0)),
+                Image = ReadString(element, "image"),
+            });
+        }
+
+        foreach (var element in ReadArray(root, "tileRules"))
+        {
+            var rule = new TileRuleData
+            {
+                Name = ReadString(element, "name"),
+                Image = ReadString(element, "image"),
+            };
+
+            var index = 0;
+            foreach (var state in ReadArray(element, "pattern"))
+            {
+                if (index >= TilePatternCells.Count)
+                {
+                    break;
+                }
+
+                rule.Pattern[index++] = state.ValueKind == JsonValueKind.Number
+                    ? TileNeighborStates.Normalize(state.GetInt32())
+                    : TileNeighborStates.Any;
+            }
+
+            rule.Normalize();
+            config.TileRules.Add(rule);
+        }
+
+        // 楼层表：旧存档没有该字段时保留默认三层（留出 2F / 3F 供剖面式搭景用），
+        // 物件与瓦片默认落在第 0 层；已有 levels 字段时必须先清空默认值，否则会叠加成 6 层
+        var levelElements = ReadArray(root, "levels").ToList();
+        if (levelElements.Count > 0)
+        {
+            config.Levels.Clear();
+            foreach (var element in levelElements)
+            {
+                var index = Math.Max(0, ReadInt(element, "index", config.Levels.Count));
+                config.Levels.Add(new MapLevelData
+                {
+                    Index = index,
+                    Name = ReadString(element, "name"),
+                    Visible = ReadBool(element, "visible", true),
+                    // 旧图没有 elevation：读成 -1 当「缺省」标记，交给 EnsureLevels 按楼层号补默认层高
+                    Elevation = ReadInt(element, "elevation", -1),
+                });
+            }
+        }
+
+        config.EnsureLevels();
+
+        // 房间表：旧存档没有该字段时保持空表（所有物件都按独立件绘制，行为与之前一致）
+        foreach (var element in ReadArray(root, "rooms"))
+        {
+            var room = new MapRoomData
+            {
+                Id = ReadId(element),
+                Name = ReadString(element, "name"),
+                Level = Math.Max(0, ReadInt(element, "level", 0)),
+                CellX = ReadInt(element, "cellX", 0),
+                CellY = ReadInt(element, "cellY", 0),
+                CellWidth = ReadInt(element, "cellWidth", 1),
+                CellHeight = ReadInt(element, "cellHeight", 1),
+                HideRoof = ReadBool(element, "hideRoof", true),
+                HideFrontWall = ReadBool(element, "hideFrontWall", true),
+                HideFloorUnder = ReadBool(element, "hideFloorUnder", true),
+                FadeSeconds = ReadDouble(element, "fadeSeconds", MapRoomData.DefaultFadeSeconds),
+            };
+
+            if (string.IsNullOrWhiteSpace(room.Id))
+            {
+                continue;   // 没有 ID 的房间无法被物件引用，直接丢弃而不是留一条废数据
+            }
+
+            room.Normalize();
+            config.Rooms.Add(room);
         }
 
         foreach (var element in ReadArray(root, "regions"))
@@ -184,6 +280,10 @@ public static class MapJsonLoader
                 Interactable = ReadBool(element, "interactable", true),
                 InteractType = ReadString(element, "interactType"),
                 SortOrder = ReadInt(element, "sortOrder", 0),
+                Level = Math.Max(0, ReadInt(element, "level", 0)),
+                SpanLevels = ReadBool(element, "spanLevels", false),
+                RoomId = ReadString(element, "roomId"),
+                HideOnEnter = ReadBool(element, "hideOnEnter", true),
                 YSortEnabled = ReadBool(element, "ySortEnabled", true),
                 YSortOffset = ReadDouble(element, "ySortOffset", 0),
                 Rotation = ReadDouble(element, "rotation", 0),
@@ -306,3 +406,5 @@ public static class MapJsonLoader
 
     #endregion
 }
+
+

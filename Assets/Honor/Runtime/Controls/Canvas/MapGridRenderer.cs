@@ -29,8 +29,8 @@ public static class MapGridRenderer
     /// <summary>路径网格的格宽：普通格子的 4 倍。</summary>
     public const int PathGridEveryCells = 4;
 
-    /// <summary>网格线在屏幕上的最小可见间距，低于该值按 2 的幂抽稀。</summary>
-    private const double MinimumScreenSpacing = 2.0;
+    /// <summary>菱形网格开始抽稀的屏幕间距（像素）：低于该值斜线会糊成一片斜纹。</summary>
+    private const double DiamondMinimumSpacing = 12.0;
 
     /// <summary>正交网格开始抽稀的缩放阈值。</summary>
     private const double OrthogonalStep55 = 0.55;
@@ -74,9 +74,13 @@ public static class MapGridRenderer
         {
             using (context.PushClip(view))
             {
-                if (config.DrawShape == DrawShapes.Diamond)
+                if (DrawShapes.IsDiamond(config.DrawShape))
                 {
-                    DrawDiamondGrid(context, map, cell * DiamondGridFactor(cell, zoom), thin);
+                    DrawDiamondGrid(context, map, cell, DiamondGridFactor(cell, zoom), thin);
+                }
+                else if (DrawShapes.IsHex(config.DrawShape))
+                {
+                    DrawHexGrid(context, map, view, (int)cell, HexGridStep(cell, zoom), thin);
                 }
                 else
                 {
@@ -167,45 +171,131 @@ public static class MapGridRenderer
         }
     }
 
-    /// <summary>菱形网格：两组 45° 斜线，相位偏移半格，与 TileMap 格点对齐。</summary>
-    private static void DrawDiamondGrid(DrawingContext context, Rect map, double spacing, double thin)
+    /// <summary>
+    /// 菱形网格：两组斜率 ±0.5 的斜线，相位与 <see cref="DiamondLattice"/> 的真实菱形边一致，
+    /// 抽稀只取「真实边」的子集，所以任何缩放下放大出来的菱形都与实际格子严丝合缝。
+    /// <para>
+    /// 细线每格一条，每 <see cref="MajorGridEvery"/> 条换一条主线；主细线在同一次遍历里选笔，
+    /// 不重复描线，密度只有「细线一遍 + 主线一遍」的一半，不会糊成一片斜纹。
+    /// </para>
+    /// </summary>
+    /// <param name="context">绘制上下文。</param>
+    /// <param name="map">地图矩形。</param>
+    /// <param name="cell">格子边长（菱形的半高）。</param>
+    /// <param name="factor">抽稀倍数（1 / 2 / 4 / 8）。</param>
+    /// <param name="thin">线宽（世界坐标）。</param>
+    private static void DrawDiamondGrid(DrawingContext context, Rect map, double cell, int factor, double thin)
     {
-        var pen = new Pen(UiTheme.MapGrid.MinorLine, thin);
-        var phase = spacing / 2.0;
+        var minor = new Pen(UiTheme.MapGrid.DiamondMinorLine, thin);
+        var major = new Pen(UiTheme.MapGrid.DiamondMajorLine, thin);
 
-        DrawDiagonalFamily(context, map, pen, phase, spacing, -map.Height, map.Width, rising: true);
-        DrawDiagonalFamily(context, map, pen, phase, spacing, 0, map.Width + map.Height, rising: false);
+        // 真实菱形边的截距相位固定为 -cell/2 + k*cell：抽稀只跳着取这些边，相位不跟着 spacing 变，
+        // 否则放大后的菱形网会与实际格子错位，看起来像一层斜纹布。
+        var phase = -cell / 2.0;
+        var spacing = cell * factor;
+
+        DrawHalfSlopeFamily(context, map, minor, major, phase, spacing, rising: true, MajorGridEvery);
+        DrawHalfSlopeFamily(context, map, minor, major, phase, spacing, rising: false, MajorGridEvery);
     }
 
-    /// <summary>按截距区间画一族 45° 平行线。</summary>
-    private static void DrawDiagonalFamily(
+    /// <summary>按截距区间画一族斜率 ±0.5 的平行线（2:1 等距菱形边方向）。</summary>
+    /// <param name="context">绘制上下文。</param>
+    /// <param name="map">地图矩形。</param>
+    /// <param name="minor">细线画笔。</param>
+    /// <param name="major">主线画笔。</param>
+    /// <param name="phase">截距相位。</param>
+    /// <param name="spacing">截距步长（世界像素）。</param>
+    /// <param name="rising">true 为「\」方向（y = 0.5x + b），false 为「/」方向（y = -0.5x + b）。</param>
+    /// <param name="majorEvery">每多少条换一次主线；0 表示全部走细线。</param>
+    private static void DrawHalfSlopeFamily(
         DrawingContext context,
         Rect map,
-        Pen pen,
+        Pen minor,
+        Pen major,
         double phase,
         double spacing,
-        double minIntercept,
-        double maxIntercept,
-        bool rising)
+        bool rising,
+        int majorEvery)
     {
-        var start = (int)Math.Floor((minIntercept - phase) / spacing) - 1;
-        var end = (int)Math.Ceiling((maxIntercept - phase) / spacing) + 1;
+        // 「\」族覆盖矩形需要 b ∈ [-W/2, H]；「/」族需要 b ∈ [0, H + W/2]
+        var min = rising ? -map.Width / 2.0 : 0;
+        var max = rising ? map.Height : map.Height + map.Width / 2.0;
+
+        var start = (int)Math.Floor((min - phase) / spacing) - 1;
+        var end = (int)Math.Ceiling((max - phase) / spacing) + 1;
         for (var i = start; i <= end; i++)
         {
-            DrawDiagonal(context, map, phase + i * spacing, pen, rising);
+            var intercept = phase + i * spacing;
+            var pen = majorEvery > 0 && i % majorEvery == 0 ? major : minor;
+            if (rising)
+            {
+                context.DrawLine(pen, new Point(0, intercept), new Point(map.Width, intercept + map.Width / 2.0));
+            }
+            else
+            {
+                context.DrawLine(pen, new Point(0, intercept), new Point(map.Width, intercept - map.Width / 2.0));
+            }
         }
     }
 
-    /// <summary>画一条贯穿地图矩形的 45° 斜线，超出部分由裁剪丢弃。</summary>
-    private static void DrawDiagonal(DrawingContext context, Rect map, double intercept, Pen pen, bool rising)
+    #endregion
+
+    #region 六边形
+
+    /// <summary>
+    /// 六边形网格：只遍历视口覆盖的格子（外扩一圈），按 <paramref name="step"/> 抽稀后
+    /// 把六边形轮廓合并进「细线 / 主线」两条几何各画一次。
+    /// 逐格 DrawLine 在上万格时会拖慢重绘，合并成一条几何后只需一次提交。
+    /// </summary>
+    /// <param name="context">绘制上下文（世界坐标）。</param>
+    /// <param name="map">地图矩形。</param>
+    /// <param name="view">视口在世界坐标下的可见矩形。</param>
+    /// <param name="cell">格子宽度（像素）。</param>
+    /// <param name="step">抽稀步长（1 / 2 / 4 / 8，行列同时跳）。</param>
+    /// <param name="thin">线宽（世界坐标）。</param>
+    private static void DrawHexGrid(DrawingContext context, Rect map, Rect view, int cell, int step, double thin)
     {
-        if (rising)
+        if (cell <= 0 || step <= 0)
         {
-            context.DrawLine(pen, new Point(0, intercept), new Point(map.Width, map.Width + intercept));
             return;
         }
 
-        context.DrawLine(pen, new Point(0, intercept), new Point(map.Width, intercept - map.Width));
+        var rowStep = HexLattice.RowStep(cell);
+        var maxRow = (int)Math.Ceiling(map.Height / rowStep) + 1;
+        var maxCol = (int)Math.Ceiling(map.Width / cell) + 1;
+
+        var firstCol = Math.Max(0, (int)Math.Floor(view.X / cell) - 1);
+        var lastCol = Math.Min(maxCol, (int)Math.Ceiling(view.Right / cell) + 1);
+        var firstRow = Math.Max(0, (int)Math.Floor(view.Y / rowStep) - 1);
+        var lastRow = Math.Min(maxRow, (int)Math.Ceiling(view.Bottom / rowStep) + 1);
+
+        var minor = new StreamGeometry();
+        var major = new StreamGeometry();
+        using (var minorContext = minor.Open())
+        using (var majorContext = major.Open())
+        {
+            for (var row = firstRow - firstRow % step; row <= lastRow; row += step)
+            {
+                for (var col = firstCol - firstCol % step; col <= lastCol; col += step)
+                {
+                    var vertices = HexLattice.Vertices(col, row, cell);
+                    var target = col % MajorGridEvery == 0 && row % MajorGridEvery == 0
+                        ? majorContext
+                        : minorContext;
+
+                    target.BeginFigure(vertices[0], isFilled: false);
+                    for (var i = 1; i < vertices.Length; i++)
+                    {
+                        target.LineTo(vertices[i]);
+                    }
+
+                    target.EndFigure(true);
+                }
+            }
+        }
+
+        context.DrawGeometry(null, new Pen(UiTheme.MapGrid.DiamondMinorLine, thin), minor);
+        context.DrawGeometry(null, new Pen(UiTheme.MapGrid.DiamondMajorLine, thin), major);
     }
 
     #endregion
@@ -237,16 +327,41 @@ public static class MapGridRenderer
         return zoom >= OrthogonalStep14 ? 4 : 8;
     }
 
-    /// <summary>菱形网格抽稀倍数：屏幕上边长至少 2 像素，否则按 2 的幂加倍。</summary>
+    /// <summary>
+    /// 菱形网格抽稀倍数：保证屏幕上相邻斜线的间距不小于 <see cref="DiamondMinimumSpacing"/>，
+    /// 否则 4000px 的地图在 10% 缩放下会变成一整块斜纹。
+    /// </summary>
+    /// <param name="cell">格子边长。</param>
+    /// <param name="zoom">当前缩放。</param>
+    /// <returns>1 / 2 / 4 / 8。</returns>
     private static int DiamondGridFactor(double cell, double zoom)
     {
         var factor = 1;
-        while (factor < 8 && cell * zoom * factor < MinimumScreenSpacing)
+        while (factor < 8 && cell * zoom * factor < DiamondMinimumSpacing)
         {
             factor *= 2;
         }
 
         return factor;
+    }
+
+    /// <summary>
+    /// 六边形网格抽稀步长：保证屏幕上单个六边形宽度不小于 8px。
+    /// 蜂窝不像斜线族那样会连成一片，阈值可以比菱形放宽一档，低缩放下也能看出格子在哪儿。
+    /// </summary>
+    /// <param name="cell">格子宽度。</param>
+    /// <param name="zoom">当前缩放。</param>
+    /// <returns>1 / 2 / 4 / 8。</returns>
+    private static int HexGridStep(double cell, double zoom)
+    {
+        const double minimumSpacing = 8.0;
+        var step = 1;
+        while (step < 8 && cell * zoom * step < minimumSpacing)
+        {
+            step *= 2;
+        }
+
+        return step;
     }
 
     /// <summary>1 个设备像素对应的世界线宽。</summary>

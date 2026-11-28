@@ -68,12 +68,14 @@ public sealed partial class StoryPreviewWindow
             Background = UiTheme.Story.ChoiceSurface,
             BorderBrush = UiTheme.Story.ChoiceBorder,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(5),
+            CornerRadius = new CornerRadius(UiMetrics.ButtonCornerRadius),
             Padding = new Thickness(14, 8),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Left,
         };
         button.Click += (_, _) => Choose(choice);
+        RowState.AttachHover(button, hovered =>
+            button.Background = hovered ? UiTheme.Story.ChoiceHover : UiTheme.Story.ChoiceSurface);
         return button;
     }
 

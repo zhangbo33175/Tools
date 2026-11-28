@@ -290,8 +290,7 @@ public partial class MainWindow : Window
         }
 
         Canvas.Select(null);
-        Canvas.Refresh();
-        Canvas.NotifyDocumentChanged();
+        Canvas.CommitEdit();
         BuildCollectiblePanelList();
         SetMessage($"已清空 {removed} 个收集物；面板素材与目标数量保留。");
     }
@@ -314,7 +313,7 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            SetMessageError($"打开添加收集向导失败：{error.Message}");
+            SetMessageError(UiFeedback.Failed("打开添加收集向导", error));
             return;
         }
 

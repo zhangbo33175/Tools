@@ -94,7 +94,7 @@ public sealed class MapConfigWindow : Window
         _hintLabel = new TextBlock
         {
             Text = "基线步长下限 10：八层基线按 0 / 步长 / 2·步长 … 等差拉开，改完点「刷新层级」：先重分析遮挡，再重排现有实例",
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             Foreground = UiTheme.TextSecondary,
             IsVisible = false,
             TextWrapping = TextWrapping.NoWrap,
@@ -158,21 +158,17 @@ public sealed class MapConfigWindow : Window
     /// <summary>基线步长行（对应 uxml 的 <c>step-row</c>）。</summary>
     private Control BuildBaselineRow()
     {
+        // 这一行是「定宽数字框 + 右侧说明文字」，与其他路径行不同：
+        // 数字框按内容定宽，说明文字吃掉剩余宽度，所以保持 Auto,* 两列，不复用 FieldRow。
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions($"{LabelWidth},Auto,*") };
-        grid.Children.Add(Label("基线步长："));
+        grid.Children.Add(UiFactory.FieldLabel("基线步长：", 12, UiTheme.TextPrimary, HorizontalAlignment.Right));
 
         _baselineBox.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(_baselineBox, 1);
         grid.Children.Add(_baselineBox);
 
-        var hint = new TextBlock
-        {
-            Text = "相邻显示层 SortOrder 基线间距",
-            FontSize = 11,
-            Foreground = UiTheme.TextSecondary,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(10, 0, 0, 0),
-        };
+        var hint = UiFactory.HintText("相邻显示层 SortOrder 基线间距", 11, wrap: false, margin: new Thickness(10, 0, 0, 0));
+        hint.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(hint, 2);
         grid.Children.Add(hint);
 
@@ -208,13 +204,8 @@ public sealed class MapConfigWindow : Window
 
     private void AddPathRow(StackPanel host, string label, bool file, string value)
     {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions($"{LabelWidth},*,Auto") };
-        grid.Children.Add(Label(label));
-
         var box = Field(value);
         box.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumn(box, 1);
-        grid.Children.Add(box);
 
         var field = new PathField(box, file);
         _pathFields.Add(field);
@@ -222,32 +213,23 @@ public sealed class MapConfigWindow : Window
         var browse = SmallButton("浏览…", BrowseButtonWidth);
         browse.Margin = new Thickness(8, 0, 0, 0);
         browse.Click += async (_, _) => await PickPathAsync(field);
-        Grid.SetColumn(browse, 2);
-        grid.Children.Add(browse);
 
-        host.Children.Add(grid);
+        host.Children.Add(UiFactory.FieldRowWithTrailing(label, box, browse, RowSkin, UiTheme.TextPrimary));
     }
 
-    private static TextBlock Label(string text) => new()
-    {
-        Text = text,
-        FontSize = 12,
-        Foreground = UiTheme.TextPrimary,
-        HorizontalAlignment = HorizontalAlignment.Right,
-        VerticalAlignment = VerticalAlignment.Center,
-        Margin = new Thickness(0, 0, 8, 0),
-    };
+    /// <summary>配置窗字段行尺寸档：标签列宽对齐，12 字号、右对齐收贴控件。</summary>
+    private static readonly UiFactory.FieldRowSkin RowSkin = new(LabelWidth);
 
-    private static Button SmallButton(string text, double width) => new()
-    {
-        Content = text,
-        Width = width,
-        Height = FieldHeight,
-        FontSize = 12,
-        Padding = new Thickness(0),
-        HorizontalContentAlignment = HorizontalAlignment.Center,
-        VerticalContentAlignment = VerticalAlignment.Center,
-    };
+    /// <summary>配置窗小按钮尺寸档：高度与输入框一致、左右内边距为 0，宽度由调用方按用途给。</summary>
+    private static readonly UiFactory.ActionSkin SmallButtonSkin =
+        new(FieldHeight, UiMetrics.ButtonCornerRadius, 0, FontSize: 12);
+
+    /// <summary>配置窗小按钮：中性档，底色与描边沿用全局按钮样式。</summary>
+    /// <param name="text">按钮文案。</param>
+    /// <param name="width">定宽。</param>
+    /// <returns>按钮。</returns>
+    private static Button SmallButton(string text, double width) =>
+        UiFactory.ActionButton(text, UiFactory.ActionTone.Neutral, SmallButtonSkin with { Width = width });
 
     /// <summary>统一输入框：12px、26 高、白底细边、圆角 2。</summary>
     /// <param name="value">初始文本。</param>
@@ -256,7 +238,7 @@ public sealed class MapConfigWindow : Window
     {
         Text = value,
         Height = FieldHeight,
-        FontSize = 12,
+        FontSize = UiMetrics.FontTitle,
         Padding = new Thickness(6, 2),
         CornerRadius = new CornerRadius(2),
         Background = UiTheme.Card,

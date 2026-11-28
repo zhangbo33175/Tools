@@ -64,6 +64,7 @@ internal static class ItemRowMapper
         row.Icon = Get(cells, columns, ItemFieldNames.Icon);
         row.ResName = Get(cells, columns, ItemFieldNames.ResName);
         row.TemplateName = Get(cells, columns, ItemFieldNames.TemplateName);
+        row.DisplayName = Get(cells, columns, ItemFieldNames.DisplayName);
         row.AnimName = Get(cells, columns, ItemFieldNames.AnimName) is { Length: > 0 } anim ? anim : "Idle";
         row.Loop = TableTextFormat.ParseBool(Get(cells, columns, ItemFieldNames.Loop), true);
         row.Speed = TableTextFormat.ParseNumber(Get(cells, columns, ItemFieldNames.Speed), 1.0);

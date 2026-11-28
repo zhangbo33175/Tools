@@ -60,11 +60,8 @@ public sealed partial class ResourceOrganizePanel : UserControl
 
     private static readonly IBrush PanelBorderBrush = UiTheme.PanelBorder;
 
-    /// <summary>页面里外层卡片的圆角，与全局卡片语言一致（卡片 8）。</summary>
-    private const double PanelCornerRadius = 8.0;
-
     /// <summary>分类筛选按钮各自的圆角，与全局按钮语言一致（按钮 5）。</summary>
-    private const double FilterButtonCornerRadius = 5.0;
+    private const double FilterButtonCornerRadius = UiMetrics.ButtonCornerRadius;
 
     private static readonly string[] FilterNames = ResourceCategories.FilterNames;
 
@@ -145,7 +142,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private readonly TextBlock _csvInfoText = new()
     {
         Foreground = UiTheme.InfoText,
-        FontSize = 11,
+        FontSize = UiMetrics.FontBody,
         TextWrapping = TextWrapping.Wrap,
         Margin = new Thickness(0, 4, 0, 0),
     };

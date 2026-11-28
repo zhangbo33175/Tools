@@ -124,9 +124,8 @@ internal static class CsvTableReader
 /// <summary>CSV 配置表的写回（表头原样 + 数据行按列回写）。</summary>
 internal static class CsvTableWriter
 {
-    public static bool Write(ItemTableFile file, out string error)
-    {
-        try
+    public static bool Write(ItemTableFile file, out string error) =>
+        ServiceOutcome.Run(() =>
         {
             var builder = new StringBuilder();
             foreach (var header in file.HeaderLines)
@@ -143,15 +142,8 @@ internal static class CsvTableWriter
             FileSystemIo.EnsureParentDirectory(file.Path);
 
             FileSystemIo.WriteText(file.Path, builder.ToString());
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-    }
+            return null;
+        }, out error);
 }
 
 #endregion

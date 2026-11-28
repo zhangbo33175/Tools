@@ -72,14 +72,14 @@ public sealed partial class AnimationPreviewWindow : Window
         };
 
         _listCountText.Text = "0";
-        _listCountText.FontSize = 10;
+        _listCountText.FontSize = UiMetrics.FontCaption;
         _listCountText.Foreground = UiTheme.Accent;
         _listCountText.VerticalAlignment = VerticalAlignment.Center;
 
         var countBadge = new Border
         {
             Background = UiTheme.PreviewAccentSoft,
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Thickness(7, 1),
             VerticalAlignment = VerticalAlignment.Center,
             Child = _listCountText,
@@ -139,7 +139,7 @@ public sealed partial class AnimationPreviewWindow : Window
         _canvasTitle.TextTrimming = TextTrimming.CharacterEllipsis;
 
         _canvasSubtitle.Text = "从左侧列表选择一个物体";
-        _canvasSubtitle.FontSize = 11;
+        _canvasSubtitle.FontSize = UiMetrics.FontBody;
         _canvasSubtitle.Foreground = UiTheme.PreviewHint;
         _canvasSubtitle.Margin = new Thickness(0, 1, 0, 0);
         _canvasSubtitle.TextTrimming = TextTrimming.CharacterEllipsis;
@@ -151,7 +151,7 @@ public sealed partial class AnimationPreviewWindow : Window
         _timeText.VerticalAlignment = VerticalAlignment.Center;
 
         _speedText.Text = FormatSpeed(1.0);
-        _speedText.FontSize = 11;
+        _speedText.FontSize = UiMetrics.FontBody;
         _speedText.Foreground = UiTheme.PreviewHint;
         _speedText.VerticalAlignment = VerticalAlignment.Center;
 
@@ -189,13 +189,7 @@ public sealed partial class AnimationPreviewWindow : Window
         Grid.SetColumn(playback, 1);
         top.Children.Add(playback);
 
-        var canvasBorder = new Border
-        {
-            Background = UiTheme.PreviewView.Stage,
-            CornerRadius = new CornerRadius(6),
-            ClipToBounds = true,
-            Child = _canvas,
-        };
+        var canvasBorder = UiFactory.CanvasStage(_canvas);
 
         var pane = new Grid
         {
@@ -299,7 +293,7 @@ public sealed partial class AnimationPreviewWindow : Window
         stack.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.Accent,
             Margin = new Thickness(0, 0, 0, 2),
@@ -314,7 +308,7 @@ public sealed partial class AnimationPreviewWindow : Window
             row.Children.Add(new TextBlock
             {
                 Text = label,
-                FontSize = 11,
+                FontSize = UiMetrics.FontBody,
                 Foreground = UiTheme.PreviewHint,
                 Margin = new Thickness(0, 1, 0, 0),
                 VerticalAlignment = VerticalAlignment.Top,
@@ -336,7 +330,7 @@ public sealed partial class AnimationPreviewWindow : Window
         value.VerticalAlignment = VerticalAlignment.Top;
         if (monospace)
         {
-            value.FontFamily = new FontFamily("Consolas");
+            value.FontFamily = UiFonts.Mono;
         }
     }
 

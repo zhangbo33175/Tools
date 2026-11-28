@@ -42,7 +42,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "第一步 · 收集规模",
             Foreground = UiTheme.WizardAccent,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             FontWeight = FontWeight.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,
         });
@@ -50,7 +50,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "之后仍可在左侧「收集物」切页调整",
             Foreground = UiTheme.PreviewHint,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(hint, 1);
@@ -79,6 +79,11 @@ public sealed partial class CollectibleWizardWindow : Window
             Spacing = 12,
             VerticalAlignment = VerticalAlignment.Center,
         };
+        // 窗口压到小的内容高度时，右栏（字段卡 + 底部提示条）会比卡片本身高；
+        // 以前既不裁剪也不滚动，提示条就直接画到卡片外面。这里把内容裁进卡片。
+        // 高度下限由 WizardMinHeight 保证，所以正常尺寸下裁不到内容，只有卡片四角
+        // 描边的抗锯齿会被削掉半像素。
+        form.ClipToBounds = true;
         form.Child = formStack;
         Grid.SetColumn(form, 1);
         body.Children.Add(form);
@@ -87,7 +92,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "收集规模",
             Foreground = UiTheme.WizardTitle,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             FontWeight = FontWeight.SemiBold,
         });
         formStack.Children.Add(new TextBlock
@@ -102,7 +107,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "数量用于随机生成和进度统计，之后仍可手动增删。",
             Foreground = UiTheme.PreviewHint,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             TextWrapping = TextWrapping.Wrap,
         });
 
@@ -122,7 +127,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "随机生成时使用的收集物总数，范围 1–9999。",
             Foreground = UiTheme.PreviewHint,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             TextWrapping = TextWrapping.Wrap,
         });
         _totalBox.Margin = new Avalonia.Thickness(0, 2, 0, 0);
@@ -150,7 +155,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "「物件下」会被建筑、树、道具挡住；「物件上」始终盖在普通物件之上、前景之下。",
             Foreground = UiTheme.PreviewHint,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             TextWrapping = TextWrapping.Wrap,
         });
         formStack.Children.Add(fields);
@@ -160,14 +165,14 @@ public sealed partial class CollectibleWizardWindow : Window
             Background = UiTheme.WizardAccentSoft,
             BorderBrush = UiTheme.WizardAccent,
             BorderThickness = new Avalonia.Thickness(3, 0, 0, 0),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Avalonia.Thickness(12, 9),
         };
         tip.Child = new TextBlock
         {
             Text = "完成后左侧会出现「收集物」切页；点素材再点地图，或直接把素材拖进地图，也可一次随机补齐。",
             Foreground = UiTheme.WizardInfoText,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             TextWrapping = TextWrapping.Wrap,
         };
         formStack.Children.Add(tip);

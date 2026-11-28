@@ -93,7 +93,7 @@ public sealed class AnimationPreviewCanvas : Control
     private const double PathLabelOffsetY = 18.0;
 
     /// <summary>路径点编号字号。</summary>
-    private const double PathLabelFontSize = 11.0;
+    private const double PathLabelFontSize = UiMetrics.FontBody;
 
     /// <summary>脚底阴影宽度。</summary>
     private const double FootShadowWidth = 36.0;

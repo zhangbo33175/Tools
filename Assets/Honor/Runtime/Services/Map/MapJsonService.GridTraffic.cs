@@ -25,14 +25,19 @@ public static partial class MapJsonService
         var cells = new List<CellPayload>();
         var seen = new HashSet<(int, int)>();
 
-        if (config.DrawShape == DrawShapes.Diamond)
+        if (DrawShapes.IsDiamond(config.DrawShape) || DrawShapes.IsHex(config.DrawShape))
         {
+            var hex = DrawShapes.IsHex(config.DrawShape);
             var cell = config.GridSize;
             foreach (var item in config.Objects)
             {
                 var bounds = item.Bounds;
-                var topLeft = DiamondLattice.IndexAt(bounds.Left, bounds.Top, cell);
-                var bottomRight = DiamondLattice.IndexAt(bounds.Right, bounds.Bottom, cell);
+                var topLeft = hex
+                    ? HexLattice.IndexAt(bounds.Left, bounds.Top, cell)
+                    : DiamondLattice.IndexAt(bounds.Left, bounds.Top, cell);
+                var bottomRight = hex
+                    ? HexLattice.IndexAt(bounds.Right, bounds.Bottom, cell)
+                    : DiamondLattice.IndexAt(bounds.Right, bounds.Bottom, cell);
                 var minCol = (int)Math.Min(topLeft.X, bottomRight.X) - 1;
                 var maxCol = (int)Math.Max(topLeft.X, bottomRight.X) + 1;
                 var minRow = (int)Math.Min(topLeft.Y, bottomRight.Y) - 1;
@@ -42,7 +47,9 @@ public static partial class MapJsonService
                 {
                     for (var row = minRow; row <= maxRow; row++)
                     {
-                        var center = DiamondLattice.Center(col, row, cell);
+                        var center = hex
+                            ? HexLattice.Center(col, row, cell)
+                            : DiamondLattice.Center(col, row, cell);
                         if (!bounds.Contains(center) || !seen.Add((col, row)))
                         {
                             continue;

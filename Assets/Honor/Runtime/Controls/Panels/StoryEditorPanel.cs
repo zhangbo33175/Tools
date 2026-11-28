@@ -14,6 +14,7 @@ using System.Linq;
 using Avalonia.Controls;
 using MapEditorTool.Models;
 using MapEditorTool.Services;
+using MapEditorTool.Controls;
 
 namespace MapEditorTool.Controls;
 
@@ -348,7 +349,7 @@ public sealed partial class StoryEditorPanel : UserControl
         }
         catch (Exception ex)
         {
-            SetMessage($"剧情保存失败：{ex.Message}");
+            SetMessage(UiFeedback.Failed("剧情保存", ex));
             return string.Empty;
         }
     }

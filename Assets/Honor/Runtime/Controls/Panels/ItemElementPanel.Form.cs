@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -91,31 +92,31 @@ public sealed partial class ItemElementPanel : UserControl
         _heightBox = Text(NumberWidth);
         _layerKeyBox = Combo(new[] { TemplateLayers.FollowType }.Concat(TemplateLayers.DisplayChoices).ToList());
         _animBox = Text(FieldWidth);
-        _loopBox = Check("循环播放");
+        _loopBox = Switch("循环播放");
         _speedBox = Text(NumberWidth);
-        _interactableBox = Check("可交互");
+        _interactableBox = Switch("可交互");
         _interactTypeBox = Combo(TemplateInteractTypes.DisplayChoices);
         _bubbleTextBox = Text(FieldWidth);
         _bubbleIdBox = Text(NumberWidth);
         _sortOrderBox = Text(NumberWidth);
         _facingBox = Combo(FacingNames.DisplayChoices);
-        _collisionBox = Check("启用碰撞");
-        _shadowBox = Check("显示阴影");
+        _collisionBox = Switch("碰撞");
+        _shadowBox = Switch("阴影");
         _displayLayerBox = Combo(TemplateLayers.DisplayChoices.ToList());
         _trafficBox = Combo(TemplateTrafficCategories.DisplayChoices);
-        _collectibleBox = Check("可收集");
+        _collectibleBox = Switch("可收集");
         _respawnBox = Text(NumberWidth);
-        _ySortBox = Check("自动深度排序");
+        _ySortBox = Switch("启用 YSort");
         _ySortOffsetBox = Text(NumberWidth);
-        _movableBox = Check("允许移动");
+        _movableBox = Switch("可移动");
         _moveAnimBox = Text(FieldWidth);
         _loopRestartBox = Text(NumberWidth);
-        _hideOffMapBox = Check("自动隐藏");
-        _teleportBox = Check("启用传送门");
+        _hideOffMapBox = Switch("离开地图隐藏");
+        _teleportBox = Switch("启用传送门");
         _teleportSceneBox = Text(FieldWidth);
         _teleportXBox = Text(NumberWidth);
         _teleportYBox = Text(NumberWidth);
-        _nineSliceBox = Check("需要九宫格");
+        _nineSliceBox = Switch("启用九宫格");
         _nineLeftBox = Text(NumberWidth);
         _nineRightBox = Text(NumberWidth);
         _nineTopBox = Text(NumberWidth);
@@ -134,15 +135,15 @@ public sealed partial class ItemElementPanel : UserControl
         AddGroup(0, "基础信息", content =>
         {
             content.Children.Add(Row(("ID：", _idBox), ("类型：", _typeBox)));
-            content.Children.Add(Row(("模板名称：", _nameBox), ("ResName：", _resNameBox)));
-            content.Children.Add(Row(("Icon：", _iconBox), ("图层归属：", _layerKeyBox)));
+            content.Children.Add(Row(("模板名称：", _nameBox), ("资源名：", _resNameBox)));
+            content.Children.Add(Row(("图片：", _iconBox), ("图层归属：", _layerKeyBox)));
             content.Children.Add(Row(("占格宽：", _widthBox), ("占格高：", _heightBox)));
         });
 
         AddGroup(1, "动画设置", content =>
         {
             content.Children.Add(Row(("默认动画：", _animBox)));
-            content.Children.Add(Row(("循环：", _loopBox), ("播放速度：", _speedBox)));
+            content.Children.Add(Row(("循环播放：", BoolCell(_loopBox)), ("播放速度：", _speedBox)));
         });
 
         _nineSliceFields = new StackPanel { Spacing = GroupContentSpacing };
@@ -159,23 +160,23 @@ public sealed partial class ItemElementPanel : UserControl
 
         AddGroup(1, "九宫格设置", content =>
         {
-            content.Children.Add(Row(("九宫格：", _nineSliceBox)));
+            content.Children.Add(Row(("启用九宫格：", BoolCell(_nineSliceBox))));
             content.Children.Add(_nineSlicePreview);
             content.Children.Add(_nineSliceFields);
         });
 
         AddGroup(0, "交互设置", content =>
         {
-            content.Children.Add(Row(("可交互：", _interactableBox)));
+            content.Children.Add(Row(("可交互：", BoolCell(_interactableBox))));
             content.Children.Add(Row(("交互类型：", _interactTypeBox)));
             content.Children.Add(Row(("对话气泡：", _bubbleTextBox)));
-            content.Children.Add(Row(("气泡ID：", _bubbleIdBox)));
+            content.Children.Add(Row(("气泡 ID：", _bubbleIdBox)));
         });
 
         AddGroup(1, "层级与碰撞", content =>
         {
             content.Children.Add(Row(("渲染层级：", _sortOrderBox), ("初始朝向：", _facingBox)));
-            content.Children.Add(Row(("碰撞：", _collisionBox), ("阴影：", _shadowBox)));
+            content.Children.Add(Row(("碰撞：", BoolCell(_collisionBox)), ("阴影：", BoolCell(_shadowBox))));
             content.Children.Add(Row(("层级档：", _displayLayerBox)));
         });
 
@@ -186,28 +187,48 @@ public sealed partial class ItemElementPanel : UserControl
 
         AddGroup(0, "收集物设置", content =>
         {
-            content.Children.Add(RowUnit("是否收集物", _collectibleBox, "重生时间", _respawnBox, "秒"));
+            content.Children.Add(RowUnit("可收集", BoolCell(_collectibleBox), "重生时间", _respawnBox, "秒"));
         });
 
         AddGroup(1, "Y 坐标深度排序", content =>
         {
-            content.Children.Add(Row(("启用 YSort：", _ySortBox), ("偏移：", _ySortOffsetBox)));
+            content.Children.Add(Row(("启用 YSort：", BoolCell(_ySortBox)), ("排序偏移：", _ySortOffsetBox)));
         });
 
         AddGroup(0, "移动与循环", content =>
         {
-            content.Children.Add(RowUnit("可移动", _movableBox, "重启延迟", _loopRestartBox, "秒"));
+            content.Children.Add(RowUnit("可移动", BoolCell(_movableBox), "重启延迟", _loopRestartBox, "秒"));
             content.Children.Add(Row(("移动动画：", _moveAnimBox)));
-            content.Children.Add(Row(("离开地图隐藏：", _hideOffMapBox)));
+            content.Children.Add(Row(("离开地图隐藏：", BoolCell(_hideOffMapBox))));
         });
 
         AddGroup(1, "传送门设置", content =>
         {
-            content.Children.Add(Row(("是否传送门：", _teleportBox), ("目标场景：", _teleportSceneBox)));
-            content.Children.Add(Row(("目标X：", _teleportXBox), ("目标Y：", _teleportYBox)));
+            content.Children.Add(Row(("启用传送门：", BoolCell(_teleportBox)), ("目标场景：", _teleportSceneBox)));
+            content.Children.Add(Row(("目标 X：", _teleportXBox), ("目标 Y：", _teleportYBox)));
         });
 
+        ApplyFieldTips();
         BindFields();
+    }
+
+    /// <summary>
+    /// 给中文化标签的字段补一条悬浮说明：中文负责「看得懂」，提示里保留数据列英文名与口径，
+    /// 方便策划与程序对照配置表，不必再去翻代码。
+    /// </summary>
+    private void ApplyFieldTips()
+    {
+        ToolTip.SetTip(_idBox, "TemplateId：模板唯一编号，由表内序列维护");
+        ToolTip.SetTip(_nameBox, "TemplateName：写入配置表「模板名称」列，也是列表标题");
+        ToolTip.SetTip(_resNameBox, "ResName：模板对应的预制体资源名");
+        ToolTip.SetTip(_iconBox, "Icon：模板使用的图片文件名，只读，随资源绑定");
+        ToolTip.SetTip(_widthBox, "占格宽：以地图格子为单位的默认宽度");
+        ToolTip.SetTip(_heightBox, "占格高：以地图格子为单位的默认高度");
+        ToolTip.SetTip(_sortOrderBox, "渲染层级：同一图层内的绘制顺序，数值越大越靠上");
+        ToolTip.SetTip(_displayLayerBox, "层级档：决定该元件归入哪个绘制层档");
+        ToolTip.SetTip(_respawnBox, "重生时间：收集后被拾取到再次出现的间隔，0 表示不重生");
+        ToolTip.SetTip(_ySortOffsetBox, "排序偏移：参与 Y 深度排序时的额外偏移像素");
+        ToolTip.SetTip(_loopRestartBox, "重启延迟：循环移动结束后重新出发的等待秒数");
     }
 
     /// <summary>把一张分组卡片交替放进左 / 右栏，宽窗口里两栏并排、窄窗口仍可纵向滚动。</summary>
@@ -248,14 +269,8 @@ public sealed partial class ItemElementPanel : UserControl
         };
 
         // 标题左侧一根竖条，比纯文字标题更容易看出分组边界
-        var accentBar = new Border
-        {
-            Width = GroupAccentWidth,
-            Height = GroupAccentHeight,
-            CornerRadius = new CornerRadius(GroupAccentRadius),
-            Background = UiTheme.AccentDark,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
+        // 宽度与倒角走统一的标题竖条定义，这里只声明高度与颜色
+        var accentBar = UiFactory.AccentBar(UiTheme.AccentDark, GroupAccentHeight, marginRight: 0);
 
         var headerContent = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*") };
         headerContent.Children.Add(arrow);
@@ -316,15 +331,16 @@ public sealed partial class ItemElementPanel : UserControl
 
     private Control Row(params (string Label, Control Control)[] cells)
     {
-        // 标签按内容宽度自适应、字段吃掉剩余宽度：卡片拉宽时输入框跟着变宽，
-        // 不会像固定像素列那样右边空出一大块
+        // 双列行按内容宽度自适应、单列行固定标签列宽：
+        // 单列字段的取值左边缘因此上下对齐，不会因为「可交互 / 交互类型」字数不同而参差
         var grid = new Grid
         {
             ColumnSpacing = 8,
         };
         for (var index = 0; index < cells.Length; index++)
         {
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(
+                cells.Length == 1 ? new GridLength(LabelWidth) : GridLength.Auto));
             grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
         }
 
@@ -355,7 +371,7 @@ public sealed partial class ItemElementPanel : UserControl
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions(
-                $"Auto,{NumberWidth},{PairGap},Auto,{NumberWidth},Auto,*"),
+                $"{LabelWidth},{NumberWidth},{PairGap},Auto,{NumberWidth},Auto,*"),
             Margin = new Thickness(0),
         };
 
@@ -445,22 +461,57 @@ public sealed partial class ItemElementPanel : UserControl
         BorderThickness = new Thickness(FieldBorderThickness),
     };
 
-    /// <summary>表单里的勾选框：方框与文字之间固定留一个字的空隙，避免「☑可交互」糊成一团。</summary>
-    /// <param name="text">勾选框右侧文字。</param>
-    /// <returns>勾选框控件。</returns>
-    private static CheckBox Check(string text) => new()
+    /// <summary>布尔字段的勾选框本体：不带可见文字，状态由 <see cref="BoolCell"/> 在右侧配状态词表达。</summary>
+    /// <param name="automationName">无障碍与自动化定位用的字段名（视觉上不显示）。</param>
+    /// <returns>空白勾选框控件。</returns>
+    private static CheckBox Switch(string automationName)
     {
-        Content = new TextBlock
+        var box = new CheckBox
         {
-            Text = text,
-            Margin = new Thickness(CheckLabelGap, 0, 0, 0),
-        },
-        MinWidth = 0,
-        Padding = new Thickness(0),
-        FontSize = FormFontSize,
-        VerticalAlignment = VerticalAlignment.Center,
-        Foreground = UiTheme.TextPrimary,
-    };
+            MinWidth = 0,
+            Padding = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        AutomationProperties.SetName(box, automationName);
+        return box;
+    }
+
+    /// <summary>
+    /// 布尔字段的统一呈现：勾选框 + 右侧状态词（已开启 / 已关闭）。
+    /// 左侧标签只写字段名，状态单独表达，避免出现「可交互 ☑ 可交互」这类重复文案。
+    /// </summary>
+    /// <param name="box">已创建并绑定好的勾选框。</param>
+    /// <returns>横向排列的开关单元。</returns>
+    private static Control BoolCell(CheckBox box)
+    {
+        var state = new TextBlock
+        {
+            FontSize = FormFontSize,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        void Sync() => ApplyBoolState(state, box.IsChecked == true);
+
+        box.IsCheckedChanged += (_, _) => Sync();
+        Sync();
+
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = CheckLabelGap,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children = { box, state },
+        };
+    }
+
+    /// <summary>按开关状态刷新状态词文字与颜色（开启走主色，关闭走次级灰）。</summary>
+    /// <param name="state">状态文字控件。</param>
+    /// <param name="enabled">是否开启。</param>
+    private static void ApplyBoolState(TextBlock state, bool enabled)
+    {
+        state.Text = enabled ? BoolOnText : BoolOffText;
+        state.Foreground = enabled ? UiTheme.AccentDark : UiTheme.TextSecondary;
+    }
 
     #endregion
 }

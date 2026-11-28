@@ -49,11 +49,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
     {
         foreach (var (name, button) in _filterButtons)
         {
-            var active = name == _filter;
-            button.Background = active ? UiTheme.PreviewAccentSoft : UiTheme.Card;
-            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
-            button.BorderBrush = active ? UiTheme.Accent : UiTheme.PanelBorder;
-            button.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
+            UiFactory.ApplyToggle(button, name == _filter, UiTheme.Toggle.Filter);
         }
     }
 
@@ -370,7 +366,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         {
             Text = BuildResourceDescription(entry),
             Foreground = UiTheme.TextSecondary,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
@@ -726,7 +722,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
         {
             Text = "选中左侧资源后在此预览",
             Foreground = UiTheme.PreviewMuted,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         });

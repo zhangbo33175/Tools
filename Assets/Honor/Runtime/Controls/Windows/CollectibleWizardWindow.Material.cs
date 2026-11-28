@@ -35,7 +35,7 @@ public sealed partial class CollectibleWizardWindow : Window
         DetachFromParent(_candidatePanel);
         DetachFromParent(_selectedCountText);
 
-        var card = UiFactory.PaneCard(cornerRadius: 16, padding: 20);
+        var card = UiFactory.PaneCard(cornerRadius: 12, padding: 18);
         var root = new Grid
         {
             RowDefinitions = new RowDefinitions("Auto,Auto,*"),
@@ -52,7 +52,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "第二步 · 选择素材",
             Foreground = UiTheme.WizardAccent,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             FontWeight = FontWeight.SemiBold,
         });
         headStack.Children.Add(new TextBlock
@@ -66,7 +66,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = $"最多 {MaxKinds} 种；已选内容会保留在左侧「收集物」切页。",
             Foreground = UiTheme.PreviewHint,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
         });
         head.Children.Add(headStack);
 
@@ -75,12 +75,12 @@ public sealed partial class CollectibleWizardWindow : Window
             Background = UiTheme.WizardAccentSoft,
             BorderBrush = UiTheme.WizardAccent,
             BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Avalonia.Thickness(12, 5),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Avalonia.Thickness(11, 4),
             VerticalAlignment = VerticalAlignment.Center,
         };
         _selectedCountText.Foreground = UiTheme.WizardTitle;
-        _selectedCountText.FontSize = 12;
+        _selectedCountText.FontSize = UiMetrics.FontTitle;
         _selectedCountText.FontWeight = FontWeight.SemiBold;
         _selectedCountText.VerticalAlignment = VerticalAlignment.Center;
         countBadge.Child = _selectedCountText;
@@ -89,18 +89,20 @@ public sealed partial class CollectibleWizardWindow : Window
         root.Children.Add(head);
 
         var slotCard = UiFactory.PaneCard(
-            background: UiTheme.WizardAccentSoft,
-            border: UiTheme.WizardAccent,
+            background: UiTheme.WizardSlotSurface,
+            border: UiTheme.WizardEmptySlotBorder,
             cornerRadius: 12,
             padding: 12);
         var slotStack = new StackPanel { Spacing = 8 };
         slotStack.Children.Add(BuildSectionHead("已选素材", "点击缩略图右上角 × 可移除", UiTheme.WizardTitle, UiTheme.WizardInfoText));
 
         _slotPanel.Orientation = Orientation.Horizontal;
+        // 槽位区在默认宽度不溢出，只有窗口压到最小宽度才需要横向平移；
+        // 这里隐藏原生横条（它在 6px 高时基本拖不动），保留滚轮横向滚动
         var slotScroll = new ScrollViewer
         {
             Content = _slotPanel,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             MaxHeight = 76,
         };
@@ -121,15 +123,23 @@ public sealed partial class CollectibleWizardWindow : Window
         gridLayout.Children.Add(BuildSectionHead("素材库", "点击卡片加入或取消选择", UiTheme.PreviewText, UiTheme.PreviewHint));
 
         _candidatePanel.Orientation = Orientation.Horizontal;
-        var gridScroll = new ScrollViewer
+
+        // 素材库是长列表，原生细条几乎抓不住；与左侧列表一样改用固定 14px 命中区的经典滚动条
+        var gridScroll = UiFactory.VerticalScroll(
+            _candidatePanel,
+            showScrollBar: false,
+            padding: new Avalonia.Thickness(0, 2, 6, 0));
+        var gridArea = new Grid
         {
-            Content = _candidatePanel,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Padding = new Avalonia.Thickness(0, 2, 0, 0),
+            ColumnDefinitions = new ColumnDefinitions($"*,{ClassicScrollBar.BarWidth}"),
         };
-        Grid.SetRow(gridScroll, 1);
-        gridLayout.Children.Add(gridScroll);
+        gridArea.Children.Add(gridScroll);
+        var gridBar = new ClassicScrollBar { Target = gridScroll };
+        Grid.SetColumn(gridBar, 1);
+        gridArea.Children.Add(gridBar);
+
+        Grid.SetRow(gridArea, 1);
+        gridLayout.Children.Add(gridArea);
         gridCard.Child = gridLayout;
         Grid.SetRow(gridCard, 2);
         root.Children.Add(gridCard);
@@ -154,14 +164,14 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = title,
             Foreground = titleBrush,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
             FontWeight = FontWeight.SemiBold,
         });
         var hintText = new TextBlock
         {
             Text = hint,
             Foreground = hintBrush,
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(hintText, 1);
@@ -199,19 +209,19 @@ public sealed partial class CollectibleWizardWindow : Window
         var remove = new Button
         {
             Content = "×",
-            Width = 20,
-            Height = 20,
-            MinWidth = 20,
-            MinHeight = 20,
+            Width = 18,
+            Height = 18,
+            MinWidth = 18,
+            MinHeight = 18,
             Padding = new Avalonia.Thickness(0),
-            FontSize = 12,
+            FontSize = UiMetrics.FontCaption,
             Background = UiTheme.WizardDanger,
             Foreground = UiTheme.White,
             BorderThickness = new Avalonia.Thickness(0),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Avalonia.Thickness(0, -2, -2, 0),
-            CornerRadius = new CornerRadius(10),
+            Margin = new Avalonia.Thickness(0, -3, -3, 0),
+            CornerRadius = new CornerRadius(9),
         };
         ToolTip.SetTip(remove, "从已选移除");
         remove.Click += (_, _) =>
@@ -231,7 +241,7 @@ public sealed partial class CollectibleWizardWindow : Window
             Background = UiTheme.WizardAccentSoft,
             BorderBrush = UiTheme.WizardAccent,
             BorderThickness = new Avalonia.Thickness(2),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Avalonia.Thickness(6),
             Margin = new Avalonia.Thickness(0, 0, 6, 0),
             Child = content,
@@ -244,16 +254,16 @@ public sealed partial class CollectibleWizardWindow : Window
     {
         Width = 64,
         Height = 64,
-        Background = UiTheme.PreviewSlot,
+        Background = UiTheme.WizardSlotSurface,
         BorderBrush = UiTheme.WizardEmptySlotBorder,
         BorderThickness = new Avalonia.Thickness(1),
-        CornerRadius = new CornerRadius(8),
+        CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
         Margin = new Avalonia.Thickness(0, 0, 6, 0),
         Child = new TextBlock
         {
             Text = "＋",
             Foreground = UiTheme.WizardEmptySlotHint,
-            FontSize = 20,
+            FontSize = 16,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         },
@@ -267,7 +277,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = template.TemplateName,
             Foreground = selected ? UiTheme.WizardTitle : UiTheme.PreviewText,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             FontWeight = selected ? FontWeight.SemiBold : FontWeight.Normal,
             TextAlignment = TextAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
@@ -299,7 +309,7 @@ public sealed partial class CollectibleWizardWindow : Window
             {
                 Text = "✓",
                 Foreground = UiTheme.White,
-                FontSize = 10,
+                FontSize = UiMetrics.FontCaption,
                 FontWeight = FontWeight.Bold,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -315,9 +325,9 @@ public sealed partial class CollectibleWizardWindow : Window
             Width = 100,
             MinHeight = 112,
             Background = selected ? UiTheme.WizardAccentSoft : UiTheme.Card,
-            BorderBrush = selected ? UiTheme.WizardAccent : UiTheme.Divider,
+            BorderBrush = selected ? UiTheme.WizardAccent : UiTheme.WizardCardBorder,
             BorderThickness = new Avalonia.Thickness(selected ? 2 : 1),
-            CornerRadius = new CornerRadius(11),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Avalonia.Thickness(6, 7),
             Margin = new Avalonia.Thickness(0, 0, 9, 9),
             HorizontalContentAlignment = HorizontalAlignment.Center,
@@ -326,6 +336,25 @@ public sealed partial class CollectibleWizardWindow : Window
             Content = content,
         };
         ToolTip.SetTip(button, selected ? "点击取消选择" : "点击加入已选");
+
+        // 悬停只换底色与描边，不改宽高，避免整片网格跟着抖；
+        // 悬停描边用淡青灰而不是强调色，避免和「已选中」的 2px 青边混淆
+        button.PointerEntered += (_, _) =>
+        {
+            if (!selected)
+            {
+                button.Background = UiTheme.WizardCardHover;
+                button.BorderBrush = UiTheme.WizardInfoBorder;
+            }
+        };
+        button.PointerExited += (_, _) =>
+        {
+            if (!selected)
+            {
+                button.Background = UiTheme.Card;
+                button.BorderBrush = UiTheme.WizardCardBorder;
+            }
+        };
         button.Click += (_, _) =>
         {
             var existing = _selected.FindIndex(item => item.TemplateId == template.TemplateId);
@@ -358,7 +387,7 @@ public sealed partial class CollectibleWizardWindow : Window
                 Width = size,
                 Height = size,
                 Background = UiTheme.WizardThumbSurface,
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
                 ClipToBounds = true,
                 Child = new Image
                 {
@@ -375,12 +404,12 @@ public sealed partial class CollectibleWizardWindow : Window
             Width = size,
             Height = size,
             Background = UiTheme.WizardThumbFallback,
-            CornerRadius = new CornerRadius(6),
+            CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
             Child = new TextBlock
             {
                 Text = "无图",
                 Foreground = UiTheme.PreviewHint,
-                FontSize = 10,
+                FontSize = UiMetrics.FontCaption,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             },

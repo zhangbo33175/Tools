@@ -52,7 +52,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Width = 46,
             Height = 46,
-            CornerRadius = new CornerRadius(14),
+            CornerRadius = new CornerRadius(ShellCornerRadius),
             Background = UiTheme.WizardAccentSoft,
             BorderBrush = UiTheme.WizardAccent,
             BorderThickness = new Avalonia.Thickness(1),
@@ -83,7 +83,7 @@ public sealed partial class CollectibleWizardWindow : Window
         {
             Text = "设定收集物规模，再从素材库挑选要在地图上出现的外观。",
             Foreground = UiTheme.PreviewHint,
-            FontSize = 12,
+            FontSize = UiMetrics.FontTitle,
         });
         brand.Children.Add(titleStack);
         header.Children.Add(brand);
@@ -93,7 +93,7 @@ public sealed partial class CollectibleWizardWindow : Window
             Background = UiTheme.WizardAccentSoft,
             BorderBrush = UiTheme.WizardAccent,
             BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new CornerRadius(16),
+            CornerRadius = new CornerRadius(BadgeCornerRadius),
             Padding = new Avalonia.Thickness(14, 7),
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -112,7 +112,7 @@ public sealed partial class CollectibleWizardWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         });
         _stepBadgeText.Foreground = UiTheme.WizardTitle;
-        _stepBadgeText.FontSize = 12;
+        _stepBadgeText.FontSize = UiMetrics.FontTitle;
         _stepBadgeText.FontWeight = FontWeight.SemiBold;
         _stepBadgeText.VerticalAlignment = VerticalAlignment.Center;
         badgeRow.Children.Add(_stepBadgeText);
@@ -137,7 +137,7 @@ public sealed partial class CollectibleWizardWindow : Window
         };
         statusRow.Children.Add(UiFactory.MarkerDot(UiTheme.WizardAccent));
         _statusText.Foreground = UiTheme.PreviewHint;
-        _statusText.FontSize = 12;
+        _statusText.FontSize = UiMetrics.FontTitle;
         _statusText.VerticalAlignment = VerticalAlignment.Center;
         _statusText.TextWrapping = TextWrapping.Wrap;
         statusRow.Children.Add(_statusText);
@@ -158,7 +158,7 @@ public sealed partial class CollectibleWizardWindow : Window
             Background = UiTheme.Card,
             BorderBrush = UiTheme.Divider,
             BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new CornerRadius(14),
+            CornerRadius = new CornerRadius(ShellCornerRadius),
             Padding = new Avalonia.Thickness(14, 10),
             Child = footerContent,
         };
@@ -167,6 +167,21 @@ public sealed partial class CollectibleWizardWindow : Window
 
         return root;
     }
+
+    /// <summary>底栏按钮高度。</summary>
+    private const double FooterButtonHeight = 36;
+
+    /// <summary>
+    /// 窗口最小高度。第一步右栏（字段卡 + 提示条）与第二步素材库都按卡片刚性排版，
+    /// 低于此高度就会有内容被挤出卡片或末行被切，故由内容反推得到。
+    /// </summary>
+    private const double WizardMinHeight = 740;
+
+    /// <summary>外壳卡片与品牌图标的圆角。</summary>
+    private const double ShellCornerRadius = 14;
+
+    /// <summary>步骤徽标胶囊的圆角。</summary>
+    private const double BadgeCornerRadius = 16;
 
     private readonly TextBlock _stepBadgeText = new();
     private StackPanel _footerButtons = null!;
@@ -259,36 +274,25 @@ public sealed partial class CollectibleWizardWindow : Window
         }
     }
 
-    private static Button MakeButton(string text, bool primary)
-    {
-        var button = new Button
-        {
-            Content = text,
-            MinWidth = 102,
-            Height = 36,
-            Padding = new Avalonia.Thickness(18, 0),
-            FontSize = 13,
-            CornerRadius = new CornerRadius(18),
-            BorderThickness = new Avalonia.Thickness(1),
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            VerticalContentAlignment = VerticalAlignment.Center,
-        };
-        if (primary)
-        {
-            button.Background = UiTheme.WizardAccent;
-            button.Foreground = UiTheme.White;
-            button.BorderBrush = UiTheme.WizardAccentDark;
-            button.FontWeight = FontWeight.SemiBold;
-        }
-        else
-        {
-            button.Background = UiTheme.Card;
-            button.Foreground = UiTheme.TextPrimary;
-            button.BorderBrush = UiTheme.Divider;
-        }
+    /// <summary>向导底栏胶囊按钮的尺寸档：36 高、18 圆角（高度一半即胶囊）、最小宽 102。</summary>
+    private static readonly UiFactory.ActionSkin FooterButtonSkin =
+        new(FooterButtonHeight, FooterButtonHeight / 2, 18, FontSize: 13, MinWidth: 102);
 
-        return button;
-    }
+    /// <summary>向导底栏按钮配色：主操作绿底白字，取消为白底细描边。</summary>
+    private static readonly UiFactory.ActionPalette FooterButtonPalette = new(
+        UiTheme.WizardAccent,
+        UiTheme.White,
+        UiTheme.WizardAccentDark,
+        UiTheme.Card,
+        UiTheme.TextPrimary,
+        UiTheme.Divider);
+
+    private static Button MakeButton(string text, bool primary) =>
+        UiFactory.ActionButton(
+            text,
+            primary ? UiFactory.ActionTone.Primary : UiFactory.ActionTone.Secondary,
+            FooterButtonSkin,
+            FooterButtonPalette);
 
     #endregion
 }

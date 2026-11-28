@@ -59,6 +59,7 @@ public partial class MainWindow : Window
 
             // 未选中实例时「交通」回到默认勾选，交通分组保持显示以便直接刷格
             PropTraffic.IsChecked = true;
+            ResetRoomFields();
             PropBandInfo.Text = string.Empty;
             PropBandInfoBox.IsVisible = false;
             PropSceneIndexBadge.IsVisible = false;
@@ -94,6 +95,8 @@ public partial class MainWindow : Window
         PropCollision.IsChecked = item.CollisionEnabled;
         PropShadow.IsChecked = item.ShadowEnabled;
         PropCollectible.IsChecked = item.IsCollectible;
+        PropSpanLevels.IsChecked = item.SpanLevels;
+        SyncRoomFields(item);
         PropTraffic.IsChecked = item.Interactable;
         PropBubble.Text = item.BubbleId.ToString(CultureInfo.InvariantCulture);
         PropDialogBubble.Text = item.DialogBubble;
@@ -335,6 +338,7 @@ public partial class MainWindow : Window
         PropCollision.IsChecked = false;
         PropShadow.IsChecked = false;
         PropCollectible.IsChecked = false;
+        PropSpanLevels.IsChecked = false;
         PropBubble.Text = string.Empty;
         PropDialogBubble.Text = string.Empty;
 
@@ -397,7 +401,7 @@ public partial class MainWindow : Window
         };
         var layer = LayerOrder.EffectiveLayer(item);
 
-        PropBandInfo.Text = $"{LayerBands.DisplayName(band)}（{source}）· {placement}";
+        PropBandInfo.Text = $"{(_config?.LevelName(item.Level) ?? $"{item.Level + 1}F")} · {LayerBands.DisplayName(band)}（{source}）· {placement}";
         PropBandOrderInfo.Text = $"层序兜底 sortOrder {item.SortOrder}（层基线 {orderBase} · 第 {slot} 档）";
         PropBandLayerInfo.Text = $"图层 {layer} · 显示层 {MapLayerKeys.DisplayName(layer)} · PSD 层 {item.Name} · {item.Width}×{item.Height} 格";
         PropBandInfoBox.IsVisible = true;
@@ -450,9 +454,18 @@ public partial class MainWindow : Window
         TrafficScroll.Offset = default;
     }
 
+    /// <summary>路径点行里需要跟着选中态单独刷新的控件；只在选中态变化时复用，不重建行。</summary>
+    /// <param name="Row">行外框，负责底色与左侧强调线。</param>
+    /// <param name="Label">序号文本，选中时改为强调色。</param>
+    /// <param name="Index">该行对应的路径点序号。</param>
+    private sealed record PathPointRowSlot(Border Row, TextBlock Label, int Index);
+
+    private readonly List<PathPointRowSlot> _pathPointRows = new();
+
     private void BuildPathList()
     {
         PathPointList.Children.Clear();
+        _pathPointRows.Clear();
 
         var item = Canvas.Selected;
         if (item is null)
@@ -473,59 +486,172 @@ public partial class MainWindow : Window
 
         for (int index = 0; index < item.PathPoints.Count; index++)
         {
-            var point = item.PathPoints[index];
-            var row = new Grid
-            {
-                Margin = new Avalonia.Thickness(0, 1),
-            };
-
-            row.ColumnDefinitions.Add(new ColumnDefinition(40, GridUnitType.Pixel));
-            row.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-            row.ColumnDefinitions.Add(new ColumnDefinition(60, GridUnitType.Pixel));
-
-            var label = new TextBlock
-            {
-                Text = $"P{index}",
-                Foreground = UiTheme.TextSecondary,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-
-            var value = new TextBlock
-            {
-                Text = $"{point.X:0}, {point.Y:0}　格 {point.GridX},{point.GridY}",
-                Foreground = UiTheme.TextPrimary,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-
-            var remove = new Button
-            {
-                Content = "×",
-                Width = 24,
-                Height = 22,
-                Padding = new Avalonia.Thickness(0),
-            };
-
-            var capturedIndex = index;
-            var owner = item;
-            remove.Click += (_, _) =>
-            {
-                if (capturedIndex < owner.PathPoints.Count)
-                {
-                    owner.PathPoints.RemoveAt(capturedIndex);
-                    Canvas.Refresh();
-                    Canvas.NotifyDocumentChanged();
-                }
-            };
-
-            Grid.SetColumn(label, 0);
-            Grid.SetColumn(value, 1);
-            Grid.SetColumn(remove, 2);
-            row.Children.Add(label);
-            row.Children.Add(value);
-            row.Children.Add(remove);
-
-            PathPointList.Children.Add(row);
+            PathPointList.Children.Add(BuildPathPointRow(item, index));
         }
+    }
+
+    /// <summary>
+    /// 构建一行路径点：序号、可直接改的坐标输入框、上移 / 下移 / 删除。
+    /// 行与画布上的选中点双向联动：点画布上的点会高亮这一行，点这一行也会选中画布上的点。
+    /// </summary>
+    /// <param name="owner">路径点所属物件。</param>
+    /// <param name="index">路径点序号。</param>
+    /// <returns>行控件。</returns>
+    private Control BuildPathPointRow(PlacedObject owner, int index)
+    {
+        var point = owner.PathPoints[index];
+        var selected = Canvas.SelectedPathIndex == index;
+
+        var label = new TextBlock
+        {
+            Text = $"P{index}",
+            FontSize = 10.5,
+            FontFamily = UiFonts.Mono,
+            Foreground = selected ? UiTheme.Accent : UiTheme.TextSecondary,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var coord = new TextBox
+        {
+            Text = $"{point.X:0}, {point.Y:0}",
+            FontSize = 10.5,
+            FontFamily = UiFonts.Mono,
+            Height = 22,
+            MinHeight = 22,
+            Padding = new Thickness(5, 0),
+            CornerRadius = new CornerRadius(UiMetrics.SmallCornerRadius),
+            VerticalContentAlignment = VerticalAlignment.Center,
+        };
+        ToolTip.SetTip(coord, "改坐标后按回车生效；格式 x, y（世界像素）");
+
+        // 输入框会吃掉指针事件，行上的选中就靠「拿到焦点」补一手；这里只刷新列表配色不重建，
+        // 所以刚点进来的输入框不会被自己触发的高亮刷新夺走焦点。
+        coord.GotFocus += (_, _) => Canvas.SelectPathPoint(index);
+        UiFactory.CommitOnEnter(coord, () =>
+        {
+            if (TryParsePathPoint(coord.Text, out var world))
+            {
+                Canvas.SelectPathPoint(index);
+                if (Canvas.MovePathPoint(index, world))
+                {
+                    SetMessage($"P{index} 已改为（{owner.PathPoints[index].X:0},{owner.PathPoints[index].Y:0}）。");
+                }
+                else
+                {
+                    coord.Text = $"{owner.PathPoints[index].X:0}, {owner.PathPoints[index].Y:0}";
+                }
+            }
+            else
+            {
+                // 解析失败要把输入框退回当前值，否则框里会留着一段非法文本，用户下次回车还是错
+                coord.Text = $"{owner.PathPoints[index].X:0}, {owner.PathPoints[index].Y:0}";
+                SetMessage($"坐标格式应为「x, y」，例如 {owner.PathPoints[index].X:0}, {owner.PathPoints[index].Y:0}");
+            }
+        });
+
+        var up = CompactIconButton("↑", index > 0);
+        up.Click += (_, _) => Canvas.ReorderPathPoint(index, index - 1);
+
+        var down = CompactIconButton("↓", index < owner.PathPoints.Count - 1);
+        down.Click += (_, _) => Canvas.ReorderPathPoint(index, index + 1);
+
+        var remove = CompactIconButton("×", true);
+        remove.Foreground = UiTheme.ResourceTable.DeleteText;
+        remove.Click += (_, _) => Canvas.RemovePathPointAt(index);
+
+        var row = new Border
+        {
+            Padding = new Thickness(4, 1),
+            CornerRadius = new CornerRadius(UiMetrics.SmallCornerRadius),
+            Background = UiTheme.Transparent,
+            BorderBrush = UiTheme.Transparent,
+            BorderThickness = new Thickness(0),
+            Child = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("24,*,20,20,20"),
+                ColumnSpacing = 3,
+                Children =
+                {
+                    UiFactory.InCell(label, 0, 0),
+                    UiFactory.InCell(coord, 0, 1),
+                    UiFactory.InCell(up, 0, 2),
+                    UiFactory.InCell(down, 0, 3),
+                    UiFactory.InCell(remove, 0, 4),
+                },
+            },
+        };
+
+        RowState.Apply(row, selected, hovered: false, UiTheme.PathPointRow);
+        RowState.AttachHover(row, hover =>
+        {
+            RowState.Apply(row, Canvas.SelectedPathIndex == index, hover, UiTheme.PathPointRow);
+        });
+
+        // 点行（含序号与空白处）即选中这个点；输入框和按钮自己吃掉点击，不会误触选中。
+        row.PointerPressed += (_, _) => Canvas.SelectPathPoint(index);
+
+        _pathPointRows.Add(new PathPointRowSlot(row, label, index));
+        return row;
+    }
+
+    /// <summary>
+    /// 只刷新路径点行的「选中态」，不重建行控件。
+    /// 重建会连带销毁正在编辑的坐标输入框（焦点与光标位置全丢），而选中态只是换底色和序号颜色。
+    /// </summary>
+    private void RefreshPathPointSelection()
+    {
+        foreach (var slot in _pathPointRows)
+        {
+            var selected = Canvas.SelectedPathIndex == slot.Index;
+            slot.Label.Foreground = selected ? UiTheme.Accent : UiTheme.TextSecondary;
+            RowState.Apply(slot.Row, selected, false, UiTheme.PathPointRow);
+        }
+    }
+
+    /// <summary>列表行里的小图标按钮：统一走紧凑按钮骨架，只覆盖尺寸与内边距。</summary>
+    /// <param name="text">按钮文案。</param>
+    /// <param name="enabled">是否可用。</param>
+    /// <returns>按钮控件。</returns>
+    private static Button CompactIconButton(string text, bool enabled)
+    {
+        var button = UiFactory.CompactButton(text, padding: new Thickness(0));
+        button.Width = 20;
+        button.Height = 20;
+        button.MinWidth = 20;
+        button.MinHeight = 20;
+        button.FontSize = UiMetrics.FontCaption;
+        button.IsEnabled = enabled;
+        button.HorizontalContentAlignment = HorizontalAlignment.Center;
+        button.VerticalContentAlignment = VerticalAlignment.Center;
+        return button;
+    }
+
+    /// <summary>解析路径点坐标文本：接受「x, y」「x，y」「x y」三种写法，只认十进制实数。</summary>
+    /// <param name="text">用户输入。</param>
+    /// <param name="world">解析出的世界坐标。</param>
+    /// <returns>解析成功返回 true。</returns>
+    private static bool TryParsePathPoint(string? text, out Point world)
+    {
+        world = default;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var parts = Regex.Split(text.Trim(), "[,，\\s]+");
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        if (!double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ||
+            !double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+        {
+            return false;
+        }
+
+        world = new Point(x, y);
+        return true;
     }
 
     /// <summary>路径列表为空时显示居中的空态文案；动画页签激活时保持隐藏。</summary>
@@ -543,53 +669,238 @@ public partial class MainWindow : Window
         SceneIdField.Text = _config.SceneId;
         MapWidthField.Text = _config.Width.ToString(CultureInfo.InvariantCulture);
         MapHeightField.Text = _config.Height.ToString(CultureInfo.InvariantCulture);
-        DrawShapeField.SelectedIndex = _config.DrawShape == DrawShapes.Diamond ? 1 : 0;
+        DrawShapeField.SelectedIndex = ShapeIndexOf(_config.DrawShape);
         RegionTypeField.SelectedIndex = _config.RegionType switch
         {
             RegionTypes.Forbid => 1,
             RegionTypes.Common => 2,
             _ => 0,
         };
-       RefreshSceneHint();
+        RefreshLevelField();
+        RefreshSceneHint();
         _suppressSync = false;
     }
 
-    /// <summary>场景设置提示行（默认文案）：格子尺寸与预制体名，随场景数据刷新覆盖临时消息。</summary>
+    /// <summary>场景设置提示行（默认文案）：格子尺寸、换算格数与预制体名，随场景数据刷新覆盖临时消息。</summary>
     private void RefreshSceneHint()
     {
-        SceneHint.Text = $"格子 {_config.GridSize}px　预制体 {(_config.BgName.Length == 0 ? "未设置" : _config.BgName)}";
+        var cells = _config.GridSize > 0
+            ? $" = {_config.GridCols}×{_config.GridRows} 格"
+            : string.Empty;
+        SceneHint.Text = $"格子 {_config.GridSize}px{cells}　预制体 {(_config.BgName.Length == 0 ? "未设置" : _config.BgName)}";
     }
 
     private void RefreshStatus()
     {
         StatusZoom.Text = $"{Canvas.ZoomPercent}%";
         StatusTileCount.Text = _config.Objects.Count.ToString(CultureInfo.InvariantCulture);
-        StatusGridSize.Text = $"{_config.GridCols}×{_config.GridRows}";
+        StatusGridSize.Text = FormatGridCount();
+        StatusMapSize.Text = $"{_config.Width}×{_config.Height}";
         StatusSavePath.Text = _saveDirectory;
 
-        // ---TODO: 空关卡使用图一风格占位层；一旦载入存档或落下首个物件，自动回到正常画布
         RefreshEmptyMapOverlay();
     }
 
     /// <summary>
+    /// 状态栏格数：菱形按「错缝铺满」口径汇报并去掉补边格（<see cref="MapConfigData.GridCols"/> 多算的那一格
+    /// 是为覆盖边缘），否则 4096px 地图会显示成 129×513 这种看着像出错的大数字。
+    /// </summary>
+    /// <returns>形如 <c>128×128</c> 或 <c>128×512·菱形</c> 的文本。</returns>
+    private string FormatGridCount()
+    {
+        if (_config.GridSize <= 0)
+        {
+            return "—";
+        }
+
+        var shape = _config.DrawShape;
+        if (!DrawShapes.IsDiamond(shape) && !DrawShapes.IsHex(shape))
+        {
+            return $"{_config.GridCols}×{_config.GridRows}";
+        }
+
+        var cols = Math.Max(0, _config.GridCols - 1);
+        var rows = Math.Max(0, _config.GridRows - 1);
+        var tag = DrawShapes.IsHex(shape)
+            ? "·六边形"
+            : shape == DrawShapes.DiamondZ ? "·等距Z" : "·菱形";
+        return $"{cols}×{rows}{tag}";
+    }
+
+    /// <summary>绘制形状 → 左下「摆放模式」下拉索引（顺序与 <c>MainWindow.axaml</c> 的 ComboBoxItem 一致）。</summary>
+    /// <param name="drawShape">绘制形状值。</param>
+    /// <returns>下拉索引。</returns>
+    private static int ShapeIndexOf(string drawShape) => drawShape switch
+    {
+        DrawShapes.Hex => 1,
+        DrawShapes.DiamondZ => 3,
+        DrawShapes.Diamond => 2,
+        _ => 0,
+    };
+
+    /// <summary>左下「摆放模式」下拉索引 → 绘制形状值。</summary>
+    /// <param name="index">下拉索引。</param>
+    /// <returns>绘制形状值。</returns>
+    private static string ShapeAtIndex(int index) => index switch
+    {
+        1 => DrawShapes.Hex,
+        2 => DrawShapes.Diamond,
+        3 => DrawShapes.DiamondZ,
+        _ => DrawShapes.Rect,
+    };
+
+    /// <summary>
     /// 空地图占位层的唯一显隐入口。
     /// <para>
-    /// 只在「没有地图存档路径」且「当前没有任何已放置物件」时显示，避免新关卡施工到一半仍被占位层遮挡；
-    /// 删除到最后一个物件后重新显示，保持空态提示与编辑状态一致。
+    /// 只在「编辑器还没进入任何关卡」时显示：没有从章节树选中关卡、没有载入地图存档、画布上也没有物件。
+    /// 一旦选中关卡（哪怕该关卡还没有存档、只是开了一张空图）就隐藏，右侧画布立刻成为可编辑的空地图；
+    /// 否则会出现「左侧关卡 2 已高亮、状态栏说已开空图，画布却仍停在 No map loaded」的观感错位。
     /// </para>
     /// </summary>
     private void RefreshEmptyMapOverlay()
     {
-        EmptyMapOverlay.IsVisible =
-            string.IsNullOrWhiteSpace(_currentMapPath) &&
-            _config.Objects.Count == 0;
+        var enteredLevel = !string.IsNullOrWhiteSpace(_selectedLevelId);
+        EmptyMapOverlay.IsVisible = !enteredLevel
+                                    && string.IsNullOrWhiteSpace(_currentMapPath)
+                                    && _config.Objects.Count == 0;
     }
 
     #endregion
 
     #region 地图配置
 
-    /// <summary>打开地图配置弹窗：确定后落盘，并把预览目录与基线步长广播到资源索引 / 层级重排。</summary>
+    /// <summary>
+    /// 打开网格设置弹窗。编辑口径（边长 / 形状 / 网格线）确定后立即作用到当前画布，
+    /// Unity 导出口径（Cell Size / Gap / Layout / Swizzle / Anchor）只落盘，供发布时生成 Grid 与 Tilemap。
+    /// </summary>
+    private async Task OpenGridSettingsAsync()
+    {
+        // 画布是唯一真相源：先取当前地图实际生效的边长 / 形状 / 网格线当种子，
+        // 否则上次存档与新开的地图不一致时，窗口一确定就会把画布改回旧值
+        var seed = EditorSettings.Current.Clone();
+        if (Canvas.Config is { } live)
+        {
+            seed.GridSize = live.GridSize;
+            seed.GridShape = GridShapes.Normalize(live.DrawShape);
+        }
+
+        seed.ShowGridLines = Canvas.ShowGrid;
+
+        // 地图尺寸也交给这个窗：写进 _config（随地图存档），不是编辑器设置
+        var mapWidth = Canvas.Config?.Width ?? MapToolDefaults.LevelPixelSize;
+        var mapHeight = Canvas.Config?.Height ?? MapToolDefaults.LevelPixelSize;
+
+        var dialog = new GridSettingsWindow(seed, mapWidth, mapHeight);
+        var result = await dialog.ShowDialog<GridSettingsResult?>(this);
+        if (result is null)
+        {
+            SetMessage("网格设置已取消，参数未改动");
+            return;
+        }
+
+        EditorSettings.Apply(result.Settings);
+        if (!_settingsStore.TrySave(result.Settings, out var error))
+        {
+            SetMessage(UiFeedback.Failed("网格设置写入", error));
+            return;
+        }
+
+        ApplyGridToCanvas(result.Settings);
+        ApplyMapSizeToCanvas(result.MapWidth, result.MapHeight);
+        SetMessage($"网格已更新：{result.MapWidth}×{result.MapHeight}px · {result.Settings.GridSize}px · " +
+                   $"{GridShapes.LabelOf(result.Settings.GridShape)} · " +
+                   $"Unity Cell {result.Settings.CellSizeX}×{result.Settings.CellSizeY} / {result.Settings.CellLayout}");
+    }
+
+    /// <summary>
+    /// 地图尺寸的唯一写入口：场景属性宽/高、网格设置窗「地图尺寸」、以及之后新增的入口都走这里，
+    /// 保证「钳制范围 / 画布刷新 / 两处输入框回填」只有一份实现。
+    /// 物件坐标是绝对像素，不随尺寸缩放：改小后越界部分只是不可见。
+    /// </summary>
+    /// <param name="width">地图宽（px）。</param>
+    /// <param name="height">地图高（px）。</param>
+    private void ApplyMapSizeToCanvas(int width, int height)
+    {
+        if (Canvas.Config is not { } config)
+        {
+            return;
+        }
+
+        var nextWidth = Math.Clamp(width, MapToolDefaults.MapPixelMin, MapToolDefaults.MapPixelMax);
+        var nextHeight = Math.Clamp(height, MapToolDefaults.MapPixelMin, MapToolDefaults.MapPixelMax);
+
+        if (config.Width != nextWidth || config.Height != nextHeight)
+        {
+            config.Width = nextWidth;
+            config.Height = nextHeight;
+            Canvas.Refresh();
+            RefreshStatus();
+        }
+
+        // 改没改都要回填：手输 100 会被钳到 256，输入框得显示真实值，不能留着用户的原话
+        RefreshSceneFields();
+    }
+
+    /// <summary>
+    /// 把编辑口径同步到当前画布：边长写 <c>GridSize</c>，形状写 <c>DrawShape</c>，
+    /// 网格线开关写 <c>ShowGrid</c>；未加载地图时只改开关并重绘。
+    /// </summary>
+    /// <param name="settings">刚保存的设置。</param>
+    private void ApplyGridToCanvas(EditorSettingsData settings)
+    {
+        Canvas.ShowGrid = settings.ShowGridLines;
+
+        if (Canvas.Config is { } config)
+        {
+            config.GridSize = settings.GridSize;
+            config.DrawShape = GridShapes.Normalize(settings.GridShape);
+        }
+
+        SyncGridControls(settings);
+        Canvas.Refresh();
+    }
+
+    /// <summary>
+    /// 把网格设置回写到主界面上的同名控件：顶部「摆放网格层」与左下「摆放模式」的形状下拉。
+    /// 这两处本来就是同一个状态的两处入口，不同步就会出现「设置里菱形、左下显示矩形」。
+    /// </summary>
+    /// <param name="settings">刚保存的设置。</param>
+    private void SyncGridControls(EditorSettingsData settings)
+    {
+        _suppressSync = true;
+        try
+        {
+            LayerPlaceGrid.IsChecked = settings.ShowGridLines;
+            DrawShapeField.SelectedIndex = ShapeIndexOf(GridShapes.Normalize(settings.GridShape));
+        }
+        finally
+        {
+            _suppressSync = false;
+        }
+    }
+
+    /// <summary>
+    /// 左下「摆放模式」切换形状时回写设置：下次打开网格设置直接看到同一形状，
+    /// 新建地图也沿用这个默认，避免两处各存一份、越用越偏。
+    /// </summary>
+    /// <param name="drawShape">画布当前的 <see cref="DrawShapes"/> 值。</param>
+    private void PersistGridShape(string drawShape)
+    {
+        var shape = GridShapes.Normalize(drawShape);
+        if (string.Equals(EditorSettings.Current.GridShape, shape, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var next = EditorSettings.Current.Clone();
+        next.GridShape = shape;
+        next.CellLayout = GridShapes.LayoutOf(shape);
+        EditorSettings.Apply(next);
+
+        // 落盘失败只影响「下次启动的默认值」，不该打断当前编辑
+        _settingsStore.TrySave(next, out _);
+    }
+
     private async Task OpenMapConfigAsync()
     {
         var dialog = new MapConfigWindow(EditorSettings.Current, _assets.ProjectRoot);
@@ -603,7 +914,7 @@ public partial class MainWindow : Window
         EditorSettings.Apply(result);
         if (!_settingsStore.TrySave(result, out var error))
         {
-            SetMessage($"地图配置写入失败：{error}");
+            SetMessage(UiFeedback.Failed("地图配置写入", error));
             return;
         }
 
@@ -694,3 +1005,4 @@ public partial class MainWindow : Window
 
     #endregion
 }
+

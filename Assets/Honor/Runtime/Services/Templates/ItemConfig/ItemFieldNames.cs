@@ -40,6 +40,9 @@ internal static class ItemFieldNames
     /// <summary>模板名称。</summary>
     public const string TemplateName = "TemplateName";
 
+    /// <summary>中文显示名称（策划可读名；不参与运行时索引）。</summary>
+    public const string DisplayName = "DisplayName";
+
     /// <summary>默认动画。</summary>
     public const string AnimName = "AnimName";
 
@@ -134,6 +137,7 @@ internal static class ItemFieldNames
         [Icon] = new[] { "Icon", "ImagePath", "图片名称" },
         [ResName] = new[] { "ResName", "资源ResDef的名字" },
         [TemplateName] = new[] { "模板名称", "TemplateName", "物件名称" },
+        [DisplayName] = new[] { "显示名称", "中文名", "DisplayName" },
         [AnimName] = new[] { "默认动画", "AnimName" },
         [Loop] = new[] { "是否循环", "Loop", "是否循环播放" },
         [Speed] = new[] { "播放速度", "Speed", "动画播放速度" },

@@ -29,7 +29,7 @@ public sealed partial class StoryEditorPanel
         _showPortraitCheck = new CheckBox
         {
             Content = "显示左侧立绘",
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             IsChecked = true,
         };
         _showPortraitCheck.IsCheckedChanged += (_, _) => OnShowPortraitChanged();
@@ -47,7 +47,7 @@ public sealed partial class StoryEditorPanel
         _optionEmpty = new TextBlock
         {
             Text = "这一节点还没有分支：点上面的「+ 分支」，会自动把类型改成「选项」并加一条默认指向原后续的分支",
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             Foreground = UiTheme.PreviewMuted,
             TextWrapping = TextWrapping.Wrap,
             IsVisible = false,
@@ -92,7 +92,7 @@ public sealed partial class StoryEditorPanel
         var headRow = new StackPanel
         {
             Margin = new Thickness(12, 10, 12, 6),
-            Children = { SectionTitle("演出与分支") },
+            Children = { UiFactory.SectionHead("演出与分支") },
         };
 
         return new Grid
@@ -101,12 +101,7 @@ public sealed partial class StoryEditorPanel
             Children =
             {
                 headRow,
-                Row(new ScrollViewer
-                {
-                    Content = stack,
-                    HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-                    VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-                }, 1),
+                Row(UiFactory.VerticalScroll(stack), 1),
             },
         };
     }

@@ -109,7 +109,7 @@ public sealed partial class AnimationPreviewWindow : Window
             out var error);
         if (asset is null)
         {
-            _statusText.Text = $"Spine 导入失败：{error}";
+            _statusText.Text = UiFeedback.Failed("Spine 导入", error);
             return;
         }
 
@@ -120,7 +120,7 @@ public sealed partial class AnimationPreviewWindow : Window
         }
         catch (Exception exception)
         {
-            _statusText.Text = $"Spine 已载入，但写盘失败：{exception.Message}";
+            _statusText.Text = UiFeedback.Failed("Spine 已载入，但写盘", exception);
         }
 
         var target = _canvas.Target;

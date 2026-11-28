@@ -58,6 +58,49 @@ public sealed class ItemTableFile
     /// <summary>xlsm 的表头行号。</summary>
     internal int HeaderRowNumber { get; set; }
 
+    /// <summary>本次会话新追加的列下标（xlsm 写回时只给这些列补表头）。</summary>
+    internal List<int> AddedColumns { get; } = new();
+
+    /// <summary>
+    /// 确保表里存在某个字段的列；没有就追加到最右一列。
+    /// CSV 同步补两行表头（列名 / 类型），xlsm 只记下来，写回时补表头单元格。
+    /// </summary>
+    /// <param name="field">字段键。</param>
+    /// <param name="columnName">新增时的列名。</param>
+    /// <param name="typeName">新增时的类型行文本。</param>
+    /// <returns>该字段所在的列下标（0 起）。</returns>
+    internal int EnsureColumn(string field, string columnName, string typeName = "string")
+    {
+        if (ColumnIndex.TryGetValue(field, out var existing))
+        {
+            return existing;
+        }
+
+        var column = ColumnNames.Count;
+        ColumnNames.Add(columnName);
+        ColumnIndex[field] = column;
+        AddedColumns.Add(column);
+
+        if (Kind == ItemTableKind.Csv)
+        {
+            for (var index = 0; index < HeaderLines.Count; index++)
+            {
+                var suffix = index == 0 ? columnName : typeName;
+                HeaderLines[index] = HeaderLines[index] + "," + suffix;
+            }
+        }
+
+        foreach (var row in Rows)
+        {
+            while (row.Cells.Count < ColumnNames.Count)
+            {
+                row.Cells.Add(string.Empty);
+            }
+        }
+
+        return column;
+    }
+
     /// <summary>新建一行（列数对齐本表，行号接在最后一行之后）。</summary>
     /// <returns>新行。</returns>
     internal ItemElementRow CreateRow()
@@ -95,6 +138,7 @@ public sealed class ItemTableFile
         SetField(row, ItemFieldNames.Icon, row.Icon);
         SetField(row, ItemFieldNames.ResName, row.ResName);
         SetField(row, ItemFieldNames.TemplateName, row.TemplateName);
+        SetField(row, ItemFieldNames.DisplayName, row.DisplayName);
         SetField(row, ItemFieldNames.AnimName, row.AnimName);
         SetExcelBool(row, ItemFieldNames.Loop, row.Loop);
         SetField(row, ItemFieldNames.Speed, TableTextFormat.Number(row.Speed));

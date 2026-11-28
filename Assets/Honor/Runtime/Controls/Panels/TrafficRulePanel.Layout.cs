@@ -30,7 +30,6 @@ public sealed partial class TrafficRulePanel : UserControl
     #region 常量
 
     private const double ListWidth = 260.0;
-    private const double FormWidth = 300.0;
 
     #endregion
 
@@ -114,7 +113,7 @@ public sealed partial class TrafficRulePanel : UserControl
             Background = UiTheme.Form.FilterIdle,
             BorderBrush = UiTheme.Divider,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Thickness(3),
             Child = segments,
         });
@@ -123,7 +122,7 @@ public sealed partial class TrafficRulePanel : UserControl
         var hint = new TextBlock
         {
             Text = "点一行即定位",
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             Foreground = UiTheme.PreviewMuted,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
@@ -161,7 +160,7 @@ public sealed partial class TrafficRulePanel : UserControl
         {
             Background = UiTheme.Transparent,
             BorderThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(5),
+            CornerRadius = new CornerRadius(UiMetrics.ButtonCornerRadius),
             Padding = new Thickness(10, 4, 11, 4),
             MinHeight = 0,
             Cursor = new Cursor(StandardCursorType.Hand),
@@ -230,7 +229,7 @@ public sealed partial class TrafficRulePanel : UserControl
         _readyText = new TextBlock
         {
             Text = "未载入地图",
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.TextSecondary,
             TextWrapping = TextWrapping.NoWrap,
@@ -239,7 +238,7 @@ public sealed partial class TrafficRulePanel : UserControl
         _readyBadge = new Border
         {
             Background = UiTheme.Form.FilterIdle,
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Thickness(9, 3),
             VerticalAlignment = VerticalAlignment.Center,
             Child = _readyText,
@@ -248,7 +247,7 @@ public sealed partial class TrafficRulePanel : UserControl
         _statusGap = new TextBlock
         {
             Text = "未载入地图",
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             IsVisible = false,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap,
@@ -270,18 +269,14 @@ public sealed partial class TrafficRulePanel : UserControl
         Grid.SetColumn(_readyBadge, 1);
         statRow.Children.Add(_readyBadge);
 
-        var header = new Border
-        {
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.PanelBorder,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = new Thickness(10, 9, 10, 8),
-            Child = new StackPanel
+        var header = UiFactory.HeaderBand(
+            new StackPanel
             {
                 Spacing = 8,
                 Children = { BuildActionBar(), statRow, _statusGap },
             },
-        };
+            new Thickness(10, 9, 10, 8),
+            UiTheme.PanelBorder);
         return header;
     }
 
@@ -289,7 +284,7 @@ public sealed partial class TrafficRulePanel : UserControl
     private static TextBlock StatValue() => new()
     {
         Text = "—",
-        FontSize = 11,
+        FontSize = UiMetrics.FontBody,
         FontWeight = FontWeight.Bold,
         Foreground = UiTheme.Traffic.StatValueText,
         VerticalAlignment = VerticalAlignment.Center,
@@ -303,7 +298,7 @@ public sealed partial class TrafficRulePanel : UserControl
             Background = UiTheme.Traffic.StatPillSurface,
             BorderBrush = UiTheme.Traffic.StatPillBorder,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Thickness(8, 2, 9, 2),
             Margin = new Thickness(0, 0, 5, 0),
             Child = new StackPanel
@@ -316,7 +311,7 @@ public sealed partial class TrafficRulePanel : UserControl
                     new TextBlock
                     {
                         Text = label,
-                        FontSize = 10,
+                        FontSize = UiMetrics.FontCaption,
                         Foreground = UiTheme.TextSecondary,
                         VerticalAlignment = VerticalAlignment.Center,
                     },
@@ -426,7 +421,7 @@ public sealed partial class TrafficRulePanel : UserControl
             var index = _crosswalkList.SelectedIndex;
             _crosswalk = index >= 0 && index < _config.Crosswalks.Count ? _config.Crosswalks[index] : null;
             FillCrosswalkForm();
-            SyncCanvasSelection(_crosswalk?.Id);
+            SyncCrosswalkOnCanvas(_crosswalk);
         };
 
         return BuildPage(_crosswalkList, _crosswalkEmpty, BuildCrosswalkForm(), (listHost, formScroll) =>
@@ -449,7 +444,7 @@ public sealed partial class TrafficRulePanel : UserControl
             var index = _actorList.SelectedIndex;
             _actor = index >= 0 && index < _actorSources.Count ? _actorSources[index] : null;
             FillActorForm();
-            SyncCanvasSelection(_actor?.Id);
+            SyncActorOnCanvas(_actor);
         };
 
         return BuildPage(_actorList, _actorEmpty, BuildActorForm(), (listHost, formScroll) =>
@@ -470,7 +465,7 @@ public sealed partial class TrafficRulePanel : UserControl
         _markerTarget = new TextBlock
         {
             Text = "当前未选中物件 · 标记按钮已禁用",
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             FontWeight = FontWeight.SemiBold,
             Foreground = UiTheme.TextSecondary,
             TextWrapping = TextWrapping.Wrap,
@@ -482,7 +477,7 @@ public sealed partial class TrafficRulePanel : UserControl
             Background = UiTheme.Card,
             BorderBrush = UiTheme.Form.GroupBorder,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Thickness(10, 9, 12, 9),
             MaxWidth = 680,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -516,7 +511,7 @@ public sealed partial class TrafficRulePanel : UserControl
                 new TextBlock
                 {
                     Text = "先在地图上选中物件，再点下面的按钮打标记；按钮变「取消…」表示已标记，再点一次即可取消。",
-                    FontSize = 10,
+                    FontSize = UiMetrics.FontCaption,
                     Foreground = UiTheme.TextSecondary,
                     TextWrapping = TextWrapping.Wrap,
                 },
@@ -532,37 +527,22 @@ public sealed partial class TrafficRulePanel : UserControl
             Children = { intro, _markerHost },
         };
 
-        return new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = body,
-        };
+        return UiFactory.VerticalScroll(body);
     }
 
     /// <summary>列表 + 表单的页面骨架；窄面板自动切成上下布局。</summary>
     private Control BuildPage(ListBox list, Control emptyHint, Control form, Action<Control, Control> register)
     {
-        var scroll = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = list,
-        };
+        var scroll = UiFactory.VerticalScroll(list, showScrollBar: false);
         var frame = UiFactory.ScrollListFrame(scroll);
-        frame.CornerRadius = new CornerRadius(6);
+        frame.CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius);
         frame.Background = UiTheme.Card;
         frame.ClipToBounds = true;
 
         var listHost = new Grid();
         listHost.Children.Add(frame);
 
-        var formScroll = new ScrollViewer
-        {
-            Padding = new Thickness(8, 4, 8, 8),
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Content = form,
-        };
+        var formScroll = UiFactory.VerticalScroll(form, padding: new Thickness(8, 4, 8, 8));
 
         var body = new Grid
         {
@@ -696,7 +676,7 @@ public sealed partial class TrafficRulePanel : UserControl
             Background = UiTheme.PreviewSlot,
             BorderBrush = UiTheme.PanelBorder,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(UiMetrics.CardCornerRadius),
             Padding = new Thickness(16, 14),
             IsVisible = false,
             Child = new StackPanel
@@ -725,7 +705,7 @@ public sealed partial class TrafficRulePanel : UserControl
                     new TextBlock
                     {
                         Text = title,
-                        FontSize = 12,
+                        FontSize = UiMetrics.FontTitle,
                         FontWeight = FontWeight.SemiBold,
                         Foreground = UiTheme.TextPrimary,
                         HorizontalAlignment = HorizontalAlignment.Center,
@@ -733,7 +713,7 @@ public sealed partial class TrafficRulePanel : UserControl
                     new TextBlock
                     {
                         Text = hint,
-                        FontSize = 10,
+                        FontSize = UiMetrics.FontCaption,
                         Foreground = UiTheme.TextSecondary,
                         TextWrapping = TextWrapping.Wrap,
                         TextAlignment = TextAlignment.Center,
@@ -762,7 +742,7 @@ public sealed partial class TrafficRulePanel : UserControl
         var button = ActionButton(text, onClick, tone);
         button.Padding = new Thickness(9, 4);
         button.MinHeight = 27;
-        button.FontSize = 11;
+        button.FontSize = UiMetrics.FontBody;
         button.Margin = default;
         ToolTip.SetTip(button, tip);
         return button;
@@ -796,9 +776,9 @@ public sealed partial class TrafficRulePanel : UserControl
         };
 
         var button = UiFactory.CompactButton(text, background, foreground, new Thickness(10, 5));
-        button.FontSize = 11;
+        button.FontSize = UiMetrics.FontBody;
         button.MinHeight = 28;
-        button.CornerRadius = new CornerRadius(5);
+        button.CornerRadius = new CornerRadius(UiMetrics.ButtonCornerRadius);
         button.BorderThickness = new Thickness(1);
         button.BorderBrush = border;
         button.HorizontalContentAlignment = HorizontalAlignment.Center;
@@ -825,64 +805,31 @@ public sealed partial class TrafficRulePanel : UserControl
         return stack;
     }
 
-    /// <summary>一张白底小卡片，把一组字段包在一起：标题条 + 细分隔线 + 字段堆叠。</summary>
+    /// <summary>一张小卡片，把一组字段包在一起：竖条标题 + 细分隔线 + 字段堆叠。</summary>
+    /// <param name="title">小节标题。</param>
+    /// <param name="body">字段堆叠。</param>
+    /// <returns>小节卡片。</param>
     private static Control Section(string title, Control body)
     {
-        var header = new StackPanel
+        var head = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 7,
+            Spacing = 6,
             Children =
             {
+                UiFactory.SectionHead(title, 11),
                 new Border
                 {
-                    Width = 3,
-                    Height = 12,
-                    CornerRadius = new CornerRadius(2),
-                    Background = UiTheme.Accent,
-                    VerticalAlignment = VerticalAlignment.Center,
-                },
-                new TextBlock
-                {
-                    Text = title,
-                    FontSize = 11,
-                    FontWeight = FontWeight.Bold,
-                    Foreground = UiTheme.AccentDark,
-                    VerticalAlignment = VerticalAlignment.Center,
+                    Height = 1,
+                    Margin = new Thickness(0, 1, 0, 0),
+                    Background = UiTheme.Form.GroupBorder,
                 },
             },
         };
 
-        return new Border
-        {
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.Form.GroupBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(11, 9, 11, 10),
-            Child = new StackPanel
-            {
-                Spacing = 8,
-                Children =
-                {
-                    new StackPanel
-                    {
-                        Spacing = 6,
-                        Children =
-                        {
-                            header,
-                            new Border
-                            {
-                                Height = 1,
-                                Margin = new Thickness(0, 1, 0, 0),
-                                Background = UiTheme.Form.GroupBorder,
-                            },
-                        },
-                    },
-                    body,
-                },
-            },
-        };
+        var stack = new StackPanel { Spacing = 8, Children = { head, body } };
+        var card = UiFactory.PanelCard(stack, padding: new Thickness(11, 9, 11, 10));
+        card.BorderBrush = UiTheme.Form.GroupBorder;
+        return card;
     }
 
     /// <summary>标签在输入框上方的单列字段。</summary>
@@ -895,12 +842,7 @@ public sealed partial class TrafficRulePanel : UserControl
             Spacing = 4,
             Children =
             {
-                new TextBlock
-                {
-                    Text = label,
-                    FontSize = 10.5,
-                    Foreground = UiTheme.TextSecondary,
-                },
+                UiFactory.FieldLabel(label, 10.5, margin: new Thickness(0)),
                 field,
             },
         };
@@ -941,23 +883,16 @@ public sealed partial class TrafficRulePanel : UserControl
         return grid;
     }
 
-    private static TextBlock Hint(string text) => new()
-    {
-        Text = text,
-        FontSize = 10,
-        Foreground = UiTheme.TextSecondary,
-        TextWrapping = TextWrapping.Wrap,
-        Margin = new Thickness(0, -1, 0, 0),
-    };
+    private static TextBlock Hint(string text) => UiFactory.HintText(text, margin: new Thickness(0, -1, 0, 0));
 
     private static TextBox Field(double width = double.NaN) => new()
     {
         Width = width,
-        FontSize = 12,
-        MinHeight = 30,
+        FontSize = UiMetrics.FontTitle,
+        MinHeight = UiMetrics.FieldHeight,
         Padding = new Thickness(8, 4),
-        CornerRadius = new CornerRadius(6),
-        Background = Brushes.White,
+        CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
+        Background = UiTheme.Card,
         Foreground = UiTheme.TextPrimary,
         BorderBrush = UiTheme.PanelBorder,
         BorderThickness = new Thickness(1),
@@ -967,10 +902,10 @@ public sealed partial class TrafficRulePanel : UserControl
     private static TextBox ReadOnlyField() => new()
     {
         IsReadOnly = true,
-        FontSize = 11,
+        FontSize = UiMetrics.FontBody,
         MinHeight = 26,
         Padding = new Thickness(8, 3),
-        CornerRadius = new CornerRadius(6),
+        CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
         Background = UiTheme.DialogSecondary,
         BorderBrush = UiTheme.PanelBorder,
         BorderThickness = new Thickness(1),
@@ -982,11 +917,11 @@ public sealed partial class TrafficRulePanel : UserControl
     {
         var box = new ComboBox
         {
-            FontSize = 12,
-            MinHeight = 30,
+            FontSize = UiMetrics.FontTitle,
+            MinHeight = UiMetrics.FieldHeight,
             Padding = new Thickness(8, 3),
-            CornerRadius = new CornerRadius(6),
-            Background = Brushes.White,
+            CornerRadius = new CornerRadius(UiMetrics.InputCornerRadius),
+            Background = UiTheme.Card,
             BorderBrush = UiTheme.PanelBorder,
             BorderThickness = new Thickness(1),
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -999,18 +934,86 @@ public sealed partial class TrafficRulePanel : UserControl
         return box;
     }
 
-    /// <summary>失焦或回车提交，避免每按一次键就改数据。</summary>
-    private static void HookCommit(TextBox box, Action commit)
+    /// <summary>
+    /// 「取选中物件」按钮：把场景里当前选中的物件交给回调，再统一回填表单并提交。
+    /// 灯取脚底中心、横道取包围盒，差别只在回调里的几何换算，取选中与收尾完全一样。
+    /// </summary>
+    /// <typeparam name="T">当前页签对应的规则对象类型。</typeparam>
+    /// <param name="text">按钮文案。</param>
+    /// <param name="emptyTip">没选中物件（或本页没有规则对象）时的提示。</param>
+    /// <param name="target">取当前页选中的规则对象；为空表示表单处于空态。</param>
+    /// <param name="apply">几何换算与表单回填。</param>
+    /// <param name="refreshLists">提交后是否连左侧列表一起刷新。</param>
+    /// <returns>表单底部按钮行里的按钮。</returns>
+    private Button PickFromSelectionButton<T>(
+        string text,
+        string emptyTip,
+        Func<T?> target,
+        Action<T, PlacedObject> apply,
+        bool refreshLists = false)
+        where T : class
     {
-        box.LostFocus += (_, _) => commit();
-        box.KeyDown += (_, e) =>
+        return ActionButton(text, () =>
         {
-            if (e.Key == Key.Enter)
+            var item = _canvas?.Selected;
+            var current = target();
+            if (item is null || current is null)
             {
-                commit();
-                e.Handled = true;
+                _notify(emptyTip);
+                return;
             }
-        };
+
+            apply(current, item);
+            ApplyChange(refreshLists);
+        });
+    }
+
+    /// <summary>
+    /// 「清零 / 清空」类按钮：没选中角色时给提示，选中则改数据、回填角色表单并提交。
+    /// 角色页的清除停止线、清空绑定灯都是这条链路，差别只在清什么。
+    /// </summary>
+    /// <param name="text">按钮文案。</param>
+    /// <param name="emptyTip">没选中角色时的提示。</param>
+    /// <param name="reset">对选中角色的清除动作。</param>
+    /// <param name="tip">按钮悬停提示；为 null 时不挂提示。</param>
+    /// <returns>表单底部按钮行里的按钮。</returns>
+    private Button ActorResetButton(string text, string emptyTip, Action<PlacedObject> reset, string? tip = null)
+    {
+        var button = ActionButton(text, () =>
+        {
+            var actor = _actor;
+            if (actor is null)
+            {
+                _notify(emptyTip);
+                return;
+            }
+
+            reset(actor);
+            FillActorForm();
+            ApplyChange();
+        });
+
+        if (tip is not null)
+        {
+            ToolTip.SetTip(button, tip);
+        }
+
+        return button;
+    }
+
+    /// <summary>
+    /// 失焦或回车提交，避免每按一次键就改数据。
+    /// 一次挂多个输入框，省掉「每个框写一行 HookCommit」的重复调用。
+    /// </summary>
+    /// <param name="commit">提交回调。</param>
+    /// <param name="boxes">共用同一提交动作的输入框。</param>
+    private static void HookCommit(Action commit, params TextBox[] boxes)
+    {
+        foreach (var box in boxes)
+        {
+            box.LostFocus += (_, _) => commit();
+            UiFactory.CommitOnEnter(box, commit);
+        }
     }
 
     private static void SelectComboByText(ComboBox box, string text)

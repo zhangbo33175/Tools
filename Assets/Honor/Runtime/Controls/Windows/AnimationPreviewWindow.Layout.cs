@@ -49,13 +49,13 @@ public sealed partial class AnimationPreviewWindow : Window
         _filterBox.SelectedIndex = FilterAll;
         _filterBox.Width = FilterWidth;
         _filterBox.Height = ToolbarControlHeight;
-        _filterBox.FontSize = 12;
+        _filterBox.FontSize = UiMetrics.FontTitle;
         _filterBox.VerticalAlignment = VerticalAlignment.Center;
         _filterBox.SelectionChanged += (_, _) => RebuildVisibleList();
 
         _searchBox.Width = SearchWidth;
         _searchBox.Height = ToolbarControlHeight;
-        _searchBox.FontSize = 12;
+        _searchBox.FontSize = UiMetrics.FontTitle;
         _searchBox.Padding = new Thickness(9, 0);
         _searchBox.PlaceholderText = "搜索名称 / ID / 动画 / 资产";
         _searchBox.TextChanged += (_, _) => RebuildVisibleList();

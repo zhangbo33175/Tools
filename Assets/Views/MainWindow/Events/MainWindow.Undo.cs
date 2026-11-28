@@ -54,8 +54,7 @@ public partial class MainWindow : Window
             return false;
         }
 
-        Canvas.Refresh();
-        Canvas.NotifyDocumentChanged();
+        Canvas.CommitEdit();
         SetMessage($"已撤销：{description}");
         return true;
     }
@@ -76,8 +75,7 @@ public partial class MainWindow : Window
             return false;
         }
 
-        Canvas.Refresh();
-        Canvas.NotifyDocumentChanged();
+        Canvas.CommitEdit();
         SetMessage($"已重做：{description}");
         return true;
     }

@@ -87,13 +87,13 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private static readonly Thickness TableEditorPadding = new(2, 0);
 
     /// <summary>表格空状态提示字号。</summary>
-    private const double TableEmptyHintFontSize = 11.0;
+    private const double TableEmptyHintFontSize = UiMetrics.FontBody;
 
     /// <summary>表格空状态提示外边距。</summary>
     private static readonly Thickness TableEmptyHintMargin = new(8, 10, 8, 10);
 
     /// <summary>表头分组标题字号。</summary>
-    private const double TableTitleFontSize = 12.0;
+    private const double TableTitleFontSize = UiMetrics.FontTitle;
 
     /// <summary>表头分组标题行高。</summary>
     private const double TableTitleLineHeight = 18.0;
@@ -102,7 +102,7 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private static readonly Thickness TableTitlePadding = new(6, 0);
 
     /// <summary>表头字段名字号。</summary>
-    private const double TableHeaderNameFontSize = 11.0;
+    private const double TableHeaderNameFontSize = UiMetrics.FontBody;
 
     /// <summary>表头字段名行高。</summary>
     private const double TableHeaderNameLineHeight = 16.0;
@@ -153,10 +153,10 @@ public sealed partial class ResourceOrganizePanel : UserControl
     private const double ActionButtonBorderThickness = 0.0;
 
     /// <summary>行内按钮圆角。</summary>
-    private const double ActionButtonCornerRadius = 5.0;
+    private const double ActionButtonCornerRadius = UiMetrics.ButtonCornerRadius;
 
     /// <summary>行内按钮字号。</summary>
-    private const double ActionButtonFontSize = 11.0;
+    private const double ActionButtonFontSize = UiMetrics.FontBody;
 
     /// <summary>编辑与删除按钮之间的间距。</summary>
     private const double ActionButtonSpacing = 3.0;

@@ -1,4 +1,4 @@
-/***************************************************************
+﻿/***************************************************************
  * (c) copyright 2026 - 2030, Honor.Runtime
  * All Rights Reserved.
  * -------------------------------------------------------------
@@ -126,67 +126,42 @@ public static partial class MapPublishService
             warnings.Add($"输出目录下没有 {LevelIndexFileName}，可能不是 Cocos 的 assets/LuaScripts/Game/Tables/Levels。");
         }
 
-        var mainPath = SubTablePath(chapterDirectory, baseName, string.Empty);
-        WriteAtomic(mainPath, BuildCocosMainFile(baseName, chapter, level, config, options.MapName));
-        files.Add(mainPath);
-
         var characters = config.Objects.Where(item => item.Type == MapObjectType.Character).ToList();
         var buildings = config.Objects.Where(item => item.Type == MapObjectType.Building).ToList();
         var objects = config.Objects.Where(item => item.Type == MapObjectType.Prop).ToList();
 
-        var charactersPath = SubTablePath(chapterDirectory, baseName, CharactersSuffix);
-        WriteAtomic(charactersPath, BuildCocosCharactersFile(baseName, characters));
-        files.Add(charactersPath);
-
-        var buildingsPath = SubTablePath(chapterDirectory, baseName, BuildingsSuffix);
-        WriteAtomic(buildingsPath, BuildCocosBuildingsFile(baseName, buildings));
-        files.Add(buildingsPath);
-
-        var objectsPath = SubTablePath(chapterDirectory, baseName, ObjectsSuffix);
-        WriteAtomic(objectsPath, BuildCocosObjectsFile(baseName, objects));
-        files.Add(objectsPath);
-
-        var pathsPath = SubTablePath(chapterDirectory, baseName, PathsSuffix);
-        WriteAtomic(pathsPath, BuildCocosPathsFile(baseName, characters, config.GridSize));
-        files.Add(pathsPath);
-
-        var trafficPath = SubTablePath(chapterDirectory, baseName, TrafficSuffix);
-        WriteAtomic(trafficPath, BuildCocosTrafficFile(baseName, config));
-        files.Add(trafficPath);
-
-        if (options.UpdateCocosIndex)
-        {
-            var indexPath = Path.Combine(root, LevelIndexFileName);
-            WriteAtomic(indexPath, BuildCocosIndex(indexPath, chapter, config.ChapterName, level));
-            files.Add(indexPath);
-        }
-
-        var spineCount = config.Objects.Count(item =>
-            string.Equals(item.AnimationKind, AnimationKinds.Spine, StringComparison.OrdinalIgnoreCase));
-        if (spineCount > 0)
-        {
-            warnings.Add($"有 {spineCount} 个 Spine 实例：Lua 表已写出 animationKind/spineAsset/spineAnimation，Cocos 地图生成链仍需补 Spine 分支。");
-        }
-
-        var manifestPath = Path.Combine(root, MapFileNames.Manifest(chapter, level));
-        WriteManifestAndRegister(
-            manifestPath,
-            options.Target,
-            config,
+        WriteSplitTables(
+            chapterDirectory,
+            root,
+            baseName,
             chapter,
             level,
-            options.MapName,
-            files,
-            root,
-            warnings);
+            config,
+            options,
+            new SplitTableStyle
+            {
+                Compact = false,
+                BackgroundName = null,
+                ImageResolver = null,
+                IncludePathPoints = false,
+                GridSize = 0,
+            },
+            characters,
+            buildings,
+            objects,
+            files);
 
-        return CreatePublishResult(
+        return FinishPublish(
+            config,
             options,
             root,
+            chapter,
+            level,
+            MapPublishTarget.CocosLua,
             files,
-            manifestPath,
             warnings,
-            $"Cocos Lua 已发布：{baseName}（{Preview(config, MapPublishTarget.CocosLua).Summary}）");
+            $"Cocos Lua 已发布：{baseName}",
+            count => $"有 {count} 个 Spine 实例：Lua 表已写出 animationKind/spineAsset/spineAnimation，Cocos 地图生成链仍需补 Spine 分支。");
     }
 
     #endregion
@@ -201,6 +176,8 @@ public static partial class MapPublishService
     /// <param name="level">关卡 ID。</param>
     /// <param name="config">当前地图配置。</param>
     /// <param name="mapName">Cocos 地图预制体名。</param>
+    /// <param name="bgNameOverride">背景资源纯名覆盖值；null 表示用地图配置里的 BgName。</param>
+    /// <param name="compact">是否写 compact-v2 头。</param>
     /// <returns>主表 Lua 文本。</returns>
     private static string BuildCocosMainFile(
         string baseName,
@@ -322,4 +299,3 @@ public static partial class MapPublishService
 
     #endregion
 }
-

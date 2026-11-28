@@ -345,14 +345,7 @@ public sealed partial class ItemElementPanel : UserControl
 
         box.LostFocus += (_, _) => commit();
         _committers.Add(commit);
-        box.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Enter)
-            {
-                commit();
-                e.Handled = true;
-            }
-        };
+        UiFactory.CommitOnEnter(box, commit);
     }
     /// <summary>在忽略用户事件的状态下执行表单回填，异常时也会恢复标志位。</summary>
     /// <param name="load">实际回填动作。</param>

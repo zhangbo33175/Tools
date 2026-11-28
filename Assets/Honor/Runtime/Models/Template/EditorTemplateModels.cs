@@ -78,6 +78,35 @@ public sealed class ObjectTemplate : IResourceRowData
     /// <summary>初始朝向。</summary>
     public string FacingDirection { get; set; } = Facings.Down;
 
+    /// <summary>
+    /// 四方向出图（朝向键 → 图片路径）。空表表示「单图 + 旋转」的旧口径。
+    /// <para>配置了变体的物件由画布按 <see cref="Facings"/> 选图并<b>不再绕中心旋转</b>：
+    /// 旋转会把等距墙面拉成斜的，四方向美术本来就是画好的四个透视，
+    /// 只需要换图。未配置变体的物件（斜边吸附的墙段）继续走旋转，行为不变。</para>
+    /// </summary>
+    public Dictionary<string, string> FacingImages { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>是否配置了任意方向的出图变体。</summary>
+    [JsonIgnore]
+    public bool HasFacingVariants => FacingImages.Count > 0;
+
+    /// <summary>
+    /// 按朝向取图片路径：命中变体返回变体路径，否则回落到 <see cref="ImagePath"/>。
+    /// </summary>
+    /// <param name="facing">朝向键，见 <see cref="Facings"/>；空串或未知键按缺省图处理。</param>
+    /// <returns>可直接交给资源库解析的图片路径。</returns>
+    public string ImagePathFor(string facing)
+    {
+        if (!string.IsNullOrWhiteSpace(facing)
+            && FacingImages.TryGetValue(facing, out var variant)
+            && !string.IsNullOrWhiteSpace(variant))
+        {
+            return variant;
+        }
+
+        return ImagePath;
+    }
+
     /// <summary>显示阴影。</summary>
     public bool ShadowEnabled { get; set; } = true;
 

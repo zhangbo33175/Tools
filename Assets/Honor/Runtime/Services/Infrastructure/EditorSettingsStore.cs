@@ -68,24 +68,15 @@ public sealed class EditorSettingsStore
     /// <param name="settings">设置实例。</param>
     /// <param name="error">失败原因，成功为空串。</param>
     /// <returns>是否写入成功。</returns>
-    public bool TrySave(EditorSettingsData settings, out string error)
-    {
-        try
+    public bool TrySave(EditorSettingsData settings, out string error) =>
+        ServiceOutcome.Run(() =>
         {
             FileSystemIo.EnsureParentDirectory(JsonPath);
 
             var payload = settings.Clone();
             payload.BaselineStep = EditorSettings.ClampBaselineStep(payload.BaselineStep);
             FileSystemIo.WriteText(JsonPath, JsonSerializer.Serialize(payload, JsonFileOptions.Indented));
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            error = exception.Message;
-            return false;
-        }
-    }
+        }, out error);
 
     #endregion
 

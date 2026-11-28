@@ -69,15 +69,7 @@ public sealed partial class ItemElementPanel : UserControl
         Grid.SetColumn(buttons, 2);
         grid.Children.Add(buttons);
 
-        return new Border
-        {
-            // 顶栏白底 + 底部细线，与迷雾 / 剧情页的页头统一，灰底会显得脏
-            Background = UiTheme.Card,
-            BorderBrush = UiTheme.Divider,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = ToolbarPadding,
-            Child = grid,
-        };
+        return UiFactory.HeaderBand(grid, ToolbarPadding);
     }
 
     /// <summary>创建工具条按钮的统一外观；点击行为由调用方追加。</summary>

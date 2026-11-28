@@ -67,14 +67,11 @@ public sealed partial class MapCanvas : Control
             }
         }
 
-        var objectIds = config.Objects
-            .Select(instance => instance.Id)
-            .Where(id => id.Length > 0)
-            .ToHashSet(StringComparer.Ordinal);
+        var objectIds = MapObjectIdSet(config);
         foreach (var light in config.TrafficLights)
         {
             // 灯已经是地图上的普通物件时由物件那条标记负责，避免同一盏灯画两圈
-            if (light.Id.Length > 0 && objectIds.Contains(light.Id))
+            if (IsBakedAsObject(objectIds, light.Id))
             {
                 continue;
             }

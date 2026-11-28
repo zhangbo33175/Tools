@@ -70,11 +70,8 @@ public sealed partial class ItemElementPanel : UserControl
         foreach (var (type, button) in _tabButtons)
         {
             var active = type == _tabType;
-            // 与资源整理的分类按钮同一套语汇：选中浅青底 + 青描边 + 青字加粗，未选白底细描边
-            button.Background = active ? UiTheme.PreviewAccentSoft : UiTheme.Card;
-            button.Foreground = active ? UiTheme.AccentDark : UiTheme.TextSecondary;
-            button.BorderBrush = active ? UiTheme.Accent : UiTheme.PanelBorder;
-            button.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
+            // 与资源整理的分类按钮同一套语汇，统一走两态配色表
+            UiFactory.ApplyToggle(button, active, UiTheme.Toggle.Filter);
         }
     }
 
@@ -165,23 +162,28 @@ public sealed partial class ItemElementPanel : UserControl
         return icon;
     }
 
-    /// <summary>构建行中部的名称与「ID · 类型 · 交互」描述。</summary>
+    /// <summary>
+    /// 构建行中部的名称与描述：主标题是中文模板名，副标题给出「#编号 · 图片名」，
+    /// 交互类型只在非「无」时追加，既保留了英文图片名的检索抓手，也不重复页签已表达的物件类型。
+    /// </summary>
     /// <param name="template">行对应的模板。</param>
     /// <returns>纵向文本区。</returns>
     private static Control BuildRowText(ObjectTemplate template)
     {
         var name = new TextBlock
         {
-            Text = string.IsNullOrWhiteSpace(template.TemplateName) ? template.TemplateId : template.TemplateName,
+            Text = BuildRowTitle(template),
             Foreground = UiTheme.TextPrimary,
             FontWeight = FontWeight.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
         var desc = new TextBlock
         {
-            Text = $"{template.TemplateId} · {ObjectTypeNames.Of(template.Type)} · {TemplateInteractTypes.ToDisplay(template.InteractType)}",
+            Text = BuildRowDesc(template),
             Foreground = UiTheme.TextSecondary,
             FontSize = RowDescFontSize,
+            TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
         var textArea = new StackPanel
@@ -193,6 +195,70 @@ public sealed partial class ItemElementPanel : UserControl
         textArea.Children.Add(name);
         textArea.Children.Add(desc);
         return textArea;
+    }
+
+    /// <summary>行主标题：优先中文模板名，缺名回退图片名，最后才回退编号。</summary>
+    /// <param name="template">行对应的模板。</param>
+    /// <returns>主标题文本。</returns>
+    private static string BuildRowTitle(ObjectTemplate template)
+    {
+        if (!string.IsNullOrWhiteSpace(template.TemplateName))
+        {
+            return template.TemplateName;
+        }
+
+        var image = ImageStemOf(template);
+        return string.IsNullOrEmpty(image) ? template.TemplateId : image;
+    }
+
+    /// <summary>行副标题：<c>#编号 · 图片名 [· 交互类型]</c>，为空的部分不占位。</summary>
+    /// <param name="template">行对应的模板。</param>
+    /// <returns>副标题文本。</returns>
+    private static string BuildRowDesc(ObjectTemplate template)
+    {
+        var parts = new List<string> { $"#{template.TemplateId}" };
+
+        var image = ImageStemOf(template);
+        if (!string.IsNullOrEmpty(image)
+            && !string.Equals(image, template.TemplateName, StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add(image);
+        }
+
+        var interact = template.InteractType;
+        if (!string.IsNullOrEmpty(interact)
+            && !string.Equals(interact, TemplateInteractTypes.None, StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add(TemplateInteractTypes.ToDisplay(interact));
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>取模板图片文件名（去目录与扩展名），作为列表里的英文检索抓手。</summary>
+    /// <param name="template">行对应的模板。</param>
+    /// <returns>图片主名；无图返回空串。</returns>
+    private static string ImageStemOf(ObjectTemplate template)
+    {
+        var value = template.ImagePath?.Trim();
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var cut = value.LastIndexOfAny(new[] { '/', '\\' });
+        if (cut >= 0 && cut < value.Length - 1)
+        {
+            value = value[(cut + 1)..];
+        }
+
+        var dot = value.LastIndexOf('.');
+        if (dot > 0)
+        {
+            value = value[..dot];
+        }
+
+        return value;
     }
 
     /// <summary>

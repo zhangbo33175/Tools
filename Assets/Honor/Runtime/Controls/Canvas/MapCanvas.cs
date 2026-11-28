@@ -39,10 +39,21 @@ public sealed partial class MapCanvas : Control
     /// <summary>线条反算到屏幕像素时允许的最小缩放，避免缩放到 0 时除零。</summary>
     private const double MinRenderableZoom = 0.0001;
 
-    // 画布配色跟随 TexturePacker 风格：浅灰工作区外框 + 青色画布 + 绿色常规网格 + 蓝色路径网格
+    // 画布配色跟随「工作区深色外框 + 青蓝地图面 + 白色网格 + 浅青路径网格」的统一语汇
     private static readonly IBrush BackdropBrush = UiTheme.MapView.Backdrop;
     private static readonly IBrush MapBackgroundBrush = UiTheme.MapView.Surface;
-    private static readonly Color MapLayerBrushColor = UiTheme.MapView.Layer;
+
+    /// <summary>无底图时的「地图层」填充：上浅下深一档的竖向渐变，避免整块纯色显得平。</summary>
+    private static readonly IBrush MapLayerBrush = new LinearGradientBrush
+    {
+        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+        EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+        GradientStops =
+        {
+            new GradientStop(UiTheme.MapView.Layer, 0),
+            new GradientStop(UiTheme.MapView.LayerDeep, 1),
+        },
+    };
     private static readonly IBrush MarqueeBrush = UiTheme.MapView.Marquee;
     private static readonly IBrush AccentBrush = UiTheme.MapView.Accent;
     private static readonly IBrush HandleBrush = UiTheme.MapView.Handle;
@@ -58,10 +69,13 @@ public sealed partial class MapCanvas : Control
     private static readonly IBrush ShadowAreaFillBrush = UiTheme.MapView.ShadowFill;
     private static readonly IBrush ShadowAreaStrokeBrush = UiTheme.MapView.ShadowStroke;
 
-    // 旋转后的占格 / 碰撞区域：琥珀色格子，矩形模式画正方格、菱形模式画菱形格
+    // 占格：三种形状统一用游戏内落位格配色（半透明绿填充 + 亮绿描边 + 格内十字）。
+    // Outline 专门画在图元之上，保证 1 格大小的贴图把整格盖住时仍能看见占格边界。
     private static readonly IBrush OccupancyFillBrush = UiTheme.MapView.OccupancyFill;
     private static readonly IBrush OccupancyStrokeBrush = UiTheme.MapView.OccupancyStroke;
     private static readonly IBrush OccupancyIdleStrokeBrush = UiTheme.MapView.OccupancyIdleStroke;
+    private static readonly IBrush OccupancyCrossBrush = UiTheme.MapView.OccupancyCross;
+    private static readonly IBrush OccupancyOutlineBrush = UiTheme.MapView.OccupancyOutline;
 
     // 摆放网格与路径网格统一由 MapGridRenderer 绘制，颜色见 UiTheme.MapGrid
     /// <summary>「包围盒」= 整张地图的外接矩形，纯绿实线，与 Unity 场景工具口径一致。</summary>
@@ -91,6 +105,18 @@ public sealed partial class MapCanvas : Control
 
     /// <summary>路径绘制开关。必须只由 <see cref="PathDrawing"/> 读写，避免 UI 里再存一份 _pathEditing。</summary>
     private bool _pathDrawing;
+
+    /// <summary>
+    /// 当前选中的路径点序号：路径列表与画布共用同一份，-1 表示没有选中。
+    /// 只经 <see cref="SelectPathPoint"/> 修改，保证重绘与事件成对发生。
+    /// </summary>
+    private int _selectedPathPoint = -1;
+
+    /// <summary>正在拖动的路径点序号；-1 表示没有在拖动。</summary>
+    private int _pathPointDrag = -1;
+
+    /// <summary>路径点拖动起点（世界坐标），松手时用来判断这一次是否真的移动过。</summary>
+    private Point _pathPointDragFrom;
 
     private bool _isPanning;
     private Point _panAnchor;
@@ -222,6 +248,9 @@ public sealed partial class MapCanvas : Control
     /// <summary>路径点新增 / 撤销 / 被去重或越界拦下时的通知，参数为面向用户的提示。</summary>
     public event EventHandler<string>? PathPointFeedback;
 
+    /// <summary>选中的路径点变化（画布拖动与路径列表点击都会触发），订阅方负责刷新列表高亮。</summary>
+    public event EventHandler? PathPointSelectionChanged;
+
     /// <summary>指针状态变化，参数为世界坐标。</summary>
     public event EventHandler<Point>? PointerWorldChanged;
 
@@ -336,6 +365,8 @@ public sealed partial class MapCanvas : Control
         }
 
         _selected = target;
+        // 换物件 / 取消选中时路径点选中态必须一起清，否则列表会高亮一个已不存在的序号。
+        SelectPathPoint(-1);
         InvalidateVisual();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -414,6 +445,17 @@ public sealed partial class MapCanvas : Control
     /// </summary>
     public void NotifyDocumentChanged() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>
+    /// 数据改动后的统一收尾：画面重绘 + 广播文档变化。
+    /// <para>两者总是成对出现——只重绘会让属性卡/列表停在旧值，只广播会看到旧画面，
+    /// 所以外部改完数据一律调这里，不要再手写 <see cref="Refresh"/> + <see cref="NotifyDocumentChanged"/>。</para>
+    /// </summary>
+    public void CommitEdit()
+    {
+        Refresh();
+        NotifyDocumentChanged();
+    }
+
     /// <summary>点击事件的世界坐标换算，供状态栏使用。</summary>
     /// <param name="screen">屏幕坐标。</param>
     /// <returns>世界坐标。</returns>
@@ -429,14 +471,17 @@ public sealed partial class MapCanvas : Control
 
     private Point ScreenToWorld(Point screen) => screen.Transform(_inverse);
 
-    /// <summary>把世界坐标对齐到格子左上角（菱形模式下即菱形外接矩形的左上角）。</summary>
+    /// <summary>
+    /// 把世界坐标对齐到格子。矩形模式贴格子左上角；菱形 / 六边形模式让「一个格子大小的贴图」
+    /// 正中坐在格心上，这样贴图四角留白对称、格子的尖角自然探出到贴图外侧，和游戏内的落位一致。
+    /// </summary>
     private Point SnapToCell(Point world)
     {
         var cell = _config?.GridSize ?? MapToolDefaults.GridSize;
-        if (IsDiamondMode)
+        if (IsLatticeMode)
         {
-            var index = DiamondLattice.IndexAt(world.X, world.Y, cell);
-            return DiamondLattice.Bounds((int)index.X, (int)index.Y, cell).TopLeft;
+            var center = LatticeCenter(LatticeIndexAt(world, cell), cell);
+            return new Point(center.X - cell / 2.0, center.Y - cell / 2.0);
         }
 
         return new Point(
@@ -448,11 +493,14 @@ public sealed partial class MapCanvas : Control
     private Point CellIndexOf(Point world)
     {
         var cell = _config?.GridSize ?? MapToolDefaults.GridSize;
-        return IsDiamondMode
-            ? DiamondLattice.IndexAt(world.X, world.Y, cell)
-            : new Point(
-                Math.Floor(world.X / cell),
-                Math.Floor(world.Y / cell));
+        if (IsLatticeMode)
+        {
+            return LatticeIndexAt(world, cell);
+        }
+
+        return new Point(
+            Math.Floor(world.X / cell),
+            Math.Floor(world.Y / cell));
     }
 
     /// <summary>判断格子是否落在地图内（画布外空白处不参与点选）。</summary>
@@ -465,9 +513,11 @@ public sealed partial class MapCanvas : Control
         }
 
         var cell = config.GridSize;
-        if (IsDiamondMode)
+        if (IsLatticeMode)
         {
-            return DiamondLattice.InsideMap((int)index.X, (int)index.Y, cell, config.Width, config.Height);
+            return IsHexMode
+                ? HexLattice.InsideMap((int)index.X, (int)index.Y, cell, config.Width, config.Height)
+                : DiamondLattice.InsideMap((int)index.X, (int)index.Y, cell, config.Width, config.Height);
         }
 
         var rect = new Rect(index.X * cell, index.Y * cell, cell, cell);
@@ -480,27 +530,24 @@ public sealed partial class MapCanvas : Control
     public Point IndexOfWorld(Point world) => CellIndexOf(world);
 
     /// <summary>格子中心的像素坐标。</summary>
-    /// <param name="index">格子行列。</param>
-    /// <returns>格子中心。</returns>
     private Point CellCenter(Point index)
     {
         var cell = _config?.GridSize ?? MapToolDefaults.GridSize;
-        return IsDiamondMode
-            ? DiamondLattice.Center((int)index.X, (int)index.Y, cell)
+        return IsLatticeMode
+            ? LatticeCenter(index, cell)
             : new Point(index.X * cell + cell / 2.0, index.Y * cell + cell / 2.0);
     }
 
     /// <summary>
     /// 路径点吸附口径：矩形网格贴格子左上角（与 Unity <c>MapToolEditorUtils.SnapToGrid</c> 一致，
-    /// 落盘后 GridX/GridY 正好等于行列号）；菱形网格取其中心，避免路径点落在菱形外接框的空白角。
+    /// 落盘后 GridX/GridY 正好等于行列号）；菱形 / 六边形网格取其中心，避免路径点落在格外的空白角。
     /// </summary>
     private Point SnapPathPoint(Point world)
     {
         var cell = _config?.GridSize ?? MapToolDefaults.GridSize;
-        if (IsDiamondMode)
+        if (IsLatticeMode)
         {
-            var diamond = DiamondLattice.IndexAt(world.X, world.Y, cell);
-            return DiamondLattice.Center((int)diamond.X, (int)diamond.Y, cell);
+            return LatticeCenter(LatticeIndexAt(world, cell), cell);
         }
 
         return new Point(
@@ -508,8 +555,30 @@ public sealed partial class MapCanvas : Control
             Math.Floor(world.Y / cell) * cell);
     }
 
-    /// <summary>是否处于菱形（TileMap 45°）模式。</summary>
-    private bool IsDiamondMode => _config?.DrawShape == DrawShapes.Diamond;
+    /// <summary>是否处于菱形（TileMap 45°）模式，含 Isometric Z as Y（画布几何相同）。</summary>
+    private bool IsDiamondMode => DrawShapes.IsDiamond(_config?.DrawShape);
+
+    /// <summary>是否处于六边形（蜂窝）模式。</summary>
+    private bool IsHexMode => DrawShapes.IsHex(_config?.DrawShape);
+
+    /// <summary>是否菱形 / 六边形这类「贴图中心坐格心」的格子模式。</summary>
+    private bool IsLatticeMode => IsDiamondMode || IsHexMode;
+
+    /// <summary>按当前形状把世界坐标换算成格行列。</summary>
+    /// <param name="world">世界坐标。</param>
+    /// <param name="cell">格子边长。</param>
+    /// <returns>格行列。</returns>
+    private Point LatticeIndexAt(Point world, int cell) => IsHexMode
+        ? HexLattice.IndexAt(world.X, world.Y, cell)
+        : DiamondLattice.IndexAt(world.X, world.Y, cell);
+
+    /// <summary>按当前形状取格心。</summary>
+    /// <param name="index">格行列。</param>
+    /// <param name="cell">格子边长。</param>
+    /// <returns>格心世界坐标。</returns>
+    private Point LatticeCenter(Point index, int cell) => IsHexMode
+        ? HexLattice.Center((int)index.X, (int)index.Y, cell)
+        : DiamondLattice.Center((int)index.X, (int)index.Y, cell);
 
     #endregion
 }

@@ -122,7 +122,7 @@ public partial class MainWindow : Window
             {
                 Text = "还没有选择收集物素材，点标题栏「重设」重新配置。",
                 Foreground = UiTheme.TextSecondary,
-                FontSize = 11,
+                FontSize = UiMetrics.FontBody,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Avalonia.Thickness(2, 4),
             });
@@ -138,7 +138,7 @@ public partial class MainWindow : Window
         {
             Text = "层级",
             Foreground = UiTheme.TextSecondary,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Avalonia.Thickness(0, 0, 8, 0),
         });
@@ -146,7 +146,7 @@ public partial class MainWindow : Window
         {
             ItemsSource = new[] { "物件下", "物件上" },
             SelectedIndex = CollectibleLayers.IsOver(plan.LayerMode) ? 1 : 0,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             Height = 26,
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
@@ -175,7 +175,7 @@ public partial class MainWindow : Window
         var randomButton = new Button
         {
             Content = $"随机生成剩余 {Math.Max(0, plan.Total - placed)}",
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             Height = 28,
             Padding = new Avalonia.Thickness(6, 0),
             Margin = new Avalonia.Thickness(0, 0, 3, 0),
@@ -185,7 +185,7 @@ public partial class MainWindow : Window
         var clearButton = new Button
         {
             Content = "清空收集物",
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             Height = 28,
             Padding = new Avalonia.Thickness(6, 0),
             Margin = new Avalonia.Thickness(3, 0, 0, 0),
@@ -199,7 +199,7 @@ public partial class MainWindow : Window
         {
             Text = $"素材（{plan.Kinds.Count} 种）",
             Foreground = UiTheme.CollectiblePanel.SectionText,
-            FontSize = 10,
+            FontSize = UiMetrics.FontCaption,
             FontWeight = FontWeight.SemiBold,
             Margin = new Avalonia.Thickness(1, 0, 0, 4),
         });
@@ -232,7 +232,7 @@ public partial class MainWindow : Window
         {
             Text = "0",
             Foreground = UiTheme.CollectiblePanel.CountText,
-            FontSize = 11,
+            FontSize = UiMetrics.FontBody,
             FontWeight = FontWeight.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Avalonia.Thickness(4, 0, 8, 0),

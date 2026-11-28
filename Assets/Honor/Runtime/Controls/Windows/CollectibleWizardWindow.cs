@@ -80,7 +80,9 @@ public sealed partial class CollectibleWizardWindow : Window
         Width = 980;
         Height = 760;
         MinWidth = 860;
-        MinHeight = 680;
+        // 两步的内容高度是刚性的（右栏字段卡 + 提示条、左栏预览卡最小 360），
+        // 压到 680 时右栏提示条会被挤出卡片。最小高度取“两步都刚好放得下”的那条线。
+        MinHeight = WizardMinHeight;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         // ---TODO 视觉改版：淡青灰渐变底替代整块纯色背景。
         Background = new LinearGradientBrush

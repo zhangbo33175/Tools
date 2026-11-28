@@ -68,7 +68,7 @@ public sealed partial class FogEditPanel : UserControl
     private const double RegionDeleteColumnWidth = 60.0;
 
     /// <summary>区域行统计文字字号。</summary>
-    private const double RegionDescFontSize = 11.0;
+    private const double RegionDescFontSize = UiMetrics.FontBody;
 
     /// <summary>区域行名称与统计之间的间距。</summary>
     private const double RegionTextSpacing = 1.0;
@@ -80,7 +80,7 @@ public sealed partial class FogEditPanel : UserControl
     private const string RegionDeleteText = "删除";
 
     /// <summary>双击区域行后重命名输入框的字号。</summary>
-    private const double RenameEditorFontSize = 12.0;
+    private const double RenameEditorFontSize = UiMetrics.FontTitle;
 
     /// <summary>重命名输入框的内边距。</summary>
     private static readonly Thickness RenameEditorPadding = new(4, 2);
@@ -154,10 +154,7 @@ public sealed partial class FogEditPanel : UserControl
     private static readonly Thickness SettingsMargin = new(6);
 
     /// <summary>设置区行间距。</summary>
-    private const double SettingsSpacing = 8.0;
-
-    /// <summary>笔刷卡片 / 快捷键卡片的圆角。</summary>
-    private const double SettingsCardCornerRadius = 8.0;
+    private const double SettingsSpacing = UiMetrics.FieldGap;
 
     /// <summary>笔刷卡片 / 快捷键卡片的内边距。</summary>
     private static readonly Thickness SettingsCardPadding = new(14, 12, 14, 14);
@@ -183,20 +180,20 @@ public sealed partial class FogEditPanel : UserControl
     /// <summary>绘制按钮内边距。</summary>
     private static readonly Thickness DrawButtonPadding = new(8, 6);
 
-    /// <summary>绘制按钮圆角：与全局按钮圆角 5 对齐。</summary>
-    private const double DrawButtonCornerRadius = 5.0;
+    /// <summary>绘制按钮圆角：取全局按钮圆角 5。</summary>
+    private const double DrawButtonCornerRadius = UiMetrics.ButtonCornerRadius;
 
     /// <summary>绘制按钮高度：比普通工具栏按钮高一档，作为左栏的主行动。</summary>
     private const double DrawButtonHeight = 32.0;
 
-    /// <summary>设置区、区域列表两张卡片的圆角，与全局卡片圆角 8 对齐。</summary>
-    private const double PanelCardCornerRadius = 8.0;
+    /// <summary>设置区、区域列表两张卡片的圆角，取全局卡片圆角。</summary>
+    private const double PanelCardCornerRadius = UiMetrics.CardCornerRadius;
 
     /// <summary>快捷键卡片标题。</summary>
     private const string ShortcutTitleText = "快捷键";
 
-    /// <summary>按键胶囊圆角：与输入框 6 那档错开，取按钮 5。</summary>
-    private const double ShortcutChipCornerRadius = 5.0;
+    /// <summary>按键胶囊圆角：取全局按钮圆角。</summary>
+    private const double ShortcutChipCornerRadius = UiMetrics.ButtonCornerRadius;
 
     /// <summary>按键胶囊内边距。</summary>
     private static readonly Thickness ShortcutChipPadding = new(6, 1);
@@ -210,17 +207,11 @@ public sealed partial class FogEditPanel : UserControl
     /// <summary>快捷键标题下方细分隔线的边距。</summary>
     private static readonly Thickness HintDividerMargin = new(0, 0, 0, 7);
 
-    /// <summary>快捷说明卡片圆角。</summary>
-    private static readonly CornerRadius HintCornerRadius = new(3);
-
-    /// <summary>快捷说明卡片内边距。</summary>
-    private static readonly Thickness HintPadding = new(8, 6);
-
     /// <summary>快捷说明行间距。</summary>
     private const double HintSpacing = 3.0;
 
     /// <summary>快捷说明与区域统计文字的字号。</summary>
-    private const double HintFontSize = 11.0;
+    private const double HintFontSize = UiMetrics.FontBody;
 
     /// <summary>区域列表表体与卡片边缘的留白。</summary>
     private static readonly Thickness RegionBodyMargin = new(8);
